@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PATIENT
+  PROFESSIONAL
+  ADMIN
+}
+
+enum AppointmentStatus {
+  REQUESTED
+  CONFIRMED
+  CANCELLED
+  ATTENDED
+}
+
+model User {
+  id           String               @id @default(cuid())
+  email        String               @unique
+  name         String
+  passwordHash String
+  role         Role
+
+  professional ProfessionalProfile?
+
+  patientAppointments      Appointment[] @relation("PatientAppointments")
+  professionalAppointments Appointment[] @relation("ProfessionalAppointments")
+  googleOAuth              GoogleOAuthToken?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Specialty {
+  id   String @id @default(cuid())
+  name String @unique
+
+  professionals ProfessionalProfile[]
+  appointments  Appointment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Location {
+  id      String @id @default(cuid())
+  name    String
+  address String
+  phone   String?
+
+  appointments Appointment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProfessionalProfile {
+  userId       String @id
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  specialtyId  String
+  specialty    Specialty @relation(fields: [specialtyId], references: [id], onDelete: Restrict)
+
+  isActive       Boolean @default(true)
+  googleCalendarId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GoogleOAuthToken {
+  id           String @id @default(cuid())
+  userId       String @unique
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accessToken  String @db.Text
+  refreshToken String @db.Text
+  scope        String?
+  tokenType    String?
+  expiryDate   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Appointment {
+  id             String            @id @default(cuid())
+  status         AppointmentStatus @default(REQUESTED)
+
+  startAt DateTime
+  endAt   DateTime
+
+  patientId String
+  patient   User @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Restrict)
+
+  professionalId String
+  professional   User @relation("ProfessionalAppointments", fields: [professionalId], references: [id], onDelete: Restrict)
+
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  specialtyId String
+  specialty   Specialty @relation(fields: [specialtyId], references: [id], onDelete: Restrict)
+
+  googleEventId String? @unique
+  notes         String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId, startAt])
+  @@index([professionalId, startAt])
+  @@index([status, startAt])
+}
+
+

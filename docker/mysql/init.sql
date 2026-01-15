@@ -1,0 +1,90 @@
+-- Crear base de datos si no existe
+CREATE DATABASE IF NOT EXISTS kober_shifts;
+USE kober_shifts;
+
+-- Tabla de Usuarios
+CREATE TABLE IF NOT EXISTS users (
+  id VARCHAR(255) PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  name VARCHAR(255) NOT NULL,
+  passwordHash VARCHAR(255) NOT NULL,
+  role ENUM('PATIENT', 'PROFESSIONAL', 'ADMIN') NOT NULL,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_email (email),
+  INDEX idx_role (role)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla de Especialidades
+CREATE TABLE IF NOT EXISTS specialties (
+  id VARCHAR(255) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL UNIQUE,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla de Ubicaciones
+CREATE TABLE IF NOT EXISTS locations (
+  id VARCHAR(255) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  address VARCHAR(255) NOT NULL,
+  phone VARCHAR(50),
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla de Perfiles Profesionales
+CREATE TABLE IF NOT EXISTS professional_profiles (
+  userId VARCHAR(255) PRIMARY KEY,
+  specialtyId VARCHAR(255) NOT NULL,
+  isActive BOOLEAN DEFAULT TRUE,
+  googleCalendarId VARCHAR(255),
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (specialtyId) REFERENCES specialties(id) ON DELETE RESTRICT,
+  INDEX idx_specialty (specialtyId),
+  INDEX idx_active (isActive)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla de Tokens OAuth de Google
+CREATE TABLE IF NOT EXISTS google_oauth_tokens (
+  id VARCHAR(255) PRIMARY KEY,
+  userId VARCHAR(255) NOT NULL UNIQUE,
+  accessToken TEXT NOT NULL,
+  refreshToken TEXT NOT NULL,
+  scope VARCHAR(255),
+  tokenType VARCHAR(50),
+  expiryDate TIMESTAMP NULL,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_user (userId)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla de Citas/Turnos
+CREATE TABLE IF NOT EXISTS appointments (
+  id VARCHAR(255) PRIMARY KEY,
+  status ENUM('REQUESTED', 'CONFIRMED', 'CANCELLED', 'ATTENDED') NOT NULL DEFAULT 'REQUESTED',
+  startAt DATETIME NOT NULL,
+  endAt DATETIME NOT NULL,
+  patientId VARCHAR(255) NOT NULL,
+  professionalId VARCHAR(255) NOT NULL,
+  locationId VARCHAR(255) NOT NULL,
+  specialtyId VARCHAR(255) NOT NULL,
+  googleEventId VARCHAR(255) UNIQUE,
+  notes TEXT,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (patientId) REFERENCES users(id) ON DELETE RESTRICT,
+  FOREIGN KEY (professionalId) REFERENCES users(id) ON DELETE RESTRICT,
+  FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE RESTRICT,
+  FOREIGN KEY (specialtyId) REFERENCES specialties(id) ON DELETE RESTRICT,
+  INDEX idx_patient_start (patientId, startAt),
+  INDEX idx_professional_start (professionalId, startAt),
+  INDEX idx_status_start (status, startAt),
+  INDEX idx_google_event (googleEventId)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

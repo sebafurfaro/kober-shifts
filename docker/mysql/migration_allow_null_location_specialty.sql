@@ -1,0 +1,2 @@
+ALTER TABLE appointments MODIFY COLUMN locationId VARCHAR(255) NULL;
+ALTER TABLE appointments MODIFY COLUMN specialtyId VARCHAR(255) NULL;
