@@ -13,7 +13,6 @@ import {
 import { Toolbar } from "./calendar/Toolbar";
 
 import { fullCalendarDateToLocal, localDateToFullCalendar } from "@/lib/timezone";
-import { useStyleConfigStore } from "@/app/store/styleConfigStore";
 import { EventDialogTitle } from "./calendar/EventDialogTitle";
 import { EventDialogContent } from "./calendar/EventDialogContent";
 import { EventDialogActions } from "./calendar/EventDialogActions";
@@ -685,10 +684,9 @@ export function Calendar() {
             onSave={async () => {
               if (!eventDialogData) return;
 
-              // Get section visibility from config
-              const configSections = useStyleConfigStore.getState().config?.sections;
-              const showLocations = configSections?.showLocations ?? false;
-              const showSpecialties = configSections?.showSpecialties ?? true;
+              // Default section visibility
+              const showLocations = true;
+              const showSpecialties = true;
 
               // Validate required fields (only those that are visible)
               if (!eventDialogData.patientId || !eventDialogData.professionalId) {

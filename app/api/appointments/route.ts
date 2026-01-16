@@ -6,7 +6,6 @@ import { AppointmentStatus, Role } from "@/lib/types";
 import { randomUUID } from "crypto";
 import { mysqlDateToUTC, utcToMySQLDate } from "@/lib/timezone";
 import { toZonedTime } from "date-fns-tz";
-import { getStyleConfig } from "@/lib/styleConfig";
 
 export async function GET(req: Request) {
   const session = await getSession();
@@ -129,10 +128,9 @@ export async function POST(req: Request) {
   const locationId = typeof body.locationId === "string" ? body.locationId : (body.locationId === null ? null : "");
   const specialtyId = typeof body.specialtyId === "string" ? body.specialtyId : (body.specialtyId === null ? null : "");
 
-  // Get section visibility from config
-  const styleConfig = await getStyleConfig();
-  const showLocations = styleConfig.sections?.showLocations ?? false;
-  const showSpecialties = styleConfig.sections?.showSpecialties ?? true;
+  // Default section visibility
+  const showLocations = true;
+  const showSpecialties = true;
 
   // Parse dates from ISO string and convert to MySQL format
   // Use centralized timezone utilities for consistent conversion

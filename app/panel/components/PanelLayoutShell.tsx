@@ -17,6 +17,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PersonIcon from "@mui/icons-material/Person";
 import EventIcon from "@mui/icons-material/Event";
@@ -24,9 +25,8 @@ import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import BadgeIcon from "@mui/icons-material/Badge";
 import CategoryIcon from "@mui/icons-material/Category";
-import SettingsIcon from "@mui/icons-material/Settings";
+import AssignmentIcon from "@mui/icons-material/Assignment";
 import { useTheme } from "@mui/material/styles";
-import { useStyleConfigStore } from "@/app/store/styleConfigStore";
 import Logo from "@/app/branding/Logo";
 
 type Role = "PATIENT" | "PROFESSIONAL" | "ADMIN";
@@ -35,8 +35,8 @@ const DRAWER_WIDTH = 260;
 
 function NavItem(props: { href: string; label: string; icon: React.ReactNode }) {
   return (
-    <ListItemButton 
-      component={Link} 
+    <ListItemButton
+      component={Link}
       href={props.href}
       sx={{
         color: "#ffffff",
@@ -72,21 +72,8 @@ export function PanelLayoutShell({
   }, [isMobileQuery]);
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false);
-  const configSiteName = useStyleConfigStore((s) => s.config?.branding?.siteName?.trim());
-  const configSections = useStyleConfigStore((s) => s.config?.sections);
   const [siteName, setSiteName] = React.useState("Panel");
-  
-  // Sync siteName from store only on client to avoid hydration mismatch
-  React.useEffect(() => {
-    if (configSiteName) {
-      setSiteName(configSiteName);
-    }
-  }, [configSiteName]);
-
-  // Load style config to get sections visibility
-  React.useEffect(() => {
-    useStyleConfigStore.getState().load();
-  }, []);
+  const configSections = { showLocations: true, showSpecialties: true };
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -94,12 +81,6 @@ export function PanelLayoutShell({
   }
 
   const adminItems = [
-    {
-      label: "Configuración",
-      href: "/panel/admin/settings",
-      icon: <SettingsIcon />,
-      show: true,
-    },
     {
       label: "Sedes",
       href: "/panel/admin/locations",
@@ -122,6 +103,12 @@ export function PanelLayoutShell({
       label: "Pacientes",
       href: "/panel/admin/patients",
       icon: <PersonIcon />,
+      show: true,
+    },
+    {
+      label: "Coberturas",
+      href: "/panel/admin/coberturas",
+      icon: <AssignmentIcon />,
       show: true,
     },
   ].filter(item => item.show);
@@ -151,8 +138,8 @@ export function PanelLayoutShell({
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             <Logo width={40} height={40} />
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mr: 2 }}>
-            {userName} · {role}
+          <Typography variant="body2" color="text.primary" sx={{ mr: 2 }}>
+            Hola, {userName}
           </Typography>
           <IconButton onClick={logout} title="Cerrar sesión">
             <LogoutIcon />
@@ -178,14 +165,14 @@ export function PanelLayoutShell({
         <Toolbar />
         <Box sx={{ overflow: "auto" }}>
           <List>
-            <NavItem href="/panel" label="Calendario" icon={<EventIcon />} />
+            <NavItem href="/panel" label="Calendario" icon={<CalendarMonthIcon />} />
           </List>
 
           <Divider sx={{ borderColor: "rgba(255, 255, 255, 0.2)" }} />
 
           <List>
             {(role === "PATIENT" || role === "ADMIN") && (
-              <NavItem href="/panel/patient" label="Paciente" icon={<PersonIcon />} />
+              <NavItem href="/panel/patient" label="Mis turnos" icon={<EventIcon />} />
             )}
             {(role === "PROFESSIONAL" || role === "ADMIN") && (
               <NavItem href="/panel/professional" label="Profesional" icon={<EventIcon />} />

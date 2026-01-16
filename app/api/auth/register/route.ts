@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createUser, findUserByEmail } from "@/lib/db";
+import { createUser, findUserByEmail, updateUser } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
 import { createSessionCookieValue, getSessionCookieOptions, SESSION_COOKIE } from "@/lib/session";
 import { Role } from "@/lib/types";
@@ -16,15 +16,30 @@ export async function POST(req: Request) {
   }
 
   const exists = await findUserByEmail(email);
-  if (exists) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
+  let user;
 
-  const user = await createUser({
-    id: randomUUID(),
-    email,
-    name,
-    passwordHash: hashPassword(password),
-    role: Role.PATIENT,
-  });
+  if (exists) {
+    if (exists.passwordHash.startsWith("PENDING_GOOGLE_")) {
+      // Update existing pending user
+      user = await updateUser(exists.id, {
+        name,
+        // We don't update email as it matches
+        passwordHash: hashPassword(password),
+        // Role remains PATIENT or whatever was set
+      });
+    } else {
+      return NextResponse.json({ error: "Email already in use" }, { status: 409 });
+    }
+  } else {
+    // Create new user
+    user = await createUser({
+      id: randomUUID(),
+      email,
+      name,
+      passwordHash: hashPassword(password),
+      role: Role.PATIENT,
+    });
+  }
 
   const res = NextResponse.json({ id: user.id, email: user.email, name: user.name, role: user.role });
   res.cookies.set(SESSION_COOKIE, createSessionCookieValue({ userId: user.id, role: user.role }), {

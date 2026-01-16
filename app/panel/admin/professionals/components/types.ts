@@ -1,0 +1,57 @@
+export interface Specialty {
+    id: string;
+    name: string;
+}
+
+export interface Slot {
+    id: string;
+    startTime: string;
+    endTime: string;
+    fromDate: string;
+    toDate: string | null;
+    repeat: "weekly" | "biweekly" | "monthly";
+}
+
+export interface AvailabilityDay {
+    slots: Slot[];
+}
+
+export interface AvailabilityConfig {
+    days: {
+        [key: number]: AvailabilityDay;
+    };
+}
+
+export interface SelectedPlan {
+    planId: string;
+    active: boolean;
+}
+
+export interface SelectedCoverage {
+    coverageId: string;
+    plans: SelectedPlan[];
+}
+
+export interface ProfessionalFormData {
+    name: string;
+    email: string;
+    phone: string;
+    licenseNumber: string;
+    tempPassword?: string;
+    specialtyIds: string[];
+    medicalCoverages: SelectedCoverage[];
+    color: string;
+    availabilityConfig: AvailabilityConfig;
+}
+
+export const INITIAL_AVAILABILITY: AvailabilityConfig = {
+    days: {
+        1: { slots: [] },
+        2: { slots: [] },
+        3: { slots: [] },
+        4: { slots: [] },
+        5: { slots: [] },
+        6: { slots: [] },
+        0: { slots: [] },
+    },
+};

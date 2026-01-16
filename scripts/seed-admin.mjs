@@ -8,8 +8,8 @@ function hashPassword(password) {
   return `${salt.toString("hex")}:${hash.toString("hex")}`;
 }
 
-const email = "seba.furfaro@gmail.com";
-const password = "Gaspar2023.3";
+const email = "kober.shifts@gmail.com";
+const password = "admin1234";
 const name = "Sebastian Furfaro";
 
 const isDocker = process.env.MYSQL_HOST === 'mysql' || process.env.NODE_ENV === 'production';
@@ -28,7 +28,7 @@ async function main() {
   try {
     // Check if user exists
     const [existing] = await pool.execute('SELECT id FROM users WHERE email = ?', [email]);
-    
+
     let userId;
     if (existing.length > 0) {
       userId = existing[0].id;

@@ -9,6 +9,7 @@ interface PanelHeaderProps {
     label: string;
     onClick: () => void;
     variant?: ButtonProps["variant"];
+    color?: ButtonProps["color"];
     startIcon?: ReactNode;
     disabled?: boolean;
   };
@@ -43,6 +44,7 @@ export function PanelHeader({ title, subtitle, action, showBreadcrumbs = false }
         {action && (
           <Button
             variant={action.variant || "contained"}
+            color={action.color}
             onClick={action.onClick}
             startIcon={action.startIcon}
             disabled={action.disabled}

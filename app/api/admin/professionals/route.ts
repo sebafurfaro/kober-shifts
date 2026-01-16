@@ -26,6 +26,10 @@ export async function POST(req: Request) {
   const specialtyIds = Array.isArray(body.specialtyIds) ? body.specialtyIds.filter((id): id is string => typeof id === "string") : (specialtyId ? [specialtyId] : []);
   const color = typeof body.color === "string" ? body.color.trim() : "#2196f3";
   const tempPassword = typeof body.tempPassword === "string" ? body.tempPassword : "changeme123";
+  const licenseNumber = typeof body.licenseNumber === "string" ? body.licenseNumber.trim() : null;
+  const medicalCoverages = Array.isArray(body.medicalCoverages) ? body.medicalCoverages : null;
+  const availabilityConfig = body.availabilityConfig && typeof body.availabilityConfig === "object" ? (body.availabilityConfig as any) : null;
+
   const availableDays = Array.isArray(body.availableDays) ? body.availableDays.filter((d): d is number => typeof d === "number") : undefined;
   const availableHours = body.availableHours && typeof body.availableHours === "object" && "start" in body.availableHours && "end" in body.availableHours
     ? { start: String(body.availableHours.start), end: String(body.availableHours.end) }
@@ -50,6 +54,9 @@ export async function POST(req: Request) {
     specialtyId: specialtyIds[0] || "",
     specialtyIds,
     color: color || "#2196f3",
+    licenseNumber,
+    medicalCoverages,
+    availabilityConfig,
     availableDays,
     availableHours,
   });

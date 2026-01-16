@@ -13,7 +13,6 @@ const COLOR_PALETTE = [
   "#6c5ce7", // Índigo
   "#4834d4", // Azul índigo oscuro
   "#3742fa", // Azul real
-  "#2f3542", // Azul gris oscuro
   "#5352ed", // Azul violeta
   "#5f27cd", // Púrpura oscuro
   "#341f97", // Púrpura muy oscuro
@@ -76,9 +75,9 @@ export function ColorPicker({ value, onChange, disabled = false, error = false }
             key={color}
             onClick={() => handleColorClick(color)}
             sx={{
-              width: "45px",
+              width: "30px",
               aspectRatio: "1",
-              borderRadius: "4px",
+              borderRadius: "2px",
               backgroundColor: color,
               cursor: disabled ? "not-allowed" : "pointer",
               opacity: disabled ? 0.5 : 1,

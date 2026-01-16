@@ -10,7 +10,6 @@ import {
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { formatForDateTimeLocal, parseFromDateTimeLocal, formatInBuenosAires, localDateToFullCalendar } from "@/lib/timezone";
-import { useStyleConfigStore } from "@/app/store/styleConfigStore";
 
 interface CalendarEvent {
   id: string;
@@ -77,14 +76,13 @@ export function EventDialogContent({
   statusColors,
   statusLabels,
 }: EventDialogContentProps) {
-  const configSections = useStyleConfigStore((s) => s.config?.sections);
-  const showLocations = configSections?.showLocations ?? false;
-  const showSpecialties = configSections?.showSpecialties ?? true;
+  const showLocations = true;
+  const showSpecialties = true;
 
   // Filter specialties based on selected professional
   const selectedProfessional = professionals.find(p => p.id === eventDialogData?.professionalId);
   // Get specialty IDs from professional (support both single and multiple specialties)
-  const professionalSpecialtyIds = selectedProfessional?.specialtyIds || 
+  const professionalSpecialtyIds = selectedProfessional?.specialtyIds ||
     (selectedProfessional?.specialtyId ? [selectedProfessional.specialtyId] : []);
   const availableSpecialties = professionalSpecialtyIds.length > 0
     ? specialties.filter(s => professionalSpecialtyIds.includes(s.id))
@@ -168,26 +166,26 @@ export function EventDialogContent({
             <Typography>
               {eventDialogData?.start
                 ? (() => {
-                    // eventDialogData.start has BA time components stored as UTC components
-                    // We need to convert it to actual UTC first, then format in BA timezone
-                    const utcDate = localDateToFullCalendar(eventDialogData.start);
-                    return formatInBuenosAires(utcDate, "PPpp", { locale: es });
-                  })()
+                  // eventDialogData.start has BA time components stored as UTC components
+                  // We need to convert it to actual UTC first, then format in BA timezone
+                  const utcDate = localDateToFullCalendar(eventDialogData.start);
+                  return formatInBuenosAires(utcDate, "PPpp", { locale: es });
+                })()
                 : (() => {
-                    try {
-                      const startDate =
-                        typeof selectedEvent.start === "string"
-                          ? parseISO(selectedEvent.start)
-                          : selectedEvent.start instanceof Date
+                  try {
+                    const startDate =
+                      typeof selectedEvent.start === "string"
+                        ? parseISO(selectedEvent.start)
+                        : selectedEvent.start instanceof Date
                           ? selectedEvent.start
                           : new Date(selectedEvent.start);
-                      // Convert to BA timezone for display
-                      return formatInBuenosAires(startDate, "PPpp", { locale: es });
-                    } catch (e) {
-                      console.error("Error formatting start date:", e, selectedEvent.start);
-                      return String(selectedEvent.start);
-                    }
-                  })()}
+                    // Convert to BA timezone for display
+                    return formatInBuenosAires(startDate, "PPpp", { locale: es });
+                  } catch (e) {
+                    console.error("Error formatting start date:", e, selectedEvent.start);
+                    return String(selectedEvent.start);
+                  }
+                })()}
             </Typography>
           </Box>
           <Box>
@@ -197,26 +195,26 @@ export function EventDialogContent({
             <Typography>
               {eventDialogData?.end
                 ? (() => {
-                    // eventDialogData.end has BA time components stored as UTC components
-                    // We need to convert it to actual UTC first, then format in BA timezone
-                    const utcDate = localDateToFullCalendar(eventDialogData.end);
-                    return formatInBuenosAires(utcDate, "PPpp", { locale: es });
-                  })()
+                  // eventDialogData.end has BA time components stored as UTC components
+                  // We need to convert it to actual UTC first, then format in BA timezone
+                  const utcDate = localDateToFullCalendar(eventDialogData.end);
+                  return formatInBuenosAires(utcDate, "PPpp", { locale: es });
+                })()
                 : (() => {
-                    try {
-                      const endDate =
-                        typeof selectedEvent.end === "string"
-                          ? parseISO(selectedEvent.end)
-                          : selectedEvent.end instanceof Date
+                  try {
+                    const endDate =
+                      typeof selectedEvent.end === "string"
+                        ? parseISO(selectedEvent.end)
+                        : selectedEvent.end instanceof Date
                           ? selectedEvent.end
                           : new Date(selectedEvent.end);
-                      // Convert to BA timezone for display
-                      return formatInBuenosAires(endDate, "PPpp", { locale: es });
-                    } catch (e) {
-                      console.error("Error formatting end date:", e, selectedEvent.end);
-                      return String(selectedEvent.end);
-                    }
-                  })()}
+                    // Convert to BA timezone for display
+                    return formatInBuenosAires(endDate, "PPpp", { locale: es });
+                  } catch (e) {
+                    console.error("Error formatting end date:", e, selectedEvent.end);
+                    return String(selectedEvent.end);
+                  }
+                })()}
             </Typography>
           </Box>
           {selectedEvent.extendedProps?.notes && (
@@ -242,8 +240,8 @@ export function EventDialogContent({
                     {selectedEvent.extendedProps.cancelledBy === "PATIENT"
                       ? "Paciente"
                       : selectedEvent.extendedProps.cancelledBy === "PROFESSIONAL"
-                      ? "Profesional"
-                      : "Administrador"}
+                        ? "Profesional"
+                        : "Administrador"}
                   </Typography>
                 )}
               </Box>
@@ -281,7 +279,7 @@ export function EventDialogContent({
             const newProfessionalId = e.target.value;
             const newProfessional = professionals.find(p => p.id === newProfessionalId);
             // If professional has specialties, auto-select the first one; otherwise clear specialty
-            const professionalSpecialtyIds = newProfessional?.specialtyIds || 
+            const professionalSpecialtyIds = newProfessional?.specialtyIds ||
               (newProfessional?.specialtyId ? [newProfessional.specialtyId] : []);
             const newSpecialtyId = professionalSpecialtyIds.length > 0 ? professionalSpecialtyIds[0] : "";
             onDataChange({

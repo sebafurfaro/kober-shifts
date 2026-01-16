@@ -6,6 +6,7 @@ import { Cancel as CancelIcon } from "@mui/icons-material";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { PanelHeader } from "../components/PanelHeader";
+import { useRouter } from "next/navigation";
 
 interface Appointment {
   id: string;
@@ -21,6 +22,7 @@ interface Appointment {
 }
 
 export default function PatientPanelPage() {
+  const router = useRouter();
   const [appointments, setAppointments] = React.useState<Appointment[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = React.useState(false);
@@ -56,7 +58,7 @@ export default function PatientPanelPage() {
 
   const handleCancelSubmit = async () => {
     if (!selectedAppointment) return;
-    
+
     if (!cancelReason || cancelReason.trim().length < 100) {
       setCancelError("El motivo de cancelación debe tener al menos 100 caracteres");
       return;
@@ -100,9 +102,19 @@ export default function PatientPanelPage() {
     return statusMap[status] || status;
   };
 
+  const handleCreate = () => {
+    router.push("/panel/patient/nuevo-turno");
+  };
+
   return (
-    <Container maxWidth="lg">
-      <PanelHeader title="Mis Turnos" subtitle="Gestiona tus turnos médicos" />
+    <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <PanelHeader
+        title="Mis Turnos"
+        subtitle="Gestiona tus turnos médicos"
+        action={{
+          label: "Nuevo Turno",
+          onClick: handleCreate,
+        }} />
       <Box sx={{ py: 4 }}>
         <TableContainer component={Paper}>
           <Table>

@@ -59,8 +59,24 @@ export interface ProfessionalProfile {
   isActive: boolean;
   googleCalendarId: string | null;
   color: string | null;
-  availableDays: number[] | null; // 0=Domingo, 1=Lunes, ..., 6=Sábado
-  availableHours: { start: string; end: string } | null; // Formato "HH:mm"
+  licenseNumber: string | null;
+  medicalCoverages: string[] | null;
+  availabilityConfig: {
+    days: {
+      [key: number]: { // 0-6
+        slots: Array<{
+          id: string;
+          startTime: string;
+          endTime: string;
+          fromDate: string;
+          toDate: string | null;
+          repeat: 'weekly' | 'biweekly' | 'monthly';
+        }>;
+      };
+    };
+  } | null;
+  availableDays: number[] | null; // Legacy 0=Domingo, 1=Lunes, ..., 6=Sábado
+  availableHours: { start: string; end: string } | null; // Legacy Formato "HH:mm"
   createdAt: Date;
   updatedAt: Date;
 }
@@ -94,3 +110,21 @@ export interface Appointment {
   updatedAt: Date;
 }
 
+export interface MedicalCoverage {
+  id: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MedicalPlan {
+  id: string;
+  coverageId: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MedicalCoverageWithPlans extends MedicalCoverage {
+  plans: MedicalPlan[];
+}

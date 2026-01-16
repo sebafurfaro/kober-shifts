@@ -1,5 +1,5 @@
 import mysql from './mysql';
-import type { User, Specialty, Location, ProfessionalProfile, GoogleOAuthToken, Appointment, Role, AppointmentStatus } from './types';
+import type { User, Specialty, Location, ProfessionalProfile, GoogleOAuthToken, Appointment, Role, AppointmentStatus, MedicalCoverage, MedicalPlan, MedicalCoverageWithPlans } from './types';
 
 // Helper para convertir filas de MySQL a objetos tipados
 function rowToUser(row: any): User {
@@ -73,6 +73,25 @@ function rowToProfessionalProfile(row: any): ProfessionalProfile {
     isActive: Boolean(row.isActive),
     googleCalendarId: row.googleCalendarId,
     color: (row.color && typeof row.color === 'string' && row.color.trim() !== '') ? row.color.trim() : null,
+    licenseNumber: row.licenseNumber || null,
+    medicalCoverages: (() => {
+      if (!row.medicalCoverages) return null;
+      try {
+        return typeof row.medicalCoverages === 'string' ? JSON.parse(row.medicalCoverages) : row.medicalCoverages;
+      } catch (e) {
+        console.error("Error parsing medicalCoverages:", e);
+        return null;
+      }
+    })(),
+    availabilityConfig: (() => {
+      if (!row.availabilityConfig) return null;
+      try {
+        return typeof row.availabilityConfig === 'string' ? JSON.parse(row.availabilityConfig) : row.availabilityConfig;
+      } catch (e) {
+        console.error("Error parsing availabilityConfig:", e);
+        return null;
+      }
+    })(),
     availableDays,
     availableHours,
     createdAt: row.createdAt,
@@ -118,6 +137,10 @@ export async function findUserById(id: string): Promise<User | null> {
   const [rows] = await mysql.execute('SELECT * FROM users WHERE id = ?', [id]);
   const result = rows as any[];
   return result.length > 0 ? rowToUser(result[0]) : null;
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  await mysql.execute('DELETE FROM users WHERE id = ?', [id]);
 }
 
 export async function findUserByEmail(email: string): Promise<User | null> {
@@ -473,6 +496,9 @@ export async function createProfessionalProfile(data: {
   isActive?: boolean;
   googleCalendarId?: string | null;
   color?: string | null;
+  licenseNumber?: string | null;
+  medicalCoverages?: string[] | null;
+  availabilityConfig?: ProfessionalProfile['availabilityConfig'];
   availableDays?: number[] | null;
   availableHours?: { start: string; end: string } | null;
 }): Promise<ProfessionalProfile> {
@@ -481,20 +507,34 @@ export async function createProfessionalProfile(data: {
 
   const availableDaysJson = data.availableDays ? JSON.stringify(data.availableDays) : null;
   const availableHoursJson = data.availableHours ? JSON.stringify(data.availableHours) : null;
+  const medicalCoveragesJson = data.medicalCoverages ? JSON.stringify(data.medicalCoverages) : null;
+  const availabilityConfigJson = data.availabilityConfig ? JSON.stringify(data.availabilityConfig) : null;
 
   await mysql.execute(
-    'INSERT INTO professional_profiles (userId, specialtyId, isActive, googleCalendarId, color, availableDays, availableHours) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [data.userId, primarySpecialtyId, data.isActive ?? true, data.googleCalendarId || null, data.color || null, availableDaysJson, availableHoursJson]
+    'INSERT INTO professional_profiles (userId, specialtyId, isActive, googleCalendarId, color, licenseNumber, medicalCoverages, availabilityConfig, availableDays, availableHours) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [
+      data.userId,
+      primarySpecialtyId,
+      data.isActive ?? true,
+      data.googleCalendarId || null,
+      data.color || null,
+      data.licenseNumber || null,
+      medicalCoveragesJson,
+      availabilityConfigJson,
+      availableDaysJson,
+      availableHoursJson
+    ]
   );
 
   // Add specialties to the many-to-many table
   const specialtyIds = data.specialtyIds || (data.specialtyId ? [data.specialtyId] : []);
   if (specialtyIds.length > 0) {
     try {
-      const values = specialtyIds.map(id => [data.userId, id]);
+      const placeholders = specialtyIds.map(() => '(?, ?)').join(', ');
+      const flattenedValues = specialtyIds.map(id => [data.userId, id]).flat();
       await mysql.execute(
-        'INSERT INTO professional_specialties (userId, specialtyId) VALUES ?',
-        [values]
+        `INSERT INTO professional_specialties (userId, specialtyId) VALUES ${placeholders}`,
+        flattenedValues
       );
     } catch (error: any) {
       // If table doesn't exist, continue (backward compatibility)
@@ -540,6 +580,18 @@ export async function updateProfessionalProfile(
     updates.push('availableHours = ?');
     values.push(data.availableHours ? JSON.stringify(data.availableHours) : null);
   }
+  if ((data as any).licenseNumber !== undefined) {
+    updates.push('licenseNumber = ?');
+    values.push((data as any).licenseNumber || null);
+  }
+  if ((data as any).medicalCoverages !== undefined) {
+    updates.push('medicalCoverages = ?');
+    values.push((data as any).medicalCoverages ? JSON.stringify((data as any).medicalCoverages) : null);
+  }
+  if ((data as any).availabilityConfig !== undefined) {
+    updates.push('availabilityConfig = ?');
+    values.push((data as any).availabilityConfig ? JSON.stringify((data as any).availabilityConfig) : null);
+  }
 
   // Update many-to-many specialties relationship if provided
   if (data.specialtyIds !== undefined) {
@@ -556,10 +608,11 @@ export async function updateProfessionalProfile(
     // Insert new specialties
     if (data.specialtyIds.length > 0) {
       try {
-        const specialtyValues = data.specialtyIds.map(id => [userId, id]);
+        const placeholders = data.specialtyIds.map(() => '(?, ?)').join(', ');
+        const flattenedValues = data.specialtyIds.map(id => [userId, id]).flat();
         await mysql.execute(
-          'INSERT INTO professional_specialties (userId, specialtyId) VALUES ?',
-          [specialtyValues]
+          `INSERT INTO professional_specialties (userId, specialtyId) VALUES ${placeholders}`,
+          flattenedValues
         );
       } catch (error: any) {
         // If table doesn't exist, continue (backward compatibility)
@@ -948,3 +1001,81 @@ export async function deleteAppointment(id: string): Promise<void> {
   await mysql.execute('DELETE FROM appointments WHERE id = ?', [id]);
 }
 
+
+// MedicalCoverage and MedicalPlan operations
+export async function findAllMedicalCoveragesWithPlans(): Promise<MedicalCoverageWithPlans[]> {
+  const [coverageRows] = await mysql.execute('SELECT * FROM medical_coverages ORDER BY name ASC');
+  const coverages = coverageRows as any[];
+
+  const results: MedicalCoverageWithPlans[] = [];
+
+  for (const coverage of coverages) {
+    const [planRows] = await mysql.execute('SELECT * FROM medical_plans WHERE coverageId = ? ORDER BY name ASC', [coverage.id]);
+    results.push({
+      ...coverage,
+      plans: planRows as MedicalPlan[]
+    });
+  }
+
+  return results;
+}
+
+export async function findMedicalCoverageById(id: string): Promise<MedicalCoverageWithPlans | null> {
+  const [rows] = await mysql.execute('SELECT * FROM medical_coverages WHERE id = ?', [id]);
+  const result = rows as any[];
+  if (result.length === 0) return null;
+
+  const coverage = result[0];
+  const [planRows] = await mysql.execute('SELECT * FROM medical_plans WHERE coverageId = ? ORDER BY name ASC', [id]);
+
+  return {
+    ...coverage,
+    plans: planRows as MedicalPlan[]
+  };
+}
+
+export async function createMedicalCoverage(data: { id: string, name: string, plans: { id: string, name: string }[] }): Promise<MedicalCoverageWithPlans> {
+  await mysql.execute('INSERT INTO medical_coverages (id, name) VALUES (?, ?)', [data.id, data.name]);
+
+  for (const plan of data.plans) {
+    await mysql.execute('INSERT INTO medical_plans (id, coverageId, name) VALUES (?, ?, ?)', [plan.id, data.id, plan.name]);
+  }
+
+  const result = await findMedicalCoverageById(data.id);
+  if (!result) throw new Error('Failed to create medical coverage');
+  return result;
+}
+
+export async function updateMedicalCoverage(id: string, name: string, plans: { id?: string, name: string }[]): Promise<MedicalCoverageWithPlans> {
+  await mysql.execute('UPDATE medical_coverages SET name = ? WHERE id = ?', [name, id]);
+
+  // Simple approach: get existing plans, compare and update/delete/insert
+  const [existingPlanRows] = await mysql.execute('SELECT id FROM medical_plans WHERE coverageId = ?', [id]);
+  const existingPlanIds = (existingPlanRows as any[]).map(row => row.id);
+
+  const currentPlanIds = plans.map(p => p.id).filter(Boolean) as string[];
+
+  // Delete plans not in the new list
+  const toDelete = existingPlanIds.filter(id => !currentPlanIds.includes(id));
+  if (toDelete.length > 0) {
+    await mysql.execute(`DELETE FROM medical_plans WHERE id IN (${toDelete.map(() => '?').join(',')})`, toDelete);
+  }
+
+  // Update or insert plans
+  for (const plan of plans) {
+    if (plan.id && existingPlanIds.includes(plan.id)) {
+      await mysql.execute('UPDATE medical_plans SET name = ? WHERE id = ?', [plan.name, plan.id]);
+    } else {
+      const newPlanId = plan.id || crypto.randomUUID();
+      await mysql.execute('INSERT INTO medical_plans (id, coverageId, name) VALUES (?, ?, ?)', [newPlanId, id, plan.name]);
+    }
+  }
+
+  const result = await findMedicalCoverageById(id);
+  if (!result) throw new Error('Failed to update medical coverage');
+  return result;
+}
+
+export async function deleteMedicalCoverage(id: string): Promise<void> {
+  await mysql.execute('DELETE FROM medical_coverages WHERE id = ?', [id]);
+}

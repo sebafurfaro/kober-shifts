@@ -1,22 +1,65 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Box, Button, Container, IconButton, InputAdornment, Stack, TextField, Typography } from "@mui/material";
 import { useRouter } from "next/navigation";
-import { Visibility, VisibilityOff } from "@mui/icons-material";
+import { Visibility, VisibilityOff, Google, CheckCircle, Cancel } from "@mui/icons-material";
+import { useSession } from "next-auth/react";
+
+function ValidationItem({ isValid, text }: { isValid: boolean; text: string }) {
+  return (
+    <Stack direction="row" spacing={1} alignItems="center">
+      {isValid ? (
+        <CheckCircle color="success" sx={{ fontSize: 16 }} />
+      ) : (
+        <Cancel color="action" sx={{ fontSize: 16, opacity: 0.5 }} />
+      )}
+      <Typography
+        variant="caption"
+        color={isValid ? "success.main" : "text.secondary"}
+        sx={{ transition: "color 0.2s" }}
+      >
+        {text}
+      </Typography>
+    </Stack>
+  );
+}
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isPasswordTouched, setIsPasswordTouched] = useState(false);
+
+  const validations = useMemo(() => {
+    return {
+      minLength: password.length >= 8,
+      hasUpperCase: /[A-Z]/.test(password),
+      hasNumber: /[0-9]/.test(password),
+      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+    };
+  }, [password]);
+
+  useEffect(() => {
+    if (session?.user) {
+      if (session.user.name) setName(session.user.name);
+      if (session.user.email) setEmail(session.user.email);
+    }
+  }, [session]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!Object.values(validations).every(Boolean)) {
+      setError("La contraseña no cumple con los requisitos de seguridad.");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
@@ -56,14 +99,15 @@ export default function RegisterPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
+            disabled={!!session?.user?.email}
           />
           <TextField
             label="Contraseña"
-            type="password"
+            type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
-            helperText="Mínimo 6 caracteres"
+            error={isPasswordTouched && !Object.values(validations).every(Boolean)}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -72,19 +116,35 @@ export default function RegisterPage() {
                     onClick={handleShowPassword}
                     onMouseDown={handleMouseDownPassword}
                     onMouseUp={handleMouseUpPassword}
+                    edge="end"
                   >
                     {showPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
                 </InputAdornment>
               ),
             }}
+            onBlur={() => setIsPasswordTouched(true)}
           />
+
+          {/* Password Requirements */}
+          <Box sx={{ mt: 1, p: 1, bgcolor: 'background.paper', borderRadius: 1 }}>
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>
+              Requisitos de la contraseña:
+            </Typography>
+            <Stack spacing={0.5}>
+              <ValidationItem isValid={validations.minLength} text="Mínimo 8 caracteres" />
+              <ValidationItem isValid={validations.hasUpperCase} text="Al menos una mayúscula" />
+              <ValidationItem isValid={validations.hasNumber} text="Al menos un número" />
+              <ValidationItem isValid={validations.hasSpecialChar} text="Al menos un carácter especial (@$!%*?&)" />
+            </Stack>
+          </Box>
+
           {error ? (
             <Typography color="error" variant="body2">
               {error}
             </Typography>
           ) : null}
-          <Button type="submit" variant="contained" disabled={loading}>
+          <Button type="submit" variant="contained" disabled={loading || (isPasswordTouched && !Object.values(validations).every(Boolean))}>
             Registrarme
           </Button>
 
@@ -96,9 +156,19 @@ export default function RegisterPage() {
 
           <Button
             variant="outlined"
+            startIcon={<Google />}
             onClick={() => import("next-auth/react").then(({ signIn }) => signIn("google"))}
             disabled={loading}
             fullWidth
+            sx={{
+              textTransform: "none",
+              borderColor: "#ddd",
+              color: "#555",
+              "&:hover": {
+                borderColor: "#ccc",
+                backgroundColor: "#f5f5f5",
+              },
+            }}
           >
             Registrarse con Google
           </Button>
