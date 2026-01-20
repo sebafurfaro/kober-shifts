@@ -9,7 +9,11 @@ export async function GET() {
     return NextResponse.json({ error: "Only professionals can link Google" }, { status: 403 });
   }
 
-  const url = getGoogleAuthUrl(session.userId);
+  // Encode both userId and tenantId into state
+  const stateObj = { userId: session.userId, tenantId: session.tenantId };
+  const state = Buffer.from(JSON.stringify(stateObj)).toString("base64");
+
+  const url = getGoogleAuthUrl(state);
   return NextResponse.redirect(url);
 }
 

@@ -6,22 +6,40 @@ import { randomUUID } from "crypto";
 
 export async function GET(req: Request) {
   const session = await getSession();
-  if (!session) return NextResponse.redirect(new URL("/login", req.url));
 
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
-  const state = url.searchParams.get("state"); // userId we sent
+  const state = url.searchParams.get("state");
 
-  if (!code || !state || state !== session.userId) {
-    return NextResponse.redirect(new URL("/panel", req.url));
+  let stateUserId = "";
+  let stateTenantId = "";
+
+  if (state) {
+    try {
+      const decodedState = JSON.parse(Buffer.from(state, "base64").toString());
+      stateUserId = decodedState.userId || "";
+      stateTenantId = decodedState.tenantId || "";
+    } catch (e) {
+      console.error("Failed to decode state:", e);
+    }
+  }
+
+  if (!session) {
+    const loginUrl = stateTenantId ? `/plataforma/${stateTenantId}/login` : "/login";
+    return NextResponse.redirect(new URL(loginUrl, req.url));
+  }
+
+  if (!code || !state || stateUserId !== session.userId || stateTenantId !== session.tenantId) {
+    return NextResponse.redirect(new URL(`/plataforma/${session.tenantId}/panel`, req.url));
   }
 
   try {
     const tokens = await exchangeCodeForTokens(code);
-    const existing = await findGoogleOAuthTokenByUserId(session.userId);
+    const existing = await findGoogleOAuthTokenByUserId(session.userId, session.tenantId);
 
     await upsertGoogleOAuthToken({
       id: existing?.id || randomUUID(),
+      tenantId: session.tenantId,
       userId: session.userId,
       accessToken: tokens.access_token!,
       refreshToken: tokens.refresh_token!,
@@ -29,11 +47,11 @@ export async function GET(req: Request) {
       tokenType: tokens.token_type ?? null,
       expiryDate: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
     });
-  } catch {
-    // keep it simple for v1
+  } catch (error) {
+    console.error("Error exchanging code for tokens:", error);
   }
 
-  return NextResponse.redirect(new URL("/panel/professional", req.url));
+  return NextResponse.redirect(new URL(`/plataforma/${session.tenantId}/panel/professional`, req.url));
 }
 
 

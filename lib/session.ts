@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 
 export const SESSION_COOKIE = "ks_session";
 
-export async function getSession(): Promise<{ userId: string; role: Role } | null> {
+export async function getSession(): Promise<{ userId: string; tenantId: string; role: Role } | null> {
   // Next.js 16: cookies() can be async depending on runtime.
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
@@ -21,8 +21,8 @@ export function getSessionCookieOptions() {
   };
 }
 
-export function createSessionCookieValue(input: { userId: string; role: Role }) {
-  return createSessionToken({ userId: input.userId, role: input.role });
+export function createSessionCookieValue(input: { userId: string; tenantId: string; role: Role }) {
+  return createSessionToken({ userId: input.userId, tenantId: input.tenantId, role: input.role });
 }
 
 

@@ -5,6 +5,9 @@ export const theme = createTheme({
     mode: "light",
     primary: { main: "#1976d2" },
   },
+  typography: {
+    fontFamily: "var(--font-open-sans), sans-serif",
+  },
 });
 
 

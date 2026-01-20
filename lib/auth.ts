@@ -8,6 +8,7 @@ if (!SECRET) throw new Error("Missing AUTH_SECRET");
 
 export type SessionPayload = {
   userId: string;
+  tenantId: string;
   role: Role;
 };
 
@@ -20,7 +21,7 @@ function base64url(input: Buffer) {
 }
 
 function sign(data: string) {
-  return base64url(crypto.createHmac("sha256", SECRET).update(data).digest());
+  return base64url(crypto.createHmac("sha256", SECRET as string).update(data).digest());
 }
 
 export function createSessionToken(payload: SessionPayload): string {
@@ -37,7 +38,7 @@ export function verifySessionToken(token: string): SessionPayload | null {
 
   try {
     const parsed = JSON.parse(Buffer.from(body, "base64").toString("utf8")) as SessionPayload;
-    if (!parsed?.userId || !parsed?.role) return null;
+    if (!parsed?.userId || !parsed?.role || !parsed?.tenantId) return null;
     return parsed;
   } catch {
     return null;

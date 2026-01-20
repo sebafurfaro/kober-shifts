@@ -3,7 +3,7 @@ import { MongoClient } from "mongodb";
 const uri =
   process.env.MONGODB_URI ??
   (process.env.NODE_ENV !== "production"
-    ? "mongodb://root:root@127.0.0.1:27018/kober_shifts?authSource=admin"
+    ? "mongodb://127.0.0.1:27020/kober_shifts"
     : undefined);
 if (!uri) throw new Error("Missing MONGODB_URI");
 

@@ -1,0 +1,227 @@
+"use client";
+
+import * as React from "react";
+import { Container, Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, Divider } from "@mui/material";
+import { Cancel as CancelIcon } from "@mui/icons-material";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { PanelHeader } from "../components/PanelHeader";
+import { useParams } from "next/navigation";
+
+interface Appointment {
+  id: string;
+  patientName: string;
+  patientEmail: string;
+  locationName: string;
+  specialtyName: string;
+  startAt: string;
+  endAt: string;
+  status: string;
+  cancellationReason: string | null;
+  cancelledBy: string | null;
+  notes: string | null;
+}
+
+export default function ProfessionalPanelPage() {
+  const params = useParams();
+  const tenantId = params.tenantId as string;
+  const [todayAppointments, setTodayAppointments] = React.useState<Appointment[]>([]);
+  const [upcomingAppointments, setUpcomingAppointments] = React.useState<Appointment[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [cancelDialogOpen, setCancelDialogOpen] = React.useState(false);
+  const [selectedAppointment, setSelectedAppointment] = React.useState<Appointment | null>(null);
+  const [cancelReason, setCancelReason] = React.useState("");
+  const [cancelError, setCancelError] = React.useState<string | null>(null);
+  const [cancelLoading, setCancelLoading] = React.useState(false);
+
+  const loadAppointments = React.useCallback(async () => {
+    try {
+      const res = await fetch(`/api/plataforma/${tenantId}/appointments/professional`);
+      if (!res.ok) throw new Error("Failed to load appointments");
+      const data = await res.json();
+      setTodayAppointments(Array.isArray(data.today) ? data.today : []);
+      setUpcomingAppointments(Array.isArray(data.upcoming) ? data.upcoming : []);
+    } catch (error) {
+      console.error("Error loading appointments:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [tenantId]);
+
+  React.useEffect(() => {
+    loadAppointments();
+  }, [loadAppointments]);
+
+  const handleCancelClick = (appointment: Appointment) => {
+    if (appointment.status === "CANCELLED") return;
+    setSelectedAppointment(appointment);
+    setCancelReason("");
+    setCancelError(null);
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancelSubmit = async () => {
+    if (!selectedAppointment) return;
+
+    setCancelLoading(true);
+    setCancelError(null);
+    try {
+      const res = await fetch(`/api/plataforma/${tenantId}/appointments/${selectedAppointment.id}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: cancelReason.trim() || null }),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.error || "Error al cancelar el turno");
+      }
+      setCancelDialogOpen(false);
+      await loadAppointments();
+    } catch (error: any) {
+      setCancelError(error?.message || "Error al cancelar el turno");
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  const getStatusLabel = (status: string, cancelledBy: string | null) => {
+    if (status === "CANCELLED") {
+      if (cancelledBy === "PATIENT") {
+        return "Paciente cancela";
+      } else if (cancelledBy === "PROFESSIONAL") {
+        return "Cancelado por ti";
+      } else if (cancelledBy === "ADMIN") {
+        return "Cancelado";
+      }
+      return "Cancelado";
+    }
+    const statusMap: Record<string, string> = {
+      REQUESTED: "Solicitado",
+      CONFIRMED: "Confirmado",
+      ATTENDED: "Atendido",
+    };
+    return statusMap[status] || status;
+  };
+
+  const renderTable = (appointments: Appointment[], title: string) => (
+    <Box sx={{ my: 4 }}>
+      <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
+        {title}
+      </Typography>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Paciente</TableCell>
+              <TableCell>Sede</TableCell>
+              <TableCell>Fecha</TableCell>
+              <TableCell>Hora</TableCell>
+              <TableCell>Estado</TableCell>
+              <TableCell align="right">Acciones</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center">
+                  Cargando...
+                </TableCell>
+              </TableRow>
+            ) : appointments.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center">
+                  No hay turnos
+                </TableCell>
+              </TableRow>
+            ) : (
+              appointments.map((appointment) => (
+                <TableRow key={appointment.id}>
+                  <TableCell>
+                    <Typography>{appointment.patientName}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {appointment.patientEmail}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>{appointment.locationName}</TableCell>
+                  <TableCell>
+                    {format(new Date(appointment.startAt), "PPP", { locale: es })}
+                  </TableCell>
+                  <TableCell>
+                    {format(new Date(appointment.startAt), "HH:mm")} - {format(new Date(appointment.endAt), "HH:mm")}
+                  </TableCell>
+                  <TableCell>{getStatusLabel(appointment.status, appointment.cancelledBy)}</TableCell>
+                  <TableCell align="right">
+                    {appointment.status !== "CANCELLED" && (
+                      <Button
+                        size="small"
+                        color="error"
+                        startIcon={<CancelIcon />}
+                        onClick={() => handleCancelClick(appointment)}
+                      >
+                        Cancelar
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
+
+  return (
+    <Container maxWidth="lg">
+      <PanelHeader title="Mis Turnos" subtitle="Gestiona tus turnos" />
+      <Box sx={{ py: 4 }}>
+        {renderTable(todayAppointments, "Turnos de Hoy")}
+        <Divider sx={{ my: 4 }} />
+        {renderTable(upcomingAppointments, "Próximos Turnos")}
+
+        {/* Cancel Dialog */}
+        <Dialog open={cancelDialogOpen} onClose={() => setCancelDialogOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Cancelar Turno</DialogTitle>
+          <DialogContent>
+            <Box sx={{ pt: 2 }}>
+              {cancelError && (
+                <Alert severity="error" sx={{ mb: 2 }} onClose={() => setCancelError(null)}>
+                  {cancelError}
+                </Alert>
+              )}
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Puedes indicar un motivo de cancelación (opcional):
+              </Typography>
+              <TextField
+                label="Motivo de cancelación (opcional)"
+                multiline
+                rows={4}
+                fullWidth
+                value={cancelReason}
+                onChange={(e) => {
+                  setCancelReason(e.target.value);
+                  setCancelError(null);
+                }}
+                error={!!cancelError}
+                helperText="El motivo es opcional para profesionales"
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCancelDialogOpen(false)} disabled={cancelLoading}>
+              Cerrar
+            </Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleCancelSubmit}
+              disabled={cancelLoading}
+            >
+              {cancelLoading ? "Cancelando..." : "Confirmar Cancelación"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
+    </Container>
+  );
+}

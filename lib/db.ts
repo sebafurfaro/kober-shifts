@@ -1,10 +1,11 @@
 import mysql from './mysql';
-import type { User, Specialty, Location, ProfessionalProfile, GoogleOAuthToken, Appointment, Role, AppointmentStatus, MedicalCoverage, MedicalPlan, MedicalCoverageWithPlans } from './types';
+import type { User, Specialty, Location, ProfessionalProfile, GoogleOAuthToken, Appointment, Role, AppointmentStatus, MedicalCoverage, MedicalPlan, MedicalCoverageWithPlans, Tenant } from './types';
 
 // Helper para convertir filas de MySQL a objetos tipados
 function rowToUser(row: any): User {
   return {
     id: row.id,
+    tenantId: row.tenantId,
     email: row.email,
     name: row.name,
     firstName: row.firstName || null,
@@ -15,6 +16,7 @@ function rowToUser(row: any): User {
     admissionDate: row.admissionDate || null,
     gender: row.gender || null,
     nationality: row.nationality || null,
+    googleId: row.googleId || null,
     passwordHash: row.passwordHash,
     role: row.role as Role,
     createdAt: row.createdAt,
@@ -25,6 +27,7 @@ function rowToUser(row: any): User {
 function rowToSpecialty(row: any): Specialty {
   return {
     id: row.id,
+    tenantId: row.tenantId,
     name: row.name,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -34,6 +37,7 @@ function rowToSpecialty(row: any): Specialty {
 function rowToLocation(row: any): Location {
   return {
     id: row.id,
+    tenantId: row.tenantId,
     name: row.name,
     address: row.address,
     phone: row.phone,
@@ -69,6 +73,7 @@ function rowToProfessionalProfile(row: any): ProfessionalProfile {
 
   return {
     userId: row.userId,
+    tenantId: row.tenantId,
     specialtyId: row.specialtyId,
     isActive: Boolean(row.isActive),
     googleCalendarId: row.googleCalendarId,
@@ -86,7 +91,21 @@ function rowToProfessionalProfile(row: any): ProfessionalProfile {
     availabilityConfig: (() => {
       if (!row.availabilityConfig) return null;
       try {
-        return typeof row.availabilityConfig === 'string' ? JSON.parse(row.availabilityConfig) : row.availabilityConfig;
+        const parsed = typeof row.availabilityConfig === 'string' ? JSON.parse(row.availabilityConfig) : row.availabilityConfig;
+        if (!parsed || typeof parsed !== 'object' || !parsed.days) return null;
+        
+        // Normalize day keys to numbers (JSON parsing may convert them to strings)
+        const normalizedDays: { [key: number]: any } = {};
+        for (const key in parsed.days) {
+          const numKey = Number(key);
+          if (!isNaN(numKey) && numKey >= 0 && numKey <= 6) {
+            normalizedDays[numKey] = parsed.days[key];
+          }
+        }
+        
+        return {
+          days: normalizedDays
+        };
       } catch (e) {
         console.error("Error parsing availabilityConfig:", e);
         return null;
@@ -102,6 +121,7 @@ function rowToProfessionalProfile(row: any): ProfessionalProfile {
 function rowToGoogleOAuthToken(row: any): GoogleOAuthToken {
   return {
     id: row.id,
+    tenantId: row.tenantId,
     userId: row.userId,
     accessToken: row.accessToken,
     refreshToken: row.refreshToken,
@@ -116,6 +136,7 @@ function rowToGoogleOAuthToken(row: any): GoogleOAuthToken {
 function rowToAppointment(row: any): Appointment {
   return {
     id: row.id,
+    tenantId: row.tenantId,
     status: row.status as AppointmentStatus,
     startAt: row.startAt,
     endAt: row.endAt,
@@ -133,18 +154,37 @@ function rowToAppointment(row: any): Appointment {
 }
 
 // User operations
-export async function findUserById(id: string): Promise<User | null> {
-  const [rows] = await mysql.execute('SELECT * FROM users WHERE id = ?', [id]);
+export async function findUserById(id: string, tenantId?: string): Promise<User | null> {
+  let query = 'SELECT * FROM users WHERE id = ?';
+  const params = [id];
+  if (tenantId) {
+    query += ' AND tenantId = ?';
+    params.push(tenantId);
+  }
+  const [rows] = await mysql.execute(query, params);
   const result = rows as any[];
   return result.length > 0 ? rowToUser(result[0]) : null;
 }
 
-export async function deleteUser(id: string): Promise<void> {
-  await mysql.execute('DELETE FROM users WHERE id = ?', [id]);
+export async function deleteUser(id: string, tenantId: string): Promise<void> {
+  await mysql.execute('DELETE FROM users WHERE id = ? AND tenantId = ?', [id, tenantId]);
 }
 
-export async function findUserByEmail(email: string): Promise<User | null> {
-  const [rows] = await mysql.execute('SELECT * FROM users WHERE email = ?', [email]);
+export async function findUserByEmail(email: string, tenantId: string): Promise<User | null> {
+  const [rows] = await mysql.execute('SELECT * FROM users WHERE email = ? AND tenantId = ?', [email, tenantId]);
+  const result = rows as any[];
+  return result.length > 0 ? rowToUser(result[0]) : null;
+}
+
+// Find user by email across all tenants (for store authentication)
+export async function findUserByEmailAnyTenant(email: string): Promise<User | null> {
+  const [rows] = await mysql.execute('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
+  const result = rows as any[];
+  return result.length > 0 ? rowToUser(result[0]) : null;
+}
+
+export async function findUserByGoogleId(googleId: string, tenantId: string): Promise<User | null> {
+  const [rows] = await mysql.execute('SELECT * FROM users WHERE googleId = ? AND tenantId = ?', [googleId, tenantId]);
   const result = rows as any[];
   return result.length > 0 ? rowToUser(result[0]) : null;
 }
@@ -161,13 +201,16 @@ export async function createUser(data: {
   admissionDate?: Date | null;
   gender?: string | null;
   nationality?: string | null;
+  googleId?: string | null;
   passwordHash: string;
   role: Role;
+  tenantId: string;
 }): Promise<User> {
   await mysql.execute(
-    'INSERT INTO users (id, email, name, firstName, lastName, phone, address, dateOfBirth, admissionDate, gender, nationality, passwordHash, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO users (id, tenantId, email, name, firstName, lastName, phone, address, dateOfBirth, admissionDate, gender, nationality, googleId, passwordHash, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     [
       data.id,
+      data.tenantId,
       data.email,
       data.name,
       data.firstName || null,
@@ -178,18 +221,20 @@ export async function createUser(data: {
       data.admissionDate || null,
       data.gender || null,
       data.nationality || null,
+      data.googleId || null,
       data.passwordHash,
       data.role,
     ]
   );
-  const user = await findUserById(data.id);
+  const user = await findUserById(data.id, data.tenantId);
   if (!user) throw new Error('Failed to create user');
   return user;
 }
 
 export async function updateUser(
   id: string,
-  data: Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'email' | 'phone' | 'address' | 'dateOfBirth' | 'admissionDate' | 'gender' | 'nationality' | 'passwordHash' | 'role'>>
+  tenantId: string,
+  data: Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'email' | 'phone' | 'address' | 'dateOfBirth' | 'admissionDate' | 'gender' | 'nationality' | 'googleId' | 'passwordHash' | 'role'>>
 ): Promise<User> {
   const updates: string[] = [];
   const values: any[] = [];
@@ -242,22 +287,30 @@ export async function updateUser(
     updates.push('role = ?');
     values.push(data.role);
   }
+  if (data.googleId !== undefined) {
+    updates.push('googleId = ?');
+    values.push(data.googleId);
+  }
 
   if (updates.length === 0) {
-    const user = await findUserById(id);
+    const user = await findUserById(id, tenantId);
     if (!user) throw new Error('User not found');
     return user;
   }
 
-  values.push(id);
-  await mysql.execute(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, values);
-  const user = await findUserById(id);
+  values.push(id, tenantId);
+  await mysql.execute(`UPDATE users SET ${updates.join(', ')} WHERE id = ? AND tenantId = ?`, values);
+  const user = await findUserById(id, tenantId);
   if (!user) throw new Error('Failed to update user');
   return user;
 }
 
-export async function findUsersByRole(role: Role): Promise<User[]> {
-  const [rows] = await mysql.execute('SELECT * FROM users WHERE role = ?', [role]);
+export async function linkGoogleAccount(userId: string, tenantId: string, googleId: string): Promise<void> {
+  await mysql.execute('UPDATE users SET googleId = ? WHERE id = ? AND tenantId = ?', [googleId, userId, tenantId]);
+}
+
+export async function findUsersByRole(role: Role, tenantId: string): Promise<User[]> {
+  const [rows] = await mysql.execute('SELECT * FROM users WHERE role = ? AND tenantId = ?', [role, tenantId]);
   return (rows as any[]).map(rowToUser);
 }
 
@@ -266,12 +319,13 @@ export async function findAllUsers(): Promise<User[]> {
   return (rows as any[]).map(rowToUser);
 }
 
-export async function findUsersWithProfessionalProfile(): Promise<(User & { professional: (ProfessionalProfile & { specialty: Specialty | null; specialties: Specialty[] }) | null })[]> {
+export async function findUsersWithProfessionalProfile(tenantId: string): Promise<(User & { professional: (ProfessionalProfile & { specialty: Specialty | null; specialties: Specialty[] }) | null })[]> {
   // First get all professionals with their profiles
   const [profileRows] = await mysql.execute(
     `SELECT 
       u.*,
       pp.userId as pp_userId,
+      pp.tenantId as pp_tenantId,
       pp.specialtyId as pp_specialtyId,
       pp.isActive as pp_isActive,
       pp.googleCalendarId as pp_googleCalendarId,
@@ -281,9 +335,10 @@ export async function findUsersWithProfessionalProfile(): Promise<(User & { prof
       pp.createdAt as pp_createdAt,
       pp.updatedAt as pp_updatedAt
     FROM users u
-    LEFT JOIN professional_profiles pp ON u.id = pp.userId
-    WHERE u.role = 'PROFESSIONAL'
-    ORDER BY u.createdAt DESC`
+    LEFT JOIN professional_profiles pp ON u.id = pp.userId AND u.tenantId = pp.tenantId
+    WHERE u.role = 'PROFESSIONAL' AND u.tenantId = ?
+    ORDER BY u.createdAt DESC`,
+    [tenantId]
   );
 
   // Then get all specialties for each professional from the many-to-many table
@@ -294,12 +349,15 @@ export async function findUsersWithProfessionalProfile(): Promise<(User & { prof
       `SELECT 
         ps.userId,
         s.id as s_id,
+        s.tenantId as s_tenantId,
         s.name as s_name,
         s.createdAt as s_createdAt,
         s.updatedAt as s_updatedAt
       FROM professional_specialties ps
       INNER JOIN specialties s ON ps.specialtyId = s.id
-      ORDER BY ps.userId, s.name`
+      WHERE s.tenantId = ?
+      ORDER BY ps.userId, s.name`,
+      [tenantId]
     );
     specialtyRows = rows as any[];
   } catch (error: any) {
@@ -321,6 +379,7 @@ export async function findUsersWithProfessionalProfile(): Promise<(User & { prof
     }
     specialtiesByUser.get(row.userId)!.push(rowToSpecialty({
       id: row.s_id,
+      tenantId: row.s_tenantId,
       name: row.s_name,
       createdAt: row.s_createdAt,
       updatedAt: row.s_updatedAt,
@@ -340,6 +399,7 @@ export async function findUsersWithProfessionalProfile(): Promise<(User & { prof
         professional: row.pp_userId ? {
           ...rowToProfessionalProfile({
             userId: row.pp_userId,
+            tenantId: row.pp_tenantId,
             specialtyId: row.pp_specialtyId || (primarySpecialty?.id || ''),
             isActive: row.pp_isActive,
             googleCalendarId: row.pp_googleCalendarId,
@@ -360,22 +420,22 @@ export async function findUsersWithProfessionalProfile(): Promise<(User & { prof
 }
 
 // Specialty operations
-export async function findSpecialtyById(id: string): Promise<Specialty | null> {
-  const [rows] = await mysql.execute('SELECT * FROM specialties WHERE id = ?', [id]);
+export async function findSpecialtyById(id: string, tenantId: string): Promise<Specialty | null> {
+  const [rows] = await mysql.execute('SELECT * FROM specialties WHERE id = ? AND tenantId = ?', [id, tenantId]);
   const result = rows as any[];
   return result.length > 0 ? rowToSpecialty(result[0]) : null;
 }
 
-export async function deleteSpecialty(id: string): Promise<void> {
-  await mysql.execute('DELETE FROM specialties WHERE id = ?', [id]);
+export async function deleteSpecialty(id: string, tenantId: string): Promise<void> {
+  await mysql.execute('DELETE FROM specialties WHERE id = ? AND tenantId = ?', [id, tenantId]);
 }
 
-export async function findAllSpecialties(): Promise<Specialty[]> {
-  const [rows] = await mysql.execute('SELECT * FROM specialties ORDER BY name ASC');
+export async function findAllSpecialties(tenantId: string): Promise<Specialty[]> {
+  const [rows] = await mysql.execute('SELECT * FROM specialties WHERE tenantId = ? ORDER BY name ASC', [tenantId]);
   return (rows as any[]).map(rowToSpecialty);
 }
 
-export async function updateSpecialty(id: string, data: Partial<Pick<Specialty, 'name'>>): Promise<Specialty> {
+export async function updateSpecialty(id: string, tenantId: string, data: Partial<Pick<Specialty, 'name'>>): Promise<Specialty> {
   const updates: string[] = [];
   const values: any[] = [];
 
@@ -385,48 +445,49 @@ export async function updateSpecialty(id: string, data: Partial<Pick<Specialty, 
   }
 
   if (updates.length === 0) {
-    const specialty = await findSpecialtyById(id);
+    const specialty = await findSpecialtyById(id, tenantId);
     if (!specialty) throw new Error('Specialty not found');
     return specialty;
   }
 
-  values.push(id);
-  await mysql.execute(`UPDATE specialties SET ${updates.join(', ')} WHERE id = ?`, values);
-  const specialty = await findSpecialtyById(id);
+  values.push(id, tenantId);
+  await mysql.execute(`UPDATE specialties SET ${updates.join(', ')} WHERE id = ? AND tenantId = ?`, values);
+  const specialty = await findSpecialtyById(id, tenantId);
   if (!specialty) throw new Error('Failed to update specialty');
   return specialty;
 }
 
-export async function countProfessionalsBySpecialty(specialtyId: string): Promise<number> {
+export async function countProfessionalsBySpecialty(specialtyId: string, tenantId: string): Promise<number> {
   const [rows] = await mysql.execute(
-    'SELECT COUNT(*) as count FROM professional_profiles WHERE specialtyId = ?',
-    [specialtyId]
+    'SELECT COUNT(*) as count FROM professional_profiles WHERE specialtyId = ? AND tenantId = ?',
+    [specialtyId, tenantId]
   );
   const result = rows as any[];
   return result.length > 0 ? Number(result[0].count) : 0;
 }
 
-export async function createSpecialty(data: { id: string; name: string }): Promise<Specialty> {
-  await mysql.execute('INSERT INTO specialties (id, name) VALUES (?, ?)', [data.id, data.name]);
-  const specialty = await findSpecialtyById(data.id);
+export async function createSpecialty(data: { id: string; tenantId: string; name: string }): Promise<Specialty> {
+  await mysql.execute('INSERT INTO specialties (id, tenantId, name) VALUES (?, ?, ?)', [data.id, data.tenantId, data.name]);
+  const specialty = await findSpecialtyById(data.id, data.tenantId);
   if (!specialty) throw new Error('Failed to create specialty');
   return specialty;
 }
 
 // Location operations
-export async function findLocationById(id: string): Promise<Location | null> {
-  const [rows] = await mysql.execute('SELECT * FROM locations WHERE id = ?', [id]);
+export async function findLocationById(id: string, tenantId: string): Promise<Location | null> {
+  const [rows] = await mysql.execute('SELECT * FROM locations WHERE id = ? AND tenantId = ?', [id, tenantId]);
   const result = rows as any[];
   return result.length > 0 ? rowToLocation(result[0]) : null;
 }
 
-export async function findAllLocations(): Promise<Location[]> {
-  const [rows] = await mysql.execute('SELECT * FROM locations ORDER BY createdAt DESC');
+export async function findAllLocations(tenantId: string): Promise<Location[]> {
+  const [rows] = await mysql.execute('SELECT * FROM locations WHERE tenantId = ? ORDER BY createdAt DESC', [tenantId]);
   return (rows as any[]).map(rowToLocation);
 }
 
 export async function updateLocation(
   id: string,
+  tenantId: string,
   data: Partial<Pick<Location, 'name' | 'address' | 'phone'>>
 ): Promise<Location> {
   const updates: string[] = [];
@@ -446,22 +507,22 @@ export async function updateLocation(
   }
 
   if (updates.length === 0) {
-    const location = await findLocationById(id);
+    const location = await findLocationById(id, tenantId);
     if (!location) throw new Error('Location not found');
     return location;
   }
 
-  values.push(id);
-  await mysql.execute(`UPDATE locations SET ${updates.join(', ')} WHERE id = ?`, values);
-  const location = await findLocationById(id);
+  values.push(id, tenantId);
+  await mysql.execute(`UPDATE locations SET ${updates.join(', ')} WHERE id = ? AND tenantId = ?`, values);
+  const location = await findLocationById(id, tenantId);
   if (!location) throw new Error('Failed to update location');
   return location;
 }
 
-export async function countAppointmentsByLocation(locationId: string): Promise<number> {
+export async function countAppointmentsByLocation(locationId: string, tenantId: string): Promise<number> {
   const [rows] = await mysql.execute(
-    'SELECT COUNT(*) as count FROM appointments WHERE locationId = ?',
-    [locationId]
+    'SELECT COUNT(*) as count FROM appointments WHERE locationId = ? AND tenantId = ?',
+    [locationId, tenantId]
   );
   const result = rows as any[];
   return result.length > 0 ? Number(result[0].count) : 0;
@@ -469,28 +530,30 @@ export async function countAppointmentsByLocation(locationId: string): Promise<n
 
 export async function createLocation(data: {
   id: string;
+  tenantId: string;
   name: string;
   address: string;
   phone?: string | null;
 }): Promise<Location> {
   await mysql.execute(
-    'INSERT INTO locations (id, name, address, phone) VALUES (?, ?, ?, ?)',
-    [data.id, data.name, data.address, data.phone || null]
+    'INSERT INTO locations (id, tenantId, name, address, phone) VALUES (?, ?, ?, ?, ?)',
+    [data.id, data.tenantId, data.name, data.address, data.phone || null]
   );
-  const location = await findLocationById(data.id);
+  const location = await findLocationById(data.id, data.tenantId);
   if (!location) throw new Error('Failed to create location');
   return location;
 }
 
 // ProfessionalProfile operations
-export async function findProfessionalProfileByUserId(userId: string): Promise<ProfessionalProfile | null> {
-  const [rows] = await mysql.execute('SELECT * FROM professional_profiles WHERE userId = ?', [userId]);
+export async function findProfessionalProfileByUserId(userId: string, tenantId: string): Promise<ProfessionalProfile | null> {
+  const [rows] = await mysql.execute('SELECT * FROM professional_profiles WHERE userId = ? AND tenantId = ?', [userId, tenantId]);
   const result = rows as any[];
   return result.length > 0 ? rowToProfessionalProfile(result[0]) : null;
 }
 
 export async function createProfessionalProfile(data: {
   userId: string;
+  tenantId: string;
   specialtyId: string;
   specialtyIds?: string[];
   isActive?: boolean;
@@ -511,9 +574,10 @@ export async function createProfessionalProfile(data: {
   const availabilityConfigJson = data.availabilityConfig ? JSON.stringify(data.availabilityConfig) : null;
 
   await mysql.execute(
-    'INSERT INTO professional_profiles (userId, specialtyId, isActive, googleCalendarId, color, licenseNumber, medicalCoverages, availabilityConfig, availableDays, availableHours) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO professional_profiles (userId, tenantId, specialtyId, isActive, googleCalendarId, color, licenseNumber, medicalCoverages, availabilityConfig, availableDays, availableHours) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     [
       data.userId,
+      data.tenantId,
       primarySpecialtyId,
       data.isActive ?? true,
       data.googleCalendarId || null,
@@ -544,13 +608,14 @@ export async function createProfessionalProfile(data: {
     }
   }
 
-  const profile = await findProfessionalProfileByUserId(data.userId);
+  const profile = await findProfessionalProfileByUserId(data.userId, data.tenantId);
   if (!profile) throw new Error('Failed to create professional profile');
   return profile;
 }
 
 export async function updateProfessionalProfile(
   userId: string,
+  tenantId: string,
   data: Partial<Pick<ProfessionalProfile, 'specialtyId' | 'isActive' | 'googleCalendarId' | 'color' | 'availableDays' | 'availableHours'>> & { specialtyIds?: string[] }
 ): Promise<ProfessionalProfile> {
   const updates: string[] = [];
@@ -590,7 +655,13 @@ export async function updateProfessionalProfile(
   }
   if ((data as any).availabilityConfig !== undefined) {
     updates.push('availabilityConfig = ?');
-    values.push((data as any).availabilityConfig ? JSON.stringify((data as any).availabilityConfig) : null);
+    // Always stringify availabilityConfig, even if it's null (to clear it)
+    const configValue = (data as any).availabilityConfig;
+    values.push(configValue ? JSON.stringify(configValue) : null);
+    console.log("updateProfessionalProfile - saving availabilityConfig:", {
+      configValue,
+      stringified: configValue ? JSON.stringify(configValue) : null,
+    });
   }
 
   // Update many-to-many specialties relationship if provided
@@ -630,27 +701,28 @@ export async function updateProfessionalProfile(
   }
 
   if (updates.length === 0) {
-    const profile = await findProfessionalProfileByUserId(userId);
+    const profile = await findProfessionalProfileByUserId(userId, tenantId);
     if (!profile) throw new Error('Professional profile not found');
     return profile;
   }
 
-  values.push(userId);
-  await mysql.execute(`UPDATE professional_profiles SET ${updates.join(', ')} WHERE userId = ?`, values);
-  const profile = await findProfessionalProfileByUserId(userId);
+  values.push(userId, tenantId);
+  await mysql.execute(`UPDATE professional_profiles SET ${updates.join(', ')} WHERE userId = ? AND tenantId = ?`, values);
+  const profile = await findProfessionalProfileByUserId(userId, tenantId);
   if (!profile) throw new Error('Failed to update professional profile');
   return profile;
 }
 
 // GoogleOAuthToken operations
-export async function findGoogleOAuthTokenByUserId(userId: string): Promise<GoogleOAuthToken | null> {
-  const [rows] = await mysql.execute('SELECT * FROM google_oauth_tokens WHERE userId = ?', [userId]);
+export async function findGoogleOAuthTokenByUserId(userId: string, tenantId: string): Promise<GoogleOAuthToken | null> {
+  const [rows] = await mysql.execute('SELECT * FROM google_oauth_tokens WHERE userId = ? AND tenantId = ?', [userId, tenantId]);
   const result = rows as any[];
   return result.length > 0 ? rowToGoogleOAuthToken(result[0]) : null;
 }
 
 export async function upsertGoogleOAuthToken(data: {
   id: string;
+  tenantId: string;
   userId: string;
   accessToken: string;
   refreshToken: string;
@@ -659,8 +731,8 @@ export async function upsertGoogleOAuthToken(data: {
   expiryDate?: Date | null;
 }): Promise<GoogleOAuthToken> {
   await mysql.execute(
-    `INSERT INTO google_oauth_tokens (id, userId, accessToken, refreshToken, scope, tokenType, expiryDate)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO google_oauth_tokens (id, tenantId, userId, accessToken, refreshToken, scope, tokenType, expiryDate)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
        accessToken = VALUES(accessToken),
        refreshToken = VALUES(refreshToken),
@@ -668,22 +740,23 @@ export async function upsertGoogleOAuthToken(data: {
        tokenType = VALUES(tokenType),
        expiryDate = VALUES(expiryDate),
        updatedAt = CURRENT_TIMESTAMP`,
-    [data.id, data.userId, data.accessToken, data.refreshToken, data.scope || null, data.tokenType || null, data.expiryDate || null]
+    [data.id, data.tenantId, data.userId, data.accessToken, data.refreshToken, data.scope || null, data.tokenType || null, data.expiryDate || null]
   );
-  const token = await findGoogleOAuthTokenByUserId(data.userId);
+  const token = await findGoogleOAuthTokenByUserId(data.userId, data.tenantId);
   if (!token) throw new Error('Failed to upsert Google OAuth token');
   return token;
 }
 
 // Appointment operations
-export async function findAppointmentById(id: string): Promise<Appointment | null> {
-  const [rows] = await mysql.execute('SELECT * FROM appointments WHERE id = ?', [id]);
+export async function findAppointmentById(id: string, tenantId: string): Promise<Appointment | null> {
+  const [rows] = await mysql.execute('SELECT * FROM appointments WHERE id = ? AND tenantId = ?', [id, tenantId]);
   const result = rows as any[];
   return result.length > 0 ? rowToAppointment(result[0]) : null;
 }
 
 export async function createAppointment(data: {
   id: string;
+  tenantId: string;
   status: AppointmentStatus;
   startAt: Date;
   endAt: Date;
@@ -695,10 +768,11 @@ export async function createAppointment(data: {
   notes?: string | null;
 }): Promise<Appointment> {
   await mysql.execute(
-    `INSERT INTO appointments (id, status, startAt, endAt, patientId, professionalId, locationId, specialtyId, googleEventId, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO appointments (id, tenantId, status, startAt, endAt, patientId, professionalId, locationId, specialtyId, googleEventId, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.id,
+      data.tenantId,
       data.status,
       data.startAt,
       data.endAt,
@@ -710,26 +784,26 @@ export async function createAppointment(data: {
       data.notes || null,
     ]
   );
-  const appointment = await findAppointmentById(data.id);
+  const appointment = await findAppointmentById(data.id, data.tenantId);
   if (!appointment) throw new Error('Failed to create appointment');
   return appointment;
 }
 
-export async function updateAppointmentStatus(id: string, status: AppointmentStatus): Promise<Appointment> {
-  await mysql.execute('UPDATE appointments SET status = ? WHERE id = ?', [status, id]);
-  const appointment = await findAppointmentById(id);
+export async function updateAppointmentStatus(id: string, tenantId: string, status: AppointmentStatus): Promise<Appointment> {
+  await mysql.execute('UPDATE appointments SET status = ? WHERE id = ? AND tenantId = ?', [status, id, tenantId]);
+  const appointment = await findAppointmentById(id, tenantId);
   if (!appointment) throw new Error('Appointment not found');
   return appointment;
 }
 
-export async function updateAppointmentGoogleEventId(id: string, googleEventId: string | null): Promise<Appointment> {
-  await mysql.execute('UPDATE appointments SET googleEventId = ? WHERE id = ?', [googleEventId, id]);
-  const appointment = await findAppointmentById(id);
+export async function updateAppointmentGoogleEventId(id: string, tenantId: string, googleEventId: string | null): Promise<Appointment> {
+  await mysql.execute('UPDATE appointments SET googleEventId = ? WHERE id = ? AND tenantId = ?', [googleEventId, id, tenantId]);
+  const appointment = await findAppointmentById(id, tenantId);
   if (!appointment) throw new Error('Appointment not found');
   return appointment;
 }
 
-export async function findAppointmentWithRelations(id: string): Promise<{
+export async function findAppointmentWithRelations(id: string, tenantId: string): Promise<{
   appointment: Appointment;
   patient: User;
   professional: User & { professional: ProfessionalProfile | null; googleOAuth: GoogleOAuthToken | null };
@@ -739,28 +813,28 @@ export async function findAppointmentWithRelations(id: string): Promise<{
   const [rows] = await mysql.execute(
     `SELECT 
       a.*,
-      p.id as p_id, p.email as p_email, p.name as p_name, p.passwordHash as p_passwordHash, 
+      p.id as p_id, p.tenantId as p_tenantId, p.email as p_email, p.name as p_name, p.passwordHash as p_passwordHash, 
       p.role as p_role, p.createdAt as p_createdAt, p.updatedAt as p_updatedAt,
-      prof.id as prof_id, prof.email as prof_email, prof.name as prof_name, prof.passwordHash as prof_passwordHash,
+      prof.id as prof_id, prof.tenantId as prof_tenantId, prof.email as prof_email, prof.name as prof_name, prof.passwordHash as prof_passwordHash,
       prof.role as prof_role, prof.createdAt as prof_createdAt, prof.updatedAt as prof_updatedAt,
-      pp.userId as pp_userId, pp.specialtyId as pp_specialtyId, pp.isActive as pp_isActive,
+      pp.userId as pp_userId, pp.tenantId as pp_tenantId, pp.specialtyId as pp_specialtyId, pp.isActive as pp_isActive,
       pp.googleCalendarId as pp_googleCalendarId, pp.color as pp_color,
       pp.createdAt as pp_createdAt, pp.updatedAt as pp_updatedAt,
-      go.id as go_id, go.userId as go_userId, go.accessToken as go_accessToken, go.refreshToken as go_refreshToken,
+      go.id as go_id, go.tenantId as go_tenantId, go.userId as go_userId, go.accessToken as go_accessToken, go.refreshToken as go_refreshToken,
       go.scope as go_scope, go.tokenType as go_tokenType, go.expiryDate as go_expiryDate,
       go.createdAt as go_createdAt, go.updatedAt as go_updatedAt,
-      l.id as l_id, l.name as l_name, l.address as l_address, l.phone as l_phone,
+      l.id as l_id, l.tenantId as l_tenantId, l.name as l_name, l.address as l_address, l.phone as l_phone,
       l.createdAt as l_createdAt, l.updatedAt as l_updatedAt,
-      s.id as s_id, s.name as s_name, s.createdAt as s_createdAt, s.updatedAt as s_updatedAt
+      s.id as s_id, s.tenantId as s_tenantId, s.name as s_name, s.createdAt as s_createdAt, s.updatedAt as s_updatedAt
     FROM appointments a
-    INNER JOIN users p ON a.patientId = p.id
-    INNER JOIN users prof ON a.professionalId = prof.id
-    LEFT JOIN professional_profiles pp ON prof.id = pp.userId
-    LEFT JOIN google_oauth_tokens go ON prof.id = go.userId
-    INNER JOIN locations l ON a.locationId = l.id
-    INNER JOIN specialties s ON a.specialtyId = s.id
-    WHERE a.id = ?`,
-    [id]
+    INNER JOIN users p ON a.patientId = p.id AND a.tenantId = p.tenantId
+    INNER JOIN users prof ON a.professionalId = prof.id AND a.tenantId = prof.tenantId
+    LEFT JOIN professional_profiles pp ON prof.id = pp.userId AND prof.tenantId = pp.tenantId
+    LEFT JOIN google_oauth_tokens go ON prof.id = go.userId AND prof.tenantId = go.tenantId
+    INNER JOIN locations l ON a.locationId = l.id AND a.tenantId = l.tenantId
+    INNER JOIN specialties s ON a.specialtyId = s.id AND a.tenantId = s.tenantId
+    WHERE a.id = ? AND a.tenantId = ?`,
+    [id, tenantId]
   );
 
   const result = rows as any[];
@@ -771,6 +845,7 @@ export async function findAppointmentWithRelations(id: string): Promise<{
     appointment: rowToAppointment(row),
     patient: rowToUser({
       id: row.p_id,
+      tenantId: row.p_tenantId,
       email: row.p_email,
       name: row.p_name,
       passwordHash: row.p_passwordHash,
@@ -781,6 +856,7 @@ export async function findAppointmentWithRelations(id: string): Promise<{
     professional: {
       ...rowToUser({
         id: row.prof_id,
+        tenantId: row.prof_tenantId,
         email: row.prof_email,
         name: row.prof_name,
         passwordHash: row.prof_passwordHash,
@@ -790,6 +866,7 @@ export async function findAppointmentWithRelations(id: string): Promise<{
       }),
       professional: row.pp_userId ? rowToProfessionalProfile({
         userId: row.pp_userId,
+        tenantId: row.pp_tenantId,
         specialtyId: row.pp_specialtyId,
         isActive: row.pp_isActive,
         googleCalendarId: row.pp_googleCalendarId,
@@ -799,6 +876,7 @@ export async function findAppointmentWithRelations(id: string): Promise<{
       }) : null,
       googleOAuth: row.go_id ? rowToGoogleOAuthToken({
         id: row.go_id,
+        tenantId: row.go_tenantId,
         userId: row.go_userId,
         accessToken: row.go_accessToken,
         refreshToken: row.go_refreshToken,
@@ -811,6 +889,7 @@ export async function findAppointmentWithRelations(id: string): Promise<{
     },
     location: rowToLocation({
       id: row.l_id,
+      tenantId: row.l_tenantId,
       name: row.l_name,
       address: row.l_address,
       phone: row.l_phone,
@@ -819,6 +898,7 @@ export async function findAppointmentWithRelations(id: string): Promise<{
     }),
     specialty: rowToSpecialty({
       id: row.s_id,
+      tenantId: row.s_tenantId,
       name: row.s_name,
       createdAt: row.s_createdAt,
       updatedAt: row.s_updatedAt,
@@ -827,6 +907,7 @@ export async function findAppointmentWithRelations(id: string): Promise<{
 }
 
 export async function findAppointmentsByDateRange(
+  tenantId: string,
   startDate: Date,
   endDate: Date,
   filters?: {
@@ -849,15 +930,15 @@ export async function findAppointmentsByDateRange(
       l.createdAt as l_createdAt, l.updatedAt as l_updatedAt,
       s.id as s_id, s.name as s_name, s.createdAt as s_createdAt, s.updatedAt as s_updatedAt
     FROM appointments a
-    INNER JOIN users p ON a.patientId = p.id
-    INNER JOIN users prof ON a.professionalId = prof.id
-    LEFT JOIN professional_profiles pp ON prof.id = pp.userId
-    INNER JOIN locations l ON a.locationId = l.id
-    INNER JOIN specialties s ON a.specialtyId = s.id
-    WHERE a.startAt >= ? AND a.startAt <= ?
+    INNER JOIN users p ON a.patientId = p.id AND a.tenantId = p.tenantId
+    INNER JOIN users prof ON a.professionalId = prof.id AND a.tenantId = prof.tenantId
+    LEFT JOIN professional_profiles pp ON prof.id = pp.userId AND prof.tenantId = pp.tenantId
+    INNER JOIN locations l ON a.locationId = l.id AND a.tenantId = l.tenantId
+    INNER JOIN specialties s ON a.specialtyId = s.id AND a.tenantId = s.tenantId
+    WHERE a.startAt >= ? AND a.startAt <= ? AND a.tenantId = ?
   `;
 
-  const params: any[] = [startDate, endDate];
+  const params: any[] = [startDate, endDate, tenantId];
 
   if (filters?.patientId) {
     query += ' AND a.patientId = ?';
@@ -883,6 +964,7 @@ export async function findAppointmentsByDateRange(
     ...rowToAppointment(row),
     patient: rowToUser({
       id: row.p_id,
+      tenantId: row.p_tenantId,
       email: row.p_email,
       name: row.p_name,
       passwordHash: row.p_passwordHash,
@@ -893,6 +975,7 @@ export async function findAppointmentsByDateRange(
     professional: {
       ...rowToUser({
         id: row.prof_id,
+        tenantId: row.prof_tenantId,
         email: row.prof_email,
         name: row.prof_name,
         passwordHash: row.prof_passwordHash,
@@ -902,6 +985,7 @@ export async function findAppointmentsByDateRange(
       }),
       professional: row.pp_userId ? rowToProfessionalProfile({
         userId: row.pp_userId,
+        tenantId: row.pp_tenantId,
         specialtyId: row.pp_specialtyId,
         isActive: row.pp_isActive,
         googleCalendarId: row.pp_googleCalendarId,
@@ -912,6 +996,7 @@ export async function findAppointmentsByDateRange(
     },
     location: rowToLocation({
       id: row.l_id,
+      tenantId: row.l_tenantId,
       name: row.l_name,
       address: row.l_address,
       phone: row.l_phone,
@@ -920,6 +1005,7 @@ export async function findAppointmentsByDateRange(
     }),
     specialty: rowToSpecialty({
       id: row.s_id,
+      tenantId: row.s_tenantId,
       name: row.s_name,
       createdAt: row.s_createdAt,
       updatedAt: row.s_updatedAt,
@@ -929,6 +1015,7 @@ export async function findAppointmentsByDateRange(
 
 export async function updateAppointment(data: {
   id: string;
+  tenantId: string;
   startAt?: Date;
   endAt?: Date;
   status?: AppointmentStatus;
@@ -985,32 +1072,32 @@ export async function updateAppointment(data: {
   }
 
   if (updates.length === 0) {
-    const appointment = await findAppointmentById(data.id);
+    const appointment = await findAppointmentById(data.id, data.tenantId);
     if (!appointment) throw new Error('Appointment not found');
     return appointment;
   }
 
-  values.push(data.id);
-  await mysql.execute(`UPDATE appointments SET ${updates.join(', ')} WHERE id = ?`, values);
-  const appointment = await findAppointmentById(data.id);
+  values.push(data.id, data.tenantId);
+  await mysql.execute(`UPDATE appointments SET ${updates.join(', ')} WHERE id = ? AND tenantId = ?`, values);
+  const appointment = await findAppointmentById(data.id, data.tenantId);
   if (!appointment) throw new Error('Appointment not found');
   return appointment;
 }
 
-export async function deleteAppointment(id: string): Promise<void> {
-  await mysql.execute('DELETE FROM appointments WHERE id = ?', [id]);
+export async function deleteAppointment(id: string, tenantId: string): Promise<void> {
+  await mysql.execute('DELETE FROM appointments WHERE id = ? AND tenantId = ?', [id, tenantId]);
 }
 
 
 // MedicalCoverage and MedicalPlan operations
-export async function findAllMedicalCoveragesWithPlans(): Promise<MedicalCoverageWithPlans[]> {
-  const [coverageRows] = await mysql.execute('SELECT * FROM medical_coverages ORDER BY name ASC');
+export async function findAllMedicalCoveragesWithPlans(tenantId: string): Promise<MedicalCoverageWithPlans[]> {
+  const [coverageRows] = await mysql.execute('SELECT * FROM medical_coverages WHERE tenantId = ? ORDER BY name ASC', [tenantId]);
   const coverages = coverageRows as any[];
 
   const results: MedicalCoverageWithPlans[] = [];
 
   for (const coverage of coverages) {
-    const [planRows] = await mysql.execute('SELECT * FROM medical_plans WHERE coverageId = ? ORDER BY name ASC', [coverage.id]);
+    const [planRows] = await mysql.execute('SELECT * FROM medical_plans WHERE coverageId = ? AND tenantId = ? ORDER BY name ASC', [coverage.id, tenantId]);
     results.push({
       ...coverage,
       plans: planRows as MedicalPlan[]
@@ -1020,13 +1107,13 @@ export async function findAllMedicalCoveragesWithPlans(): Promise<MedicalCoverag
   return results;
 }
 
-export async function findMedicalCoverageById(id: string): Promise<MedicalCoverageWithPlans | null> {
-  const [rows] = await mysql.execute('SELECT * FROM medical_coverages WHERE id = ?', [id]);
+export async function findMedicalCoverageById(id: string, tenantId: string): Promise<MedicalCoverageWithPlans | null> {
+  const [rows] = await mysql.execute('SELECT * FROM medical_coverages WHERE id = ? AND tenantId = ?', [id, tenantId]);
   const result = rows as any[];
   if (result.length === 0) return null;
 
   const coverage = result[0];
-  const [planRows] = await mysql.execute('SELECT * FROM medical_plans WHERE coverageId = ? ORDER BY name ASC', [id]);
+  const [planRows] = await mysql.execute('SELECT * FROM medical_plans WHERE coverageId = ? AND tenantId = ? ORDER BY name ASC', [id, tenantId]);
 
   return {
     ...coverage,
@@ -1034,23 +1121,23 @@ export async function findMedicalCoverageById(id: string): Promise<MedicalCovera
   };
 }
 
-export async function createMedicalCoverage(data: { id: string, name: string, plans: { id: string, name: string }[] }): Promise<MedicalCoverageWithPlans> {
-  await mysql.execute('INSERT INTO medical_coverages (id, name) VALUES (?, ?)', [data.id, data.name]);
+export async function createMedicalCoverage(data: { id: string, tenantId: string, name: string, plans: { id: string, name: string }[] }): Promise<MedicalCoverageWithPlans> {
+  await mysql.execute('INSERT INTO medical_coverages (id, tenantId, name) VALUES (?, ?, ?)', [data.id, data.tenantId, data.name]);
 
   for (const plan of data.plans) {
-    await mysql.execute('INSERT INTO medical_plans (id, coverageId, name) VALUES (?, ?, ?)', [plan.id, data.id, plan.name]);
+    await mysql.execute('INSERT INTO medical_plans (id, tenantId, coverageId, name) VALUES (?, ?, ?, ?)', [plan.id, data.tenantId, data.id, plan.name]);
   }
 
-  const result = await findMedicalCoverageById(data.id);
+  const result = await findMedicalCoverageById(data.id, data.tenantId);
   if (!result) throw new Error('Failed to create medical coverage');
   return result;
 }
 
-export async function updateMedicalCoverage(id: string, name: string, plans: { id?: string, name: string }[]): Promise<MedicalCoverageWithPlans> {
-  await mysql.execute('UPDATE medical_coverages SET name = ? WHERE id = ?', [name, id]);
+export async function updateMedicalCoverage(id: string, tenantId: string, name: string, plans: { id?: string, name: string }[]): Promise<MedicalCoverageWithPlans> {
+  await mysql.execute('UPDATE medical_coverages SET name = ? WHERE id = ? AND tenantId = ?', [name, id, tenantId]);
 
   // Simple approach: get existing plans, compare and update/delete/insert
-  const [existingPlanRows] = await mysql.execute('SELECT id FROM medical_plans WHERE coverageId = ?', [id]);
+  const [existingPlanRows] = await mysql.execute('SELECT id FROM medical_plans WHERE coverageId = ? AND tenantId = ?', [id, tenantId]);
   const existingPlanIds = (existingPlanRows as any[]).map(row => row.id);
 
   const currentPlanIds = plans.map(p => p.id).filter(Boolean) as string[];
@@ -1058,24 +1145,65 @@ export async function updateMedicalCoverage(id: string, name: string, plans: { i
   // Delete plans not in the new list
   const toDelete = existingPlanIds.filter(id => !currentPlanIds.includes(id));
   if (toDelete.length > 0) {
-    await mysql.execute(`DELETE FROM medical_plans WHERE id IN (${toDelete.map(() => '?').join(',')})`, toDelete);
+    await mysql.execute(`DELETE FROM medical_plans WHERE id IN (${toDelete.map(() => '?').join(',')}) AND tenantId = ?`, [...toDelete, tenantId]);
   }
 
   // Update or insert plans
   for (const plan of plans) {
     if (plan.id && existingPlanIds.includes(plan.id)) {
-      await mysql.execute('UPDATE medical_plans SET name = ? WHERE id = ?', [plan.name, plan.id]);
+      await mysql.execute('UPDATE medical_plans SET name = ? WHERE id = ? AND tenantId = ?', [plan.name, plan.id, tenantId]);
     } else {
       const newPlanId = plan.id || crypto.randomUUID();
-      await mysql.execute('INSERT INTO medical_plans (id, coverageId, name) VALUES (?, ?, ?)', [newPlanId, id, plan.name]);
+      await mysql.execute('INSERT INTO medical_plans (id, tenantId, coverageId, name) VALUES (?, ?, ?, ?)', [newPlanId, tenantId, id, plan.name]);
     }
   }
 
-  const result = await findMedicalCoverageById(id);
+  const result = await findMedicalCoverageById(id, tenantId);
   if (!result) throw new Error('Failed to update medical coverage');
   return result;
 }
 
-export async function deleteMedicalCoverage(id: string): Promise<void> {
-  await mysql.execute('DELETE FROM medical_coverages WHERE id = ?', [id]);
+export async function deleteMedicalCoverage(id: string, tenantId: string): Promise<void> {
+  // First delete plans
+  await mysql.execute('DELETE FROM medical_plans WHERE coverageId = ? AND tenantId = ?', [id, tenantId]);
+  // Then delete coverage
+  await mysql.execute('DELETE FROM medical_coverages WHERE id = ? AND tenantId = ?', [id, tenantId]);
+}
+
+// Helper para convertir filas de MySQL a objetos Tenant
+function rowToTenant(row: any): Tenant {
+  return {
+    id: row.id,
+    name: row.name,
+    logoUrl: row.logoUrl || null,
+    isActive: Boolean(row.isActive),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export async function createTenant(data: { id: string; name: string; logoUrl?: string | null }): Promise<Tenant> {
+  await mysql.execute(
+    'INSERT INTO tenants (id, name, logoUrl, isActive) VALUES (?, ?, ?, ?)',
+    [data.id, data.name, data.logoUrl || null, true]
+  );
+  const result = await findTenantById(data.id);
+  if (!result) throw new Error('Failed to create tenant');
+  return result;
+}
+
+export async function findAllTenants(): Promise<Tenant[]> {
+  const [rows] = await mysql.execute('SELECT * FROM tenants ORDER BY name ASC');
+  return (rows as any[]).map(rowToTenant);
+}
+
+export async function findTenantById(id: string): Promise<Tenant | null> {
+  const [rows] = await mysql.execute('SELECT * FROM tenants WHERE id = ?', [id]);
+  const result = rows as any[];
+  return result.length > 0 ? rowToTenant(result[0]) : null;
+}
+
+export async function deleteTenant(id: string): Promise<void> {
+  // Note: Foreign key constraints with ON DELETE CASCADE will handle related data
+  await mysql.execute('DELETE FROM tenants WHERE id = ?', [id]);
 }

@@ -19,8 +19,18 @@ export enum Gender {
   NO_BINARIO = 'No binario',
 }
 
+export interface Tenant {
+  id: string;
+  name: string;
+  logoUrl?: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface User {
   id: string;
+  tenantId: string;
   email: string;
   name: string;
   firstName?: string | null;
@@ -31,6 +41,7 @@ export interface User {
   admissionDate?: Date | null;
   gender?: Gender | null;
   nationality?: string | null;
+  googleId?: string | null;
   passwordHash: string;
   role: Role;
   createdAt: Date;
@@ -39,6 +50,7 @@ export interface User {
 
 export interface Specialty {
   id: string;
+  tenantId: string;
   name: string;
   createdAt: Date;
   updatedAt: Date;
@@ -46,6 +58,7 @@ export interface Specialty {
 
 export interface Location {
   id: string;
+  tenantId: string;
   name: string;
   address: string;
   phone: string | null;
@@ -55,6 +68,7 @@ export interface Location {
 
 export interface ProfessionalProfile {
   userId: string;
+  tenantId: string;
   specialtyId: string;
   isActive: boolean;
   googleCalendarId: string | null;
@@ -83,6 +97,7 @@ export interface ProfessionalProfile {
 
 export interface GoogleOAuthToken {
   id: string;
+  tenantId: string;
   userId: string;
   accessToken: string;
   refreshToken: string;
@@ -95,6 +110,7 @@ export interface GoogleOAuthToken {
 
 export interface Appointment {
   id: string;
+  tenantId: string;
   status: AppointmentStatus;
   startAt: Date;
   endAt: Date;
@@ -112,6 +128,7 @@ export interface Appointment {
 
 export interface MedicalCoverage {
   id: string;
+  tenantId: string;
   name: string;
   createdAt: Date;
   updatedAt: Date;
@@ -119,6 +136,7 @@ export interface MedicalCoverage {
 
 export interface MedicalPlan {
   id: string;
+  tenantId: string;
   coverageId: string;
   name: string;
   createdAt: Date;
