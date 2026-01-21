@@ -50,6 +50,7 @@ export function PanelLayoutShell({
   const currentTenantId = tenantId || (params.tenantId as string);
   const [isMobile, setIsMobile] = React.useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false);
+  const [calendarEnabled, setCalendarEnabled] = React.useState(true);
 
   React.useEffect(() => {
     const checkMobile = () => {
@@ -59,6 +60,29 @@ export function PanelLayoutShell({
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  // Load calendar feature flag
+  React.useEffect(() => {
+    async function loadCalendarFeature() {
+      try {
+        const res = await fetch(`/api/plataforma/${currentTenantId}/features`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const features = await res.json();
+          setCalendarEnabled(features.calendar ?? true);
+        } else {
+          // Default to enabled on error
+          setCalendarEnabled(true);
+        }
+      } catch (error) {
+        console.error("Error loading calendar feature:", error);
+        // Default to enabled on error
+        setCalendarEnabled(true);
+      }
+    }
+    loadCalendarFeature();
+  }, [currentTenantId]);
   const configSections = { showLocations: true, showSpecialties: true };
 
   async function logout() {
@@ -148,7 +172,7 @@ export function PanelLayoutShell({
       >
         <div className="overflow-y-auto h-full py-4">
           <nav className="space-y-2 px-2">
-            {role !== "PATIENT" && (
+            {role !== "PATIENT" && calendarEnabled && (
               <NavItem
                 href={`/plataforma/${currentTenantId}/panel`}
                 label="Calendario"

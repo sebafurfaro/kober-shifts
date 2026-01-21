@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStoreSession } from "@/lib/store-session";
 import { findAllTenants, createTenant } from "@/lib/db";
+import { mongoClientPromise } from "@/lib/mongo";
 import { randomUUID } from "crypto";
 
 const ALLOWED_EMAIL = "seba.furfaro@gmail.com";
@@ -37,6 +38,11 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const logoUrl = typeof body.logoUrl === "string" ? body.logoUrl.trim() : null;
+  const features = body.features as {
+    calendar?: boolean;
+    emailNotifications?: boolean;
+    whatsappNotifications?: boolean;
+  } | undefined;
 
   if (!name) return NextResponse.json({ error: "Invalid input: name is required" }, { status: 400 });
 
@@ -47,6 +53,32 @@ export async function POST(req: Request) {
 
   try {
     const created = await createTenant({ id, name, logoUrl });
+    
+    // Save feature flags to MongoDB
+    if (features) {
+      try {
+        const client = await mongoClientPromise;
+        const db = client.db();
+        const collection = db.collection("tenant_features");
+
+        const featureFlags = {
+          calendar: features.calendar ?? true,
+          emailNotifications: features.emailNotifications ?? false,
+          whatsappNotifications: features.whatsappNotifications ?? false,
+        };
+
+        await collection.insertOne({
+          tenantId: id,
+          features: featureFlags,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      } catch (mongoError) {
+        console.error("Error saving feature flags:", mongoError);
+        // Don't fail the tenant creation if feature flags fail
+      }
+    }
+    
     return NextResponse.json(created);
   } catch (error: any) {
     if (error.message?.includes('Duplicate') || error.code === 'ER_DUP_ENTRY') {

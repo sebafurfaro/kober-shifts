@@ -16,10 +16,18 @@ export interface AvailabilityDay {
     slots: Slot[];
 }
 
+export interface Holiday {
+    id: string;
+    startDate: string; // YYYY-MM-DD
+    endDate: string; // YYYY-MM-DD
+    description?: string;
+}
+
 export interface AvailabilityConfig {
     days: {
         [key: number]: AvailabilityDay;
     };
+    holidays?: Holiday[];
 }
 
 export interface SelectedPlan {
@@ -42,6 +50,7 @@ export interface ProfessionalFormData {
     medicalCoverages: SelectedCoverage[];
     color: string;
     availabilityConfig: AvailabilityConfig;
+    holidays?: Holiday[];
 }
 
 export const INITIAL_AVAILABILITY: AvailabilityConfig = {
@@ -54,4 +63,5 @@ export const INITIAL_AVAILABILITY: AvailabilityConfig = {
         6: { slots: [] },
         0: { slots: [] },
     },
+    holidays: [],
 };

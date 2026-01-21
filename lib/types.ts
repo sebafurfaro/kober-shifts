@@ -88,6 +88,12 @@ export interface ProfessionalProfile {
         }>;
       };
     };
+    holidays?: Array<{
+      id: string;
+      startDate: string;
+      endDate: string;
+      description?: string;
+    }>;
   } | null;
   availableDays: number[] | null; // Legacy 0=Domingo, 1=Lunes, ..., 6=Sábado
   availableHours: { start: string; end: string } | null; // Legacy Formato "HH:mm"

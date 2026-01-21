@@ -10,12 +10,19 @@ import {
   Button,
   Input,
   Alert,
+  Switch,
+  Divider,
 } from "@heroui/react";
 
 interface TenantFormData {
   name: string;
   id?: string;
   logoUrl?: string;
+  features?: {
+    calendar: boolean;
+    emailNotifications: boolean;
+    whatsappNotifications: boolean;
+  };
 }
 
 interface TenantFormDialogProps {
@@ -35,6 +42,11 @@ export function TenantFormDialog({
     name: "",
     id: "",
     logoUrl: "",
+    features: {
+      calendar: true,
+      emailNotifications: false,
+      whatsappNotifications: false,
+    },
   });
 
   const [errors, setErrors] = React.useState<Partial<Record<keyof TenantFormData, string>>>({});
@@ -47,6 +59,11 @@ export function TenantFormDialog({
         name: "",
         id: "",
         logoUrl: "",
+        features: {
+          calendar: true,
+          emailNotifications: false,
+          whatsappNotifications: false,
+        },
       });
       setErrors({});
       setSubmitError(null);
@@ -85,6 +102,7 @@ export function TenantFormDialog({
         name: formData.name.trim(),
         id: formData.id?.trim() || undefined,
         logoUrl: formData.logoUrl?.trim() || undefined,
+        features: formData.features,
       };
 
       await onSubmit(submitData);
@@ -107,9 +125,9 @@ export function TenantFormDialog({
 
   return (
     <Modal isOpen={open} onClose={onClose} size="md" scrollBehavior="inside">
-      <ModalContent>
+      <ModalContent className="text-slate-800">
         <form onSubmit={handleSubmit}>
-          <ModalHeader>Crear Tenant</ModalHeader>
+          <ModalHeader>Añadir nuevo Tenant</ModalHeader>
           <ModalBody>
             <div className="flex flex-col gap-4">
               {submitError && (
@@ -158,22 +176,62 @@ export function TenantFormDialog({
                 </p>
               </div>
 
-              <Input
-                label="Logo URL (Opcional)"
-                value={formData.logoUrl || ""}
-                onValueChange={(value) => {
-                  setFormData((prev) => ({ ...prev, logoUrl: value }));
-                  if (errors.logoUrl) {
-                    setErrors((prev) => ({ ...prev, logoUrl: undefined }));
-                  }
-                  setSubmitError(null);
-                }}
-                isInvalid={!!errors.logoUrl}
-                errorMessage={errors.logoUrl || "URL de la imagen del logo del tenant"}
-                isDisabled={loading}
-                placeholder="https://ejemplo.com/logo.png"
-                autoComplete="off"
-              />
+              <Divider className="my-2" />
+
+              <div className="space-y-3 flex flex-col gap-2">
+                <h3 className="text-sm font-semibold text-gray-700">Feature Flags</h3>
+                
+                <Switch
+                  isSelected={formData.features?.calendar ?? true}
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      features: {
+                        ...prev.features!,
+                        calendar: value,
+                      },
+                    }));
+                  }}
+                  isDisabled={loading}
+                  classNames={{label: "text-slate-800"}}
+                >
+                  Calendario
+                </Switch>
+
+                <Switch
+                  isSelected={formData.features?.emailNotifications ?? false}
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      features: {
+                        ...prev.features!,
+                        emailNotifications: value,
+                      },
+                    }));
+                  }}
+                  isDisabled={loading}
+                  classNames={{label: "text-slate-800"}}
+                >
+                  Notificaciones por Email
+                </Switch>
+
+                <Switch
+                  isSelected={formData.features?.whatsappNotifications ?? false}
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      features: {
+                        ...prev.features!,
+                        whatsappNotifications: value,
+                      },
+                    }));
+                  }}
+                  isDisabled={loading}
+                  classNames={{label: "text-slate-800"}}
+                >
+                  Notificaciones por WhatsApp
+                </Switch>
+              </div>
             </div>
           </ModalBody>
           <ModalFooter>

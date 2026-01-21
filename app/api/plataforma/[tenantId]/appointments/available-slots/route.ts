@@ -180,6 +180,32 @@ export async function GET(
 /**
  * Generate available appointment slots based on professional availability
  */
+/**
+ * Check if a date falls within any holiday period
+ */
+function isDateInHoliday(date: Date, holidays: Array<{ startDate: string; endDate: string }> | null | undefined): boolean {
+  if (!holidays || !Array.isArray(holidays) || holidays.length === 0) {
+    return false;
+  }
+
+  const dateOnly = new Date(date);
+  dateOnly.setHours(0, 0, 0, 0);
+
+  for (const holiday of holidays) {
+    const startDate = new Date(holiday.startDate);
+    startDate.setHours(0, 0, 0, 0);
+    
+    const endDate = new Date(holiday.endDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    if (dateOnly >= startDate && dateOnly <= endDate) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function generateAvailableSlots(
   profile: any,
   startDate: Date,
@@ -190,6 +216,9 @@ function generateAvailableSlots(
   const slots: Array<{ date: string; time: string; datetime: string }> = [];
   const appointmentDuration = 45; // minutes
   const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+  // Get holidays from availabilityConfig
+  const holidays = profile.availabilityConfig?.holidays || [];
 
   // Combine all busy times
   const busyTimes: Array<{ start: Date; end: Date }> = [
@@ -258,6 +287,12 @@ function generateAvailableSlots(
     
     const currentDate = new Date(startDate);
     while (currentDate <= endDate) {
+      // Skip if date is in a holiday period
+      if (isDateInHoliday(currentDate, holidays)) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        continue;
+      }
+
       const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 6 = Saturday
       const dayConfig = normalizedDays[dayOfWeek];
       
@@ -439,6 +474,12 @@ function generateAvailableSlots(
     
     const currentDate = new Date(startDate);
     while (currentDate <= endDate) {
+      // Skip if date is in a holiday period
+      if (isDateInHoliday(currentDate, holidays)) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        continue;
+      }
+
       const dayOfWeek = currentDate.getDay();
       if (profile.availableDays.includes(dayOfWeek)) {
         const [startHour, startMin] = profile.availableHours.start

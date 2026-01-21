@@ -14,6 +14,7 @@ import { ContactTab } from "./ContactTab";
 import { SpecialtiesTab } from "./SpecialtiesTab";
 import { CoveragesTab } from "./CoveragesTab";
 import { AvailabilityTab } from "./AvailabilityTab";
+import { HolidaysTab } from "./HolidaysTab";
 
 interface ProfessionalFormProps {
     initialData?: Partial<ProfessionalFormData>;
@@ -45,6 +46,7 @@ export function ProfessionalForm({
         medicalCoverages: initialData?.medicalCoverages || [],
         color: initialData?.color || "#2196f3",
         availabilityConfig: initialData?.availabilityConfig || { ...INITIAL_AVAILABILITY },
+        holidays: initialData?.holidays || initialData?.availabilityConfig?.holidays || [],
     });
 
     const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -139,17 +141,16 @@ export function ProfessionalForm({
                         </CardBody>
                     </Card>
                 </Tab>
+                <Tab key="vacaciones" title="Vacaciones">
+                    <Card>
+                        <CardBody>
+                            <HolidaysTab formData={formData} setFormData={setFormData}  onSave={handleSubmit} loading={loading} />
+                        </CardBody>
+                    </Card>
+                </Tab>  
             </Tabs>
 
             <div className="mt-6 flex justify-end gap-3">
-                <Button 
-                    variant="bordered" 
-                    onPress={() => window.history.back()} 
-                    isDisabled={loading}
-                    color="danger"
-                >
-                    Cancelar
-                </Button>
                 <Button
                     type="submit"
                     color="success"

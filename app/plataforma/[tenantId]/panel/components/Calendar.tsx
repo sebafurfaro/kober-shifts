@@ -220,17 +220,52 @@ export function Calendar() {
       if (!res.ok) throw new Error("Failed to load events");
       const data = await res.json();
 
+      // Generate holiday events from professionals' availabilityConfig
+      const holidayEvents: CalendarEvent[] = [];
+      professionals.forEach((professional) => {
+        const holidays = professional.professional?.availabilityConfig?.holidays || [];
+        holidays.forEach((holiday: any) => {
+          const startDate = new Date(holiday.startDate);
+          startDate.setHours(0, 0, 0, 0);
+          const endDate = new Date(holiday.endDate);
+          endDate.setHours(23, 59, 59, 999);
+
+          // Only include holidays that overlap with the requested date range
+          if (endDate >= start && startDate <= end) {
+            holidayEvents.push({
+              id: `holiday-${professional.id}-${holiday.id}`,
+              title: `Vacaciones: ${professional.name}${holiday.description ? ` - ${holiday.description}` : ''}`,
+              start: startDate.toISOString(),
+              end: endDate.toISOString(),
+              extendedProps: {
+                professionalId: professional.id,
+                professionalName: professional.name,
+                isHoliday: true,
+                holidayDescription: holiday.description,
+              },
+              backgroundColor: '#ff9800',
+              borderColor: '#ff9800',
+              display: 'background',
+              classNames: ['holiday-event'],
+            });
+          }
+        });
+      });
+
+      // Combine appointments and holiday events
+      const allEvents = [...data, ...holidayEvents];
+
       // Check if events actually changed before updating
       const eventsChanged =
-        eventsRef.current.length !== data.length ||
+        eventsRef.current.length !== allEvents.length ||
         JSON.stringify(eventsRef.current.map(e => e.id).sort()) !==
-        JSON.stringify(data.map((e: any) => e.id).sort());
+        JSON.stringify(allEvents.map((e: any) => e.id).sort());
 
       if (eventsChanged) {
-        eventsRef.current = data;
+        eventsRef.current = allEvents;
         // Use requestAnimationFrame to batch the update and prevent datesSet from firing
         requestAnimationFrame(() => {
-          setEvents(data);
+          setEvents(allEvents);
           // Reset flag after events are set and React has processed the update
           setTimeout(() => {
             isUpdatingRef.current = false;
@@ -248,7 +283,7 @@ export function Calendar() {
       setLoading(false);
       // Note: isUpdatingRef is reset inside the setTimeout above after setEvents
     }
-  }, []);
+  }, [tenantId, professionals]);
 
   const handleDatesSet = useCallback((arg: { start: Date; end: Date; view: any }) => {
     // Prevent recursive calls during state updates

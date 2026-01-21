@@ -27,6 +27,10 @@ body {
   font-family: var(--font-inter), sans-serif;
 }
 
+.font-primary {
+  font-family: var(--font-montserrat), sans-serif;
+}
+
 /* Global box-sizing */
 * {
   box-sizing: border-box;
@@ -63,6 +67,14 @@ body {
 
 .gradient-nodo {
   background-image: linear-gradient(135deg, #1A237E 0%, #1497B5 50%, #26A69A 100%);
+}
+
+.bg-nodo {
+  background-color: #ffffff;
+  background-image: url('/p-1.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .button {

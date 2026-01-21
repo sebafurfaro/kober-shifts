@@ -48,6 +48,7 @@ export async function GET(
     licenseNumber: profile.licenseNumber,
     medicalCoverages: profile.medicalCoverages,
     availabilityConfig: profile.availabilityConfig,
+    holidays: profile.availabilityConfig?.holidays || [],
     availableDays: profile.availableDays,
     availableHours: profile.availableHours,
   });
@@ -85,9 +86,18 @@ export async function PUT(
     
     // Handle availabilityConfig - always include it if present in body, even if empty/null
     // This ensures we can clear availability by sending null
-    const availabilityConfig = body.hasOwnProperty('availabilityConfig')
+    // Also merge holidays if provided separately
+    let availabilityConfig = body.hasOwnProperty('availabilityConfig')
       ? (body.availabilityConfig && typeof body.availabilityConfig === "object" ? body.availabilityConfig : null)
       : undefined;
+    
+    // If holidays are provided separately, merge them into availabilityConfig
+    if (body.hasOwnProperty('holidays') && Array.isArray(body.holidays)) {
+      if (!availabilityConfig || typeof availabilityConfig !== 'object') {
+        availabilityConfig = { days: {}, holidays: [] };
+      }
+      availabilityConfig.holidays = body.holidays;
+    }
 
     const availableDays = Array.isArray(body.availableDays) ? body.availableDays.filter((d): d is number => typeof d === "number") : undefined;
     const availableHours = body.availableHours && typeof body.availableHours === "object" && "start" in body.availableHours && "end" in body.availableHours
@@ -156,6 +166,7 @@ export async function PUT(
       licenseNumber: updatedProfile?.licenseNumber,
       medicalCoverages: updatedProfile?.medicalCoverages,
       availabilityConfig: updatedProfile?.availabilityConfig,
+      holidays: updatedProfile?.availabilityConfig?.holidays || [],
       availableDays: updatedProfile?.availableDays,
       availableHours: updatedProfile?.availableHours,
     });

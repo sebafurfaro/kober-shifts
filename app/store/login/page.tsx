@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button, Input, Card, CardBody } from "@heroui/react";
 import { useRouter } from "next/navigation";
+import Logo from "../../branding/Logo";
 
 export default function StoreLoginPage() {
   const router = useRouter();
@@ -53,12 +54,15 @@ export default function StoreLoginPage() {
   }
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100">
+    <div className="flex justify-center items-center min-h-screen bg-nodo">
       <div className="max-w-md w-full px-4">
         <Card className="p-6">
           <CardBody>
             <form onSubmit={onSubmit} className="space-y-4">
-              <h2 className="text-2xl font-bold text-center">Store - Gestión de Tenants</h2>
+              <div className="w-full flex flex-col gap-2 justify-center items-center">
+                <Logo width={80} height={85} />
+                <h2 className="text-2xl font-bold text-center text-black">NODO <span className="bg-gradient-to-r from-[#1A237E] via-[#1497B5] to-[#26A69A] bg-clip-text text-transparent">App</span> </h2>
+              </div>
               <p className="text-sm text-gray-500 text-center">Acceso restringido</p>
               <Input
                 label="Email"
@@ -79,7 +83,7 @@ export default function StoreLoginPage() {
               {error ? (
                 <p className="text-sm text-danger text-center">{error}</p>
               ) : null}
-              <Button type="submit" color="primary" isDisabled={loading} isLoading={loading} className="w-full">
+              <Button type="submit" isDisabled={loading} isLoading={loading} className="w-full button button-secondary">
                 {loading ? "Iniciando sesión..." : "Entrar"}
               </Button>
             </form>

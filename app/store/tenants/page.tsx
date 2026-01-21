@@ -13,12 +13,19 @@ import {
   TableCell,
   Chip,
   Spinner,
+  Switch,
 } from "@heroui/react";
 import { Trash2, Plus, LogOut } from "lucide-react";
 import { ConfirmationDialog } from "../../plataforma/[tenantId]/panel/components/alerts/ConfirmationDialog";
 import { AlertDialog } from "../../plataforma/[tenantId]/panel/components/alerts/AlertDialog";
 import { TenantFormDialog } from "../components/TenantFormDialog";
 import { useRouter } from "next/navigation";
+
+interface TenantFeatures {
+  calendar: boolean;
+  emailNotifications: boolean;
+  whatsappNotifications: boolean;
+}
 
 interface Tenant {
   id: string;
@@ -27,6 +34,7 @@ interface Tenant {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  features?: TenantFeatures;
 }
 
 export default function StoreTenantsPage() {
@@ -62,7 +70,27 @@ export default function StoreTenantsPage() {
         throw new Error("Failed to load tenants");
       }
       const data = await res.json();
-      setTenants(Array.isArray(data) ? data : []);
+      const tenantsList = Array.isArray(data) ? data : [];
+      
+      // Load features for each tenant
+      const tenantsWithFeatures = await Promise.all(
+        tenantsList.map(async (tenant: Tenant) => {
+          try {
+            const featuresRes = await fetch(`/api/store/tenants/${tenant.id}/features`, {
+              credentials: "include",
+            });
+            if (featuresRes.ok) {
+              const features = await featuresRes.json();
+              return { ...tenant, features };
+            }
+          } catch (error) {
+            console.error(`Error loading features for tenant ${tenant.id}:`, error);
+          }
+          return tenant;
+        })
+      );
+      
+      setTenants(tenantsWithFeatures);
     } catch (error) {
       console.error("Error loading tenants:", error);
     } finally {
@@ -131,11 +159,56 @@ export default function StoreTenantsPage() {
     }
   };
 
+  const handleFeatureToggle = async (
+    tenantId: string,
+    featureKey: keyof TenantFeatures,
+    value: boolean
+  ) => {
+    try {
+      const currentFeatures = tenants.find((t) => t.id === tenantId)?.features || {
+        calendar: true,
+        emailNotifications: false,
+        whatsappNotifications: false,
+      };
+
+      const updatedFeatures = {
+        ...currentFeatures,
+        [featureKey]: value,
+      };
+
+      const res = await fetch(`/api/store/tenants/${tenantId}/features`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ features: updatedFeatures }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Error al actualizar feature flag");
+      }
+
+      // Update local state
+      setTenants((prev) =>
+        prev.map((tenant) =>
+          tenant.id === tenantId
+            ? { ...tenant, features: updatedFeatures }
+            : tenant
+        )
+      );
+    } catch (error: any) {
+      setAlertDialog({
+        open: true,
+        message: error.message || "Error al actualizar feature flag",
+        type: "error",
+      });
+    }
+  };
+
   return (
-    <div className="max-w-7xl mx-auto mt-8 px-4 py-8">
-      <Card className="p-6 mb-6 shadow-lg">
+    <div className="w-full mx-auto mt-8 px-4 py-8 min-h-screen bg-nodo space-y-4">
+      <Card className="max-w-5xl card mx-auto !shadow-lg">
         <CardBody>
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center text-slate-800">
             <div>
               <h2 className="text-xl font-semibold">Gestión de Tenants</h2>
               <p className="text-sm text-gray-500">Administra los tenants de la plataforma</p>
@@ -162,13 +235,16 @@ export default function StoreTenantsPage() {
         </CardBody>
       </Card>
 
-      <Card>
+      <Card className="max-w-5xl mx-auto !shadow-lg card">
         <CardBody>
-          <Table aria-label="Tabla de tenants">
+          <Table aria-label="Tabla de tenants" classNames={{base: "text-slate-800"}}>
             <TableHeader>
               <TableColumn>ID</TableColumn>
               <TableColumn>Nombre</TableColumn>
               <TableColumn>Estado</TableColumn>
+              <TableColumn>Calendario</TableColumn>
+              <TableColumn>Email</TableColumn>
+              <TableColumn>WhatsApp</TableColumn>
               <TableColumn>Fecha de Creación</TableColumn>
               <TableColumn align="end">Acciones</TableColumn>
             </TableHeader>
@@ -177,38 +253,76 @@ export default function StoreTenantsPage() {
               loadingContent={<Spinner />}
               emptyContent={tenants.length === 0 ? "No hay tenants registrados" : undefined}
             >
-              {tenants.map((tenant) => (
-                <TableRow key={tenant.id}>
-                  <TableCell>
-                    <code className="text-sm">{tenant.id}</code>
-                  </TableCell>
-                  <TableCell>{tenant.name}</TableCell>
-                  <TableCell>
-                    <Chip
-                      color={tenant.isActive ? "success" : "default"}
-                      size="sm"
-                    >
-                      {tenant.isActive ? "Activo" : "Inactivo"}
-                    </Chip>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(tenant.createdAt).toLocaleDateString("es-AR")}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2 justify-end">
-                      <Button
+              {tenants.map((tenant) => {
+                const features = tenant.features || {
+                  calendar: true,
+                  emailNotifications: false,
+                  whatsappNotifications: false,
+                };
+
+                return (
+                  <TableRow key={tenant.id}>
+                    <TableCell>
+                      <code className="text-sm">{tenant.id}</code>
+                    </TableCell>
+                    <TableCell>{tenant.name}</TableCell>
+                    <TableCell>
+                      <Chip
+                        color={tenant.isActive ? "success" : "default"}
                         size="sm"
-                        onPress={() => handleDelete(tenant)}
-                        isIconOnly
-                        color="danger"
-                        aria-label="eliminar"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                        {tenant.isActive ? "Activo" : "Inactivo"}
+                      </Chip>
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        size="sm"
+                        isSelected={features.calendar}
+                        onValueChange={(value) =>
+                          handleFeatureToggle(tenant.id, "calendar", value)
+                        }
+                        aria-label="Calendario"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        size="sm"
+                        isSelected={features.emailNotifications}
+                        onValueChange={(value) =>
+                          handleFeatureToggle(tenant.id, "emailNotifications", value)
+                        }
+                        aria-label="Notificaciones por Email"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        size="sm"
+                        isSelected={features.whatsappNotifications}
+                        onValueChange={(value) =>
+                          handleFeatureToggle(tenant.id, "whatsappNotifications", value)
+                        }
+                        aria-label="Notificaciones por WhatsApp"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {new Date(tenant.createdAt).toLocaleDateString("es-AR")}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          size="sm"
+                          onPress={() => handleDelete(tenant)}
+                          isIconOnly
+                          color="danger"
+                          aria-label="eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardBody>
