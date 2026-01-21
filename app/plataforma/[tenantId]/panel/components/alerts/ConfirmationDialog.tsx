@@ -2,18 +2,14 @@
 
 import React from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
   Button,
-  Typography,
-  Box,
-} from "@mui/material";
-import WarningIcon from "@mui/icons-material/Warning";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import ErrorIcon from "@mui/icons-material/Error";
-import InfoIcon from "@mui/icons-material/Info";
+} from "@heroui/react";
+import { AlertTriangle, CheckCircle2, AlertCircle, Info } from "lucide-react";
 
 export type ConfirmationDialogType = "warning" | "error" | "info" | "success";
 
@@ -39,16 +35,17 @@ export function ConfirmationDialog({
   type = "warning",
 }: ConfirmationDialogProps) {
   const getIcon = () => {
+    const iconClass = "w-12 h-12";
     switch (type) {
       case "error":
-        return <ErrorIcon sx={{ fontSize: 48, color: "error.main" }} />;
+        return <AlertCircle className={`${iconClass} text-danger`} />;
       case "success":
-        return <CheckCircleIcon sx={{ fontSize: 48, color: "success.main" }} />;
+        return <CheckCircle2 className={`${iconClass} text-success`} />;
       case "info":
-        return <InfoIcon sx={{ fontSize: 48, color: "info.main" }} />;
+        return <Info className={`${iconClass} text-primary`} />;
       case "warning":
       default:
-        return <WarningIcon sx={{ fontSize: 48, color: "warning.main" }} />;
+        return <AlertTriangle className={`${iconClass} text-warning`} />;
     }
   };
 
@@ -58,65 +55,45 @@ export function ConfirmationDialog({
   };
 
   return (
-    <Dialog
-      open={open}
+    <Modal
+      isOpen={open}
       onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 2,
-        },
+      size="md"
+      placement="center"
+      isDismissable={true}
+      isKeyboardDismissDisabled={false}
+      classNames={{
+        base: "rounded-xl",
       }}
     >
-      <DialogTitle sx={{ pb: 1 }}>
-        {title || "Confirmar acción"}
-      </DialogTitle>
-      <DialogContent>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-            py: 2,
-          }}
-        >
-          {getIcon()}
-          <Typography variant="body1" align="center" sx={{ mt: 1 }}>
-            {message}
-          </Typography>
-        </Box>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
-        <Button
-          variant="outlined"
-          onClick={onClose}
-          color="error"
-          sx={{
-            borderColor: "error.main",
-            "&:hover": {
-              borderColor: "error.dark",
-              backgroundColor: "error.light",
-            },
-          }}
-        >
-          {cancelText}
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleConfirm}
-          color="success"
-          sx={{
-            backgroundColor: "success.main",
-            "&:hover": {
-              backgroundColor: "success.dark",
-            },
-          }}
-        >
-          {confirmText}
-        </Button>
-      </DialogActions>
-    </Dialog>
+      <ModalContent>
+        <ModalHeader className="flex flex-col gap-1 pb-2 text-slate-800">
+          {title || "Confirmar acción"}
+        </ModalHeader>
+        <ModalBody className="text-slate-800">
+          <div className="flex flex-col items-center gap-4 py-2">
+            {getIcon()}
+            <p className="text-center text-base">{message}</p>
+          </div>
+        </ModalBody>
+        <ModalFooter className="gap-2 pt-2 text-slate-800">
+          <Button
+            variant="light"
+            color="danger"
+            onPress={onClose}
+            className="min-w-24"
+          >
+            {cancelText}
+          </Button>
+          <Button
+            color={type === "error" ? "danger" : type === "success" ? "success" : "primary"}
+            onPress={handleConfirm}
+            className="min-w-24"
+          >
+            {confirmText}
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   );
 }

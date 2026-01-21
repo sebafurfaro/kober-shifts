@@ -1,29 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { Box, Button, Container, Stack, Typography } from "@mui/material";
+import { Button } from "@heroui/react";
 
 export default function Home() {
   return (
-    <Box sx={{ minHeight: "100vh", display: "flex", alignItems: "center"}}>
-      <Container maxWidth="sm">
-        <Stack spacing={2}>
-          <Typography variant="h4" fontWeight={700}>
-            Kober Shifts
-          </Typography>
-          <Typography color="text.secondary">
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="max-w-md w-full px-4">
+        <div className="space-y-4">
+          <h1 className="text-3xl font-bold">Kober Shifts</h1>
+          <p className="text-gray-500">
             Sistema de turnos: pacientes, profesionales y administración del centro.
-          </Typography>
-          <Stack direction="row" spacing={2}>
-            <Button component={Link} href="/login" variant="contained">
+          </p>
+          <div className="flex gap-4">
+            <Button as={Link} href="/login" color="primary">
               Ingresar
             </Button>
-            <Button component={Link} href="/register" variant="outlined">
+            <Button as={Link} href="/register" variant="bordered">
               Crear cuenta
             </Button>
-          </Stack>
-        </Stack>
-      </Container>
-    </Box>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

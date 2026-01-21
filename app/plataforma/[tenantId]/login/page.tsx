@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Box, Button, Container, Stack, TextField, Typography } from "@mui/material";
+import { Button, Input, Card, CardBody } from "@heroui/react";
 import { useParams, useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -36,53 +36,54 @@ export default function LoginPage() {
   }
 
   return (
-    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", backgroundImage: "url('/p-1.png')", backgroundSize: "cover", backgroundPosition: "center" }}>
-      <Container maxWidth="sm">
-        <Box sx={{ py: 8 }}>
-          <Stack spacing={2} component="form" onSubmit={onSubmit}>
-            <Typography variant="h5" fontWeight={700}>
-              Ingresar
-            </Typography>
-            <TextField
-              label="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-            />
-            <TextField
-              label="Contraseña"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-            />
-            {error ? (
-              <Typography color="error" variant="body2">
-                {error}
-              </Typography>
-            ) : null}
-            <Button type="submit" variant="contained" disabled={loading}>
-              Entrar
-            </Button>
+    <div className="flex justify-center items-center min-h-screen bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/p-1.png')" }}>
+      <div className="max-w-md w-full px-4">
+        <Card className="py-8">
+          <CardBody>
+            <form onSubmit={onSubmit} className="space-y-4">
+              <h2 className="text-2xl font-bold">Ingresar</h2>
+              <Input
+                label="Email"
+                type="email"
+                value={email}
+                onValueChange={setEmail}
+                autoComplete="email"
+                isRequired
+              />
+              <Input
+                label="Contraseña"
+                type="password"
+                value={password}
+                onValueChange={setPassword}
+                autoComplete="current-password"
+                isRequired
+              />
+              {error ? (
+                <p className="text-sm text-danger">{error}</p>
+              ) : null}
+              <Button type="submit" color="primary" isDisabled={loading} className="w-full">
+                Entrar
+              </Button>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', my: 2 }}>
-              <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-              <Typography variant="caption" sx={{ px: 2, color: 'text.secondary' }}>O</Typography>
-              <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-            </Box>
+              <div className="flex items-center my-4">
+                <div className="flex-1 h-px bg-gray-300" />
+                <span className="px-2 text-sm text-gray-500">O</span>
+                <div className="flex-1 h-px bg-gray-300" />
+              </div>
 
-            <Button
-              variant="outlined"
-              onClick={() => window.location.href = `/api/plataforma/${tenantId}/auth/google`}
-              disabled={loading}
-              fullWidth
-            >
-              Ingresar con Google
-            </Button>
-          </Stack>
-        </Box>
-      </Container>
-    </Box>
+              <Button
+                variant="bordered"
+                onPress={() => window.location.href = `/api/plataforma/${tenantId}/auth/google`}
+                isDisabled={loading}
+                className="w-full"
+              >
+                Ingresar con Google
+              </Button>
+            </form>
+          </CardBody>
+        </Card>
+      </div>
+    </div>
   );
 }
 

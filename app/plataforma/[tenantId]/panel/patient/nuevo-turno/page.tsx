@@ -2,28 +2,22 @@
 
 import { PanelHeader } from "../../components/PanelHeader";
 import {
-    Box,
-    Container,
-    FormControl,
-    InputLabel,
-    MenuItem,
     Select,
-    Typography,
-    List,
-    ListItem,
-    ListItemText,
-    CircularProgress,
+    SelectItem,
+    Spinner,
     Alert,
     Button,
-    Paper,
+    Card,
+    CardBody,
     Chip,
     Pagination,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Divider
-} from "@mui/material";
+    Modal,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
+    Input,
+} from "@heroui/react";
 import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
@@ -272,8 +266,8 @@ export default function NewAppointment() {
     const endIndex = startIndex + slotsPerPage;
     const paginatedSlots = availableSlots.slice(startIndex, endIndex);
 
-    const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
-        setCurrentPage(value);
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
         // Scroll to top of slots list
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -298,228 +292,229 @@ export default function NewAppointment() {
     const selectedProfessional = professionals.find((p) => p.id === professional);
 
     return (
-        <Container maxWidth="lg" className="mt-8">
+        <div className="max-w-7xl mx-auto mt-8 px-4">
             <PanelHeader
                 title="Nuevo Turno"
                 subtitle="Para crear un nuevo turno, debes seleccionar las opciones"
             />
             {error && (
-                <Alert severity="error" className="mb-6 animate-fade-in" onClose={() => setError(null)}>
+                <Alert color="danger" className="mb-6 animate-fade-in" onClose={() => setError(null)}>
                     {error}
                 </Alert>
             )}
-            <Box className="grid grid-cols-1 md:grid-cols-[1fr_0.5fr_2fr] gap-6">
-                <Box className="py-8">
-                    <Typography variant="h6" className="mb-4 font-semibold text-gray-800">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_0.5fr_2fr] gap-6">
+                <div className="py-8">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
                         Selecciona el profesional
-                    </Typography>
+                    </h3>
                     {loadingProfessionals ? (
-                        <Box className="flex justify-center items-center py-16">
-                            <CircularProgress />
-                        </Box>
+                        <div className="flex justify-center items-center py-16">
+                            <Spinner />
+                        </div>
                     ) : (
-                        <FormControl fullWidth>
-                            <InputLabel>Profesional</InputLabel>
-                            <Select
-                                label="Profesional"
-                                value={professional}
-                                onChange={(e) => handleProfessionalChange(e.target.value)}
-                                className="focus:ring-2 focus:ring-blue-500"
-                            >
-                                {professionals.map((prof) => (
-                                    <MenuItem key={prof.id} value={prof.id} className="hover:bg-gray-100">
-                                        {prof.name}
+                        <Select
+                            label="Profesional"
+                            selectedKeys={professional ? [professional] : []}
+                            onSelectionChange={(keys) => {
+                                const selected = Array.from(keys)[0] as string;
+                                handleProfessionalChange(selected);
+                            }}
+                            className="w-full"
+                        >
+                            {professionals.map((prof) => (
+                                <SelectItem key={prof.id} value={prof.id}>
+                                    <div className="flex items-center gap-2">
+                                        <span>{prof.name}</span>
                                         {prof.specialty && (
-                                            <Chip
-                                                label={prof.specialty.name}
-                                                size="small"
-                                                className="ml-2"
-                                            />
+                                            <Chip size="sm" className="ml-2">
+                                                {prof.specialty.name}
+                                            </Chip>
                                         )}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
+                                    </div>
+                                </SelectItem>
+                            ))}
+                        </Select>
                     )}
-                </Box>
-                <Box></Box>
-                <Box className="py-8">
-                    <Typography variant="h6" className="mb-4 font-semibold text-gray-800">
+                </div>
+                <div></div>
+                <div className="py-8">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
                         Selecciona el turno de acuerdo a la disponibilidad
-                    </Typography>
+                    </h3>
                     {!professional ? (
-                        <Paper className="p-6 text-center rounded-lg border border-gray-200 bg-gray-50">
-                            <Typography color="text.secondary" className="text-gray-600">
-                                Selecciona un profesional para ver los turnos disponibles
-                            </Typography>
-                        </Paper>
+                        <Card className="p-6 text-center border border-gray-200 bg-gray-50">
+                            <CardBody>
+                                <p className="text-gray-600">
+                                    Selecciona un profesional para ver los turnos disponibles
+                                </p>
+                            </CardBody>
+                        </Card>
                     ) : loadingSlots ? (
-                        <Box className="flex justify-center items-center py-16">
-                            <CircularProgress />
-                        </Box>
+                        <div className="flex justify-center items-center py-16">
+                            <Spinner />
+                        </div>
                     ) : availableSlots.length === 0 ? (
-                        <Paper className="p-6 text-center rounded-lg border border-gray-200 bg-gray-50">
-                            <Typography color="text.secondary" className="text-gray-600">
-                                No hay turnos disponibles para este profesional en los próximos 30 días
-                            </Typography>
-                        </Paper>
+                        <Card className="p-6 text-center border border-gray-200 bg-gray-50">
+                            <CardBody>
+                                <p className="text-gray-600">
+                                    No hay turnos disponibles para este profesional en los próximos 30 días
+                                </p>
+                            </CardBody>
+                        </Card>
                     ) : (
-                        <Box className="animate-fade-in">
-                            <Typography variant="body2" color="text.secondary" className="mb-4 text-gray-600">
+                        <div className="animate-fade-in">
+                            <p className="text-sm text-gray-600 mb-4">
                                 Mostrando {startIndex + 1}-{Math.min(endIndex, availableSlots.length)} de {availableSlots.length} turnos disponibles
-                            </Typography>
-                            <List className="space-y-2">
+                            </p>
+                            <div className="space-y-2">
                                 {paginatedSlots.map((slot, index) => (
-                                    <ListItem
+                                    <div
                                         key={`${slot.date}-${slot.time}-${index}`}
                                         onClick={() => handleSlotClick(slot)}
-                                        className="border border-gray-300 rounded-lg mb-2 cursor-pointer transition-all duration-200 hover:bg-blue-50 hover:border-blue-400 hover:shadow-md active:scale-[0.98]"
+                                        className="border border-gray-300 rounded-lg mb-2 p-4 cursor-pointer transition-all duration-200 hover:bg-blue-50 hover:border-blue-400 hover:shadow-md active:scale-[0.98]"
                                     >
-                                        <ListItemText
-                                            primary={
-                                                <Typography variant="body1" fontWeight={500} className="text-gray-800">
-                                                    {formatDate(slot.date)}
-                                                </Typography>
-                                            }
-                                            secondary={
-                                                <Typography variant="body2" color="text.secondary" className="text-gray-600">
-                                                    {slot.time}
-                                                </Typography>
-                                            }
-                                        />
-                                    </ListItem>
+                                        <p className="font-medium text-gray-800">
+                                            {formatDate(slot.date)}
+                                        </p>
+                                        <p className="text-sm text-gray-600">
+                                            {slot.time}
+                                        </p>
+                                    </div>
                                 ))}
-                            </List>
+                            </div>
                             {totalPages > 1 && (
-                                <Box className="flex justify-center mt-6">
+                                <div className="flex justify-center mt-6">
                                     <Pagination
-                                        count={totalPages}
+                                        total={totalPages}
                                         page={currentPage}
                                         onChange={handlePageChange}
                                         color="primary"
-                                        size="large"
-                                        className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                                        size="lg"
                                     />
-                                </Box>
+                                </div>
                             )}
-                        </Box>
+                        </div>
                     )}
-                </Box>
-            </Box>
+                </div>
+            </div>
 
             {/* Confirmation Dialog */}
-            <Dialog
-                open={confirmDialogOpen}
+            <Modal
+                isOpen={confirmDialogOpen}
                 onClose={() => !confirming && setConfirmDialogOpen(false)}
-                maxWidth="sm"
-                fullWidth
+                size="md"
+                scrollBehavior="inside"
                 className="animate-fade-in"
             >
-                <DialogTitle className="text-xl font-semibold text-gray-800">Confirmar Turno</DialogTitle>
-                <DialogContent>
-                    {selectedSlot && selectedProfessional && (
-                        <Box className="py-4">
-                            <Typography variant="h6" className="mb-4 font-semibold text-gray-800">
-                                Detalles del Turno
-                            </Typography>
-                            <Divider className="my-4" />
-                            
-                            <Box className="mb-4">
-                                <Typography variant="body2" color="text.secondary" className="text-gray-600 mb-1">
-                                    Profesional
-                                </Typography>
-                                <Typography variant="body1" fontWeight={500} className="text-gray-800">
-                                    {selectedProfessional.name}
-                                </Typography>
-                            </Box>
+                <ModalContent>
+                    <ModalHeader className="text-xl font-semibold text-gray-800">Confirmar Turno</ModalHeader>
+                    <ModalBody>
+                        {selectedSlot && selectedProfessional && (
+                            <div className="py-4">
+                                <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                                    Detalles del Turno
+                                </h4>
+                                <div className="border-t border-gray-200 my-4" />
+                                
+                                <div className="mb-4">
+                                    <p className="text-sm text-gray-600 mb-1">
+                                        Profesional
+                                    </p>
+                                    <p className="font-medium text-gray-800">
+                                        {selectedProfessional.name}
+                                    </p>
+                                </div>
 
-                            <Box className="mb-4">
-                                <Typography variant="body2" color="text.secondary" className="text-gray-600 mb-1">
-                                    Fecha y Hora
-                                </Typography>
-                                <Typography variant="body1" fontWeight={500} className="text-gray-800">
-                                    {formatDate(selectedSlot.date)} a las {selectedSlot.time}
-                                </Typography>
-                            </Box>
+                                <div className="mb-4">
+                                    <p className="text-sm text-gray-600 mb-1">
+                                        Fecha y Hora
+                                    </p>
+                                    <p className="font-medium text-gray-800">
+                                        {formatDate(selectedSlot.date)} a las {selectedSlot.time}
+                                    </p>
+                                </div>
 
-                            <Box className="mb-4">
-                                <FormControl fullWidth required>
-                                    <InputLabel>Especialidad</InputLabel>
+                                <div className="mb-4">
                                     <Select
-                                        value={selectedSpecialty}
-                                        onChange={(e) => setSelectedSpecialty(e.target.value)}
                                         label="Especialidad"
-                                        disabled={confirming || loadingSpecialties}
-                                        className="focus:ring-2 focus:ring-blue-500"
+                                        selectedKeys={selectedSpecialty ? [selectedSpecialty] : []}
+                                        onSelectionChange={(keys) => {
+                                            const selected = Array.from(keys)[0] as string;
+                                            setSelectedSpecialty(selected);
+                                        }}
+                                        isRequired
+                                        isDisabled={confirming || loadingSpecialties}
+                                        className="w-full"
                                     >
                                         {selectedProfessional.specialties.length > 0 ? (
                                             selectedProfessional.specialties.map((spec) => (
-                                                <MenuItem key={spec.id} value={spec.id} className="hover:bg-gray-100">
+                                                <SelectItem key={spec.id} value={spec.id}>
                                                     {spec.name}
-                                                </MenuItem>
+                                                </SelectItem>
                                             ))
                                         ) : (
                                             specialties.map((spec) => (
-                                                <MenuItem key={spec.id} value={spec.id} className="hover:bg-gray-100">
+                                                <SelectItem key={spec.id} value={spec.id}>
                                                     {spec.name}
-                                                </MenuItem>
+                                                </SelectItem>
                                             ))
                                         )}
                                     </Select>
-                                </FormControl>
-                            </Box>
+                                </div>
 
-                            <Box className="mb-4">
-                                <FormControl fullWidth required>
-                                    <InputLabel>Ubicación</InputLabel>
+                                <div className="mb-4">
                                     <Select
-                                        value={selectedLocation}
-                                        onChange={(e) => setSelectedLocation(e.target.value)}
                                         label="Ubicación"
-                                        disabled={confirming || loadingLocations}
-                                        className="focus:ring-2 focus:ring-blue-500"
+                                        selectedKeys={selectedLocation ? [selectedLocation] : []}
+                                        onSelectionChange={(keys) => {
+                                            const selected = Array.from(keys)[0] as string;
+                                            setSelectedLocation(selected);
+                                        }}
+                                        isRequired
+                                        isDisabled={confirming || loadingLocations}
+                                        className="w-full"
                                     >
                                         {locations.map((loc) => (
-                                            <MenuItem key={loc.id} value={loc.id} className="hover:bg-gray-100">
+                                            <SelectItem key={loc.id} value={loc.id}>
                                                 {loc.name}
-                                            </MenuItem>
+                                            </SelectItem>
                                         ))}
                                     </Select>
-                                </FormControl>
-                            </Box>
+                                </div>
 
-                            {error && (
-                                <Alert severity="error" className="mt-4 animate-fade-in" onClose={() => setError(null)}>
-                                    {error}
-                                </Alert>
-                            )}
-                        </Box>
-                    )}
-                </DialogContent>
-                <DialogActions className="px-6 py-4 gap-2">
-                    <Button
-                        onClick={() => {
-                            setConfirmDialogOpen(false);
-                            setSelectedSlot(null);
-                            setSelectedLocation("");
-                            setSelectedSpecialty("");
-                            setError(null);
-                        }}
-                        disabled={confirming}
-                        className="px-4 py-2 hover:bg-gray-100 transition-colors duration-150"
-                    >
-                        Cancelar
-                    </Button>
-                    <Button
-                        onClick={handleConfirmAppointment}
-                        variant="contained"
-                        disabled={confirming || !selectedLocation || !selectedSpecialty}
-                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                    >
-                        {confirming ? <CircularProgress size={24} /> : "Confirmar Turno"}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                                {error && (
+                                    <Alert color="danger" className="mt-4 animate-fade-in" onClose={() => setError(null)}>
+                                        {error}
+                                    </Alert>
+                                )}
+                            </div>
+                        )}
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button
+                            onPress={() => {
+                                setConfirmDialogOpen(false);
+                                setSelectedSlot(null);
+                                setSelectedLocation("");
+                                setSelectedSpecialty("");
+                                setError(null);
+                            }}
+                            isDisabled={confirming}
+                            variant="light"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            onPress={handleConfirmAppointment}
+                            color="primary"
+                            isDisabled={confirming || !selectedLocation || !selectedSpecialty}
+                            isLoading={confirming}
+                        >
+                            Confirmar Turno
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
 
             {/* Success Dialog */}
             <AlertDialog
@@ -529,6 +524,6 @@ export default function NewAppointment() {
                 type="success"
                 title="Éxito"
             />
-        </Container>
+        </div>
     );
 }

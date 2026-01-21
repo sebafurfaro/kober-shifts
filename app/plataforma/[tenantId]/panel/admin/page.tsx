@@ -2,11 +2,9 @@
 
 import * as React from "react";
 import { PanelHeader } from "../components/PanelHeader";
-import { Paper, Grid, Container, Stack, Typography, Switch, CircularProgress, Alert, Box } from "@mui/material";
+import { Card, CardBody, Switch, Spinner, Alert, Input, Button } from "@heroui/react";
 import { useParams } from "next/navigation";
 import { AlertDialog } from "../components/alerts/AlertDialog";
-import { styled } from "@mui/material/styles";
-import { SwitchProps } from "@mui/material";
 
 interface NotificationSettings {
   whatsapp: boolean;
@@ -129,122 +127,89 @@ export default function AdminPanelPage() {
     },
   ];
 
-  const IOSSwitch = styled((props: SwitchProps) => (
-    <Switch focusVisibleClassName=".Mui-focusVisible" disableRipple {...props} />
-  ))(({ theme }) => ({
-    width: 42,
-    height: 26,
-    padding: 0,
-    '& .MuiSwitch-switchBase': {
-      padding: 0,
-      margin: "2px",
-      transitionDuration: '300ms',
-      '&.Mui-checked': {
-        transform: 'translateX(16px)',
-        color: '#fff',
-        '& + .MuiSwitch-track': {
-          backgroundColor: '#2e72caff',
-          opacity: 1,
-          border: 0,
-          ...theme.applyStyles('dark', {
-            backgroundColor: '#2e72caff',
-          }),
-        },
-        '&.Mui-disabled + .MuiSwitch-track': {
-          opacity: 0.5,
-        },
-      },
-      '&.Mui-focusVisible .MuiSwitch-thumb': {
-        color: '#2e72ca',
-        border: '6px solid #fff',
-      },
-      '&.Mui-disabled .MuiSwitch-thumb': {
-        color: theme.palette.grey[100],
-        ...theme.applyStyles('dark', {
-          color: theme.palette.grey[600],
-        }),
-      },
-      '&.Mui-disabled + .MuiSwitch-track': {
-        opacity: 0.7,
-        ...theme.applyStyles('dark', {
-          opacity: 0.3,
-        }),
-      },
-    },
-    '& .MuiSwitch-thumb': {
-      boxSizing: 'border-box',
-      width: 22,
-      height: 22,
-    },
-    '& .MuiSwitch-track': {
-      borderRadius: 26 / 2,
-      backgroundColor: '#E9E9EA',
-      opacity: 1,
-      transition: theme.transitions.create(['background-color'], {
-        duration: 500,
-      }),
-      ...theme.applyStyles('dark', {
-        backgroundColor: '#39393D',
-      }),
-    },
-  }));
 
   if (loading) {
     return (
-      <Container maxWidth="md" className="mt-8">
-        <Box className="flex justify-center items-center py-16">
-          <CircularProgress />
-        </Box>
-      </Container>
+      <div className="max-w-3xl mx-auto mt-8">
+        <div className="flex justify-center items-center py-16">
+          <Spinner size="lg" />
+        </div>
+      </div>
     );
   }
 
   return (
-    <Container maxWidth="md" className="mt-8">
+    <div className="max-w-3xl mx-auto mt-8">
       <PanelHeader
         title="Configuraciones"
         subtitle={`Hola, ${userName}. Configura tu centro de trabajo.`}
       />
       {error && (
         <Alert 
-          severity="error" 
+          color="danger" 
           className="mb-6 animate-fade-in" 
           onClose={() => setError(null)}
         >
           {error}
         </Alert>
       )}
-      <Stack spacing={2}>
-        <Paper className="p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200">
-          <Typography fontWeight={700} className="mb-6 text-gray-800">
-            Notificaciones
-          </Typography>
-          <Box className="mt-4 space-y-4">
-            {notifications.map((notif) => (
-              <Grid 
-                container 
-                spacing={2} 
-                key={notif.key} 
-                className="items-center py-3 px-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors duration-150 rounded-md"
-              >
-                <Grid item xs={10}>
-                  <Typography fontWeight={500} className="text-gray-700">
+      <div className="space-y-4">
+        <Card className="p-6">
+          <CardBody className="p-0">
+            <h3 className="font-bold mb-6 text-gray-800 text-lg">
+              Notificaciones
+            </h3>
+            <div className="mt-4 space-y-4">
+              {notifications.map((notif) => (
+                <div 
+                  key={notif.key} 
+                  className="flex items-center justify-between py-3 px-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors duration-150 rounded-md"
+                >
+                  <p className="font-medium text-gray-700 flex-1">
                     {notif.title}
-                  </Typography>
-                </Grid>
-                <Grid item xs={2} className="flex justify-end">
-                  <IOSSwitch
-                    checked={settings.notifications[notif.key]}
-                    onChange={() => handleToggle(notif.key)}
-                    disabled={saving}
-                    className="focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-full transition-all duration-200"
-                  />
-                </Grid>
-              </Grid>
-            ))}
-          </Box>
-        </Paper>
-      </Stack>
+                  </p>
+                  <div className="flex justify-end">
+                    <Switch
+                      isSelected={settings.notifications[notif.key]}
+                      onValueChange={() => handleToggle(notif.key)}
+                      isDisabled={saving}
+                      color="primary"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+        <Card className="p-6">
+          <CardBody className="p-0">
+            <h3 className="font-bold mb-6 text-gray-800 text-lg">
+              Configuración general de turnos
+            </h3>
+            <div className="flex gap-2 items-center text-slate-800">
+              Permitir cancelacion de turnos hasta 
+              <Input
+                type="number"
+                value={settings.cancelationLimit}
+                onChange={(e) => setSettings({ ...settings, cancelationLimit: parseInt(e.target.value) })}
+                isDisabled={saving}
+                color="default"
+                variant="bordered"
+                className="w-24"
+              />
+              dias antes del turno
+              <Button
+                className="button button-secondary"
+                onPress={() => handleSaveCancelationLimit()}
+                isDisabled={saving}
+                isLoading={saving}
+              >
+                Guardar
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
+      </div>
 
       {/* Success Dialog */}
       <AlertDialog
@@ -254,7 +219,7 @@ export default function AdminPanelPage() {
         type="success"
         title="Éxito"
       />
-    </Container>
+    </div>
   );
 }
 

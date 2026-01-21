@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Container, CircularProgress, Alert, Box } from "@mui/material";
+import { Spinner, Alert } from "@heroui/react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
+import { ArrowLeft } from "lucide-react";
 import { PanelHeader } from "../../../../components/PanelHeader";
 import { ProfessionalForm } from "../../components/ProfessionalForm";
 import { Specialty } from "../../components/types";
@@ -75,32 +75,32 @@ export default function ProfessionalEditPage() {
 
     if (loading) {
         return (
-            <Container maxWidth="lg" sx={{ mt: 4, textAlign: "center" }}>
-                <CircularProgress />
-            </Container>
+            <div className="max-w-7xl mx-auto mt-8 text-center">
+                <Spinner size="lg" />
+            </div>
         );
     }
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 8 }}>
+        <div className="max-w-7xl mx-auto mt-8 mb-16">
             <PanelHeader
                 title="Editar Profesional"
                 subtitle={`Modificando el perfil de ${initialData?.name}`}
                 action={{
                     label: "Volver",
                     onClick: () => router.push(`/plataforma/${tenantId}/panel/admin/professionals`),
-                    variant: "outlined",
-                    startIcon: <ArrowBackIcon />
+                    variant: "bordered",
+                    startIcon: <ArrowLeft className="w-4 h-4" />
                 }}
             />
 
             {error && (
-                <Alert severity="error" sx={{ mt: 2, mb: 2 }}>
+                <Alert color="danger" className="mt-4 mb-4">
                     {error}
                 </Alert>
             )}
 
-            <Box sx={{ mt: 4 }}>
+            <div className="mt-6">
                 <ProfessionalForm
                     mode="edit"
                     specialties={specialties}
@@ -108,7 +108,7 @@ export default function ProfessionalEditPage() {
                     onSubmit={handleSubmit}
                     loading={submitting}
                 />
-            </Box>
-        </Container>
+            </div>
+        </div>
     );
 }

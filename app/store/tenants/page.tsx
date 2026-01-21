@@ -2,20 +2,19 @@
 
 import * as React from "react";
 import {
-  Box,
-  Container,
-  Paper,
+  Button,
+  Card,
+  CardBody,
   Table,
+  TableHeader,
+  TableColumn,
   TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
-  IconButton,
+  TableCell,
   Chip,
-  Typography,
-} from "@mui/material";
-import { Delete as DeleteIcon, Add as AddIcon, Logout as LogoutIcon } from "@mui/icons-material";
+  Spinner,
+} from "@heroui/react";
+import { Trash2, Plus, LogOut } from "lucide-react";
 import { ConfirmationDialog } from "../../plataforma/[tenantId]/panel/components/alerts/ConfirmationDialog";
 import { AlertDialog } from "../../plataforma/[tenantId]/panel/components/alerts/AlertDialog";
 import { TenantFormDialog } from "../components/TenantFormDialog";
@@ -133,116 +132,87 @@ export default function StoreTenantsPage() {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Box sx={{ py: 4 }}>
-        <Paper sx={{ p: 3, mb: 4, borderRadius: 3 }} elevation={8}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Box>
-              <Typography variant="h6" fontWeight={600} sx={{ fontSize: "1.25rem" }}>
-                Gestión de Tenants
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Administra los tenants de la plataforma
-              </Typography>
-            </Box>
-            <Box sx={{ display: "flex", gap: 1 }}>
-              <IconButton
+    <div className="max-w-7xl mx-auto mt-8 px-4 py-8">
+      <Card className="p-6 mb-6 shadow-lg">
+        <CardBody>
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-semibold">Gestión de Tenants</h2>
+              <p className="text-sm text-gray-500">Administra los tenants de la plataforma</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
                 color="primary"
-                onClick={handleCreate}
-                sx={{
-                  bgcolor: "primary.main",
-                  color: "white",
-                  "&:hover": {
-                    bgcolor: "primary.dark",
-                  },
-                }}
+                onPress={handleCreate}
+                isIconOnly
                 title="Agregar tenant"
               >
-                <AddIcon />
-              </IconButton>
-              <IconButton
-                color="error"
-                onClick={handleLogout}
-                sx={{
-                  bgcolor: "error.main",
-                  color: "white",
-                  "&:hover": {
-                    bgcolor: "error.dark",
-                  },
-                }}
+                <Plus className="w-5 h-5" />
+              </Button>
+              <Button
+                color="danger"
+                onPress={handleLogout}
+                isIconOnly
                 title="Cerrar sesión"
               >
-                <LogoutIcon />
-              </IconButton>
-            </Box>
-          </Box>
-        </Paper>
+                <LogOut className="w-5 h-5" />
+              </Button>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
 
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Nombre</TableCell>
-                <TableCell>Estado</TableCell>
-                <TableCell>Fecha de Creación</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center">
-                    Cargando...
+      <Card>
+        <CardBody>
+          <Table aria-label="Tabla de tenants">
+            <TableHeader>
+              <TableColumn>ID</TableColumn>
+              <TableColumn>Nombre</TableColumn>
+              <TableColumn>Estado</TableColumn>
+              <TableColumn>Fecha de Creación</TableColumn>
+              <TableColumn align="end">Acciones</TableColumn>
+            </TableHeader>
+            <TableBody
+              isLoading={loading}
+              loadingContent={<Spinner />}
+              emptyContent={tenants.length === 0 ? "No hay tenants registrados" : undefined}
+            >
+              {tenants.map((tenant) => (
+                <TableRow key={tenant.id}>
+                  <TableCell>
+                    <code className="text-sm">{tenant.id}</code>
+                  </TableCell>
+                  <TableCell>{tenant.name}</TableCell>
+                  <TableCell>
+                    <Chip
+                      color={tenant.isActive ? "success" : "default"}
+                      size="sm"
+                    >
+                      {tenant.isActive ? "Activo" : "Inactivo"}
+                    </Chip>
+                  </TableCell>
+                  <TableCell>
+                    {new Date(tenant.createdAt).toLocaleDateString("es-AR")}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        size="sm"
+                        onPress={() => handleDelete(tenant)}
+                        isIconOnly
+                        color="danger"
+                        aria-label="eliminar"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ) : tenants.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center">
-                    No hay tenants registrados
-                  </TableCell>
-                </TableRow>
-              ) : (
-                tenants.map((tenant) => (
-                  <TableRow key={tenant.id}>
-                    <TableCell>
-                      <code style={{ fontSize: "0.875rem" }}>{tenant.id}</code>
-                    </TableCell>
-                    <TableCell>{tenant.name}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={tenant.isActive ? "Activo" : "Inactivo"}
-                        color={tenant.isActive ? "success" : "default"}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {new Date(tenant.createdAt).toLocaleDateString("es-AR")}
-                    </TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDelete(tenant)}
-                          aria-label="eliminar"
-                          color="error"
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+              ))}
             </TableBody>
           </Table>
-        </TableContainer>
+        </CardBody>
+      </Card>
 
         <TenantFormDialog
           open={dialogOpen}
@@ -261,13 +231,12 @@ export default function StoreTenantsPage() {
           type="warning"
         />
 
-        <AlertDialog
-          open={alertDialog.open}
-          onClose={() => setAlertDialog({ open: false, message: "", type: "error" })}
-          message={alertDialog.message}
-          type={alertDialog.type}
-        />
-      </Box>
-    </Container>
+      <AlertDialog
+        open={alertDialog.open}
+        onClose={() => setAlertDialog({ open: false, message: "", type: "error" })}
+        message={alertDialog.message}
+        type={alertDialog.type}
+      />
+    </div>
   );
 }

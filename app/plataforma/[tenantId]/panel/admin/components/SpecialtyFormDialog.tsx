@@ -2,16 +2,15 @@
 
 import * as React from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
   Button,
-  TextField,
-  Box,
+  Input,
   Alert,
-  CircularProgress,
-} from "@mui/material";
+} from "@heroui/react";
 
 interface SpecialtyFormData {
   name: string;
@@ -86,60 +85,61 @@ export function SpecialtyFormDialog({
     }
   };
 
-  const handleChange = (field: keyof SpecialtyFormData) => (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-    // Clear error for this field when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-    setSubmitError(null);
-  };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <form onSubmit={handleSubmit}>
-        <DialogTitle>
-          {mode === "create" ? "Crear Especialidad" : "Editar Especialidad"}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
-            {submitError && (
-              <Alert severity="error" onClose={() => setSubmitError(null)}>
-                {submitError}
-              </Alert>
-            )}
+    <Modal isOpen={open} onClose={onClose} size="md">
+      <ModalContent>
+        <form onSubmit={handleSubmit}>
+          <ModalHeader className="text-slate-800">
+            {mode === "create" ? "Crear Especialidad" : "Editar Especialidad"}
+          </ModalHeader>
+          <ModalBody className="text-slate-800">
+            <div className="flex flex-col gap-4">
+              {submitError && (
+                <Alert color="danger" onClose={() => setSubmitError(null)}>
+                  {submitError}
+                </Alert>
+              )}
 
-            <TextField
-              label="Nombre"
-              value={formData.name}
-              onChange={handleChange("name")}
-              error={!!errors.name}
-              helperText={errors.name}
-              required
-              disabled={loading}
-              fullWidth
-              autoFocus
-              autoComplete="off"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={loading}
-            startIcon={loading ? <CircularProgress size={16} /> : null}
-          >
-            {loading ? "Guardando..." : mode === "create" ? "Crear" : "Guardar"}
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+              <Input
+                label="Nombre"
+                value={formData.name}
+                onValueChange={(value) => {
+                  setFormData((prev) => ({ ...prev, name: value }));
+                  if (errors.name) {
+                    setErrors((prev) => ({ ...prev, name: undefined }));
+                  }
+                  setSubmitError(null);
+                }}
+                isInvalid={!!errors.name}
+                errorMessage={errors.name}
+                isRequired
+                isDisabled={loading}
+                autoFocus
+                autoComplete="off"
+              />
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="light"
+              onPress={onClose}
+              isDisabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              color="primary"
+              isDisabled={loading}
+              isLoading={loading}
+            >
+              {loading ? "Guardando..." : mode === "create" ? "Crear" : "Guardar"}
+            </Button>
+          </ModalFooter>
+        </form>
+      </ModalContent>
+    </Modal>
   );
 }
 

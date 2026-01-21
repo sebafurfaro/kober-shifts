@@ -2,31 +2,19 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { Button } from "@heroui/react";
 import {
-  AppBar,
-  Box,
-  Divider,
-  Drawer,
-  IconButton,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Toolbar,
-  Typography,
-  useMediaQuery,
-} from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu";
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
-import LogoutIcon from "@mui/icons-material/Logout";
-import PersonIcon from "@mui/icons-material/Person";
-import EventIcon from "@mui/icons-material/Event";
-import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
-import LocationOnIcon from "@mui/icons-material/LocationOn";
-import BadgeIcon from "@mui/icons-material/Badge";
-import CategoryIcon from "@mui/icons-material/Category";
-import AssignmentIcon from "@mui/icons-material/Assignment";
-import { useTheme } from "@mui/material/styles";
+  Menu,
+  Calendar,
+  LogOut,
+  User,
+  CalendarDays,
+  Settings,
+  MapPin,
+  Badge,
+  FolderTree,
+  FileText,
+} from "lucide-react";
 import { useParams } from "next/navigation";
 import Logo from "@/app/branding/Logo";
 
@@ -36,22 +24,13 @@ const DRAWER_WIDTH = 260;
 
 function NavItem(props: { href: string; label: string; icon: React.ReactNode }) {
   return (
-    <ListItemButton
-      component={Link}
+    <Link
       href={props.href}
-      sx={{
-        color: "#ffffff",
-        "&:hover": {
-          backgroundColor: "rgba(255, 255, 255, 0.1)",
-        },
-        "& .MuiListItemIcon-root": {
-          color: "#ffffff",
-        },
-      }}
+      className="flex items-center gap-3 px-4 py-3 text-white hover:bg-white/10 transition-colors duration-150 rounded-lg"
     >
-      <ListItemIcon>{props.icon}</ListItemIcon>
-      <ListItemText primary={props.label} />
-    </ListItemButton>
+      <span className="w-5 h-5">{props.icon}</span>
+      <span className="text-sm font-medium">{props.label}</span>
+    </Link>
   );
 }
 
@@ -69,15 +48,17 @@ export function PanelLayoutShell({
   const params = useParams();
   // Use prop if provided, otherwise fallback to params
   const currentTenantId = tenantId || (params.tenantId as string);
-  const theme = useTheme();
-  const isMobileQuery = useMediaQuery(theme.breakpoints.down("md"));
   const [isMobile, setIsMobile] = React.useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false);
 
   React.useEffect(() => {
-    setIsMobile(isMobileQuery);
-  }, [isMobileQuery]);
-
-  const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false);
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
   const configSections = { showLocations: true, showSpecialties: true };
 
   async function logout() {
@@ -89,138 +70,156 @@ export function PanelLayoutShell({
     {
       label: "Sedes",
       href: `/plataforma/${currentTenantId}/panel/admin/locations`,
-      icon: <LocationOnIcon />,
+      icon: <MapPin className="w-5 h-5" />,
       show: configSections?.showLocations ?? false,
     },
     {
       label: "Especialidades",
       href: `/plataforma/${currentTenantId}/panel/admin/specialties`,
-      icon: <CategoryIcon />,
+      icon: <FolderTree className="w-5 h-5" />,
       show: configSections?.showSpecialties ?? true,
     },
     {
       label: "Profesionales",
       href: `/plataforma/${currentTenantId}/panel/admin/professionals`,
-      icon: <BadgeIcon />,
+      icon: <Badge className="w-5 h-5" />,
       show: true,
     },
     {
       label: "Pacientes",
       href: `/plataforma/${currentTenantId}/panel/admin/patients`,
-      icon: <PersonIcon />,
+      icon: <User className="w-5 h-5" />,
       show: true,
     },
     {
       label: "Coberturas",
       href: `/plataforma/${currentTenantId}/panel/admin/coberturas`,
-      icon: <AssignmentIcon />,
+      icon: <FileText className="w-5 h-5" />,
       show: true,
     },
   ].filter(item => item.show);
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh" }}>
-      <AppBar
-        position="fixed"
-        color="default"
-        elevation={0}
-        sx={{
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          zIndex: (t) => t.zIndex.drawer + 1,
-        }}
-      >
-        <Toolbar sx={{ backgroundColor: "#ffffff" }}>
-          {isMobile ? (
-            <IconButton
-              edge="start"
-              onClick={() => setMobileDrawerOpen((v) => !v)}
-              sx={{ mr: 1 }}
-            >
-              <MenuIcon />
-            </IconButton>
-          ) : null}
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            <Logo width={40} height={40} />
-          </Typography>
-          <Typography variant="body2" color="text.primary" sx={{ mr: 2 }}>
-            Hola, {userName}
-          </Typography>
-          <IconButton onClick={logout} title="Cerrar sesión">
-            <LogoutIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
+    <div className="flex min-h-screen">
+      {/* Mobile Overlay */}
+      {isMobile && mobileDrawerOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setMobileDrawerOpen(false)}
+        />
+      )}
 
-      <Drawer
-        variant={isMobile ? "temporary" : "permanent"}
-        open={isMobile ? mobileDrawerOpen : true}
-        onClose={isMobile ? () => setMobileDrawerOpen(false) : undefined}
-        sx={{
-          width: DRAWER_WIDTH,
-          flexShrink: 0,
-          "& .MuiDrawer-paper": {
-            width: DRAWER_WIDTH,
-            boxSizing: "border-box",
-            backgroundColor: "#0e5287",
-            color: "#ffffff",
-          },
-        }}
+      {/* AppBar */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-50 flex items-center px-4">
+        {isMobile && (
+          <Button
+            isIconOnly
+            variant="light"
+            onPress={() => setMobileDrawerOpen((v) => !v)}
+            className="mr-2"
+          >
+            <Menu className="w-5 h-5" />
+          </Button>
+        )}
+        <div className="flex-1">
+          <Logo width={40} height={40} />
+        </div>
+        <p className="text-sm text-gray-700 mr-4">Hola, {userName}</p>
+        <Button
+          isIconOnly
+          variant="light"
+          onPress={logout}
+          title="Cerrar sesión"
+        >
+          <LogOut className="w-5 h-5" />
+        </Button>
+      </header>
+
+      {/* Drawer */}
+      <aside
+        className={`fixed top-16 left-0 h-[calc(100vh-4rem)] w-[${DRAWER_WIDTH}px] bg-[#0e5287] text-white z-30 transition-transform duration-300 ${
+          isMobile
+            ? mobileDrawerOpen
+              ? "translate-x-0"
+              : "-translate-x-full"
+            : "translate-x-0"
+        }`}
+        style={{ width: `${DRAWER_WIDTH}px` }}
       >
-        <Toolbar />
-        <Box sx={{ overflow: "auto" }}>
-          <List>
+        <div className="overflow-y-auto h-full py-4">
+          <nav className="space-y-2 px-2">
             {role !== "PATIENT" && (
-              <NavItem href={`/plataforma/${currentTenantId}/panel`} label="Calendario" icon={<CalendarMonthIcon />} />
+              <NavItem
+                href={`/plataforma/${currentTenantId}/panel`}
+                label="Calendario"
+                icon={<Calendar className="w-5 h-5" />}
+              />
             )}
-          </List>
 
-          <Divider sx={{ borderColor: "rgba(255, 255, 255, 0.2)" }} />
+            <div className="border-t border-white/20 my-2" />
 
-          <List>
             {(role === "PATIENT" || role === "ADMIN") && (
-              <NavItem href={`/plataforma/${currentTenantId}/panel/patient`} label="Mis turnos" icon={<EventIcon />} />
+              <NavItem
+                href={`/plataforma/${currentTenantId}/panel/patient`}
+                label="Mis turnos"
+                icon={<CalendarDays className="w-5 h-5" />}
+              />
             )}
             {(role === "PROFESSIONAL" || role === "ADMIN") && (
-              <NavItem href={`/plataforma/${currentTenantId}/panel/professional`} label="Profesional" icon={<EventIcon />} />
+              <NavItem
+                href={`/plataforma/${currentTenantId}/panel/professional`}
+                label="Profesional"
+                icon={<CalendarDays className="w-5 h-5" />}
+              />
             )}
-            {role === "ADMIN" && <NavItem href={`/plataforma/${currentTenantId}/panel/admin`} label="Admin" icon={<AdminPanelSettingsIcon />} />}
-          </List>
+            {role === "ADMIN" && (
+              <NavItem
+                href={`/plataforma/${currentTenantId}/panel/admin`}
+                label="Admin"
+                icon={<Settings className="w-5 h-5" />}
+              />
+            )}
 
-          {role === "ADMIN" ? (
-            <>
-              <Divider sx={{ borderColor: "rgba(255, 255, 255, 0.2)" }} />
-              <List>
+            {role === "ADMIN" && (
+              <>
+                <div className="border-t border-white/20 my-2" />
                 {adminItems.map((item) => (
-                  <NavItem key={item.href} href={item.href} label={item.label} icon={item.icon} />
+                  <NavItem
+                    key={item.href}
+                    href={item.href}
+                    label={item.label}
+                    icon={item.icon}
+                  />
                 ))}
-              </List>
-            </>
-          ) : null}
-          {role === "PROFESSIONAL" && (
-            <>
-              <Divider sx={{ borderColor: "rgba(255, 255, 255, 0.2)" }} />
-              <List>
-                <NavItem href={`/plataforma/${currentTenantId}/panel/professional/patients`} label="Pacientes" icon={<PersonIcon />} />
-              </List>
-            </>
-          )}
-        </Box>
-      </Drawer>
+              </>
+            )}
+            {role === "PROFESSIONAL" && (
+              <>
+                <div className="border-t border-white/20 my-2" />
+                <NavItem
+                  href={`/plataforma/${currentTenantId}/panel/professional/patients`}
+                  label="Pacientes"
+                  icon={<User className="w-5 h-5" />}
+                />
+              </>
+            )}
+          </nav>
+        </div>
+      </aside>
 
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          pt: 8,
-          px: 3,
-          ml: 0,
+      {/* Main Content */}
+      <main
+        className={`flex-1 pt-16 px-6 transition-all duration-300 ${
+          isMobile ? "ml-0" : `ml-[${DRAWER_WIDTH}px]`
+        }`}
+        style={{
+          marginLeft: isMobile ? 0 : `${DRAWER_WIDTH}px`,
           backgroundImage: "linear-gradient(to bottom, #F3F8FC, #f4f8fa)",
         }}
       >
         {children}
-      </Box>
-    </Box>
+      </main>
+    </div>
   );
 }
 

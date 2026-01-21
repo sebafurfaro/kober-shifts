@@ -2,18 +2,14 @@
 
 import React from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
   Button,
-  Typography,
-  Box,
-} from "@mui/material";
-import ErrorIcon from "@mui/icons-material/Error";
-import InfoIcon from "@mui/icons-material/Info";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import WarningIcon from "@mui/icons-material/Warning";
+} from "@heroui/react";
+import { AlertCircle, CheckCircle2, AlertTriangle, Info } from "lucide-react";
 
 export type AlertDialogType = "error" | "info" | "success" | "warning";
 
@@ -34,17 +30,19 @@ export function AlertDialog({
   type = "info",
   buttonText = "Aceptar",
 }: AlertDialogProps) {
+
   const getIcon = () => {
+    const iconClass = "w-12 h-12";
     switch (type) {
       case "error":
-        return <ErrorIcon sx={{ fontSize: 48, color: "error.main" }} />;
+        return <AlertCircle className={`${iconClass} text-danger`} />;
       case "success":
-        return <CheckCircleIcon sx={{ fontSize: 48, color: "success.main" }} />;
+        return <CheckCircle2 className={`${iconClass} text-success`} />;
       case "warning":
-        return <WarningIcon sx={{ fontSize: 48, color: "warning.main" }} />;
+        return <AlertTriangle className={`${iconClass} text-warning`} />;
       case "info":
       default:
-        return <InfoIcon sx={{ fontSize: 48, color: "info.main" }} />;
+        return <Info className={`${iconClass} text-primary`} />;
     }
   };
 
@@ -63,44 +61,55 @@ export function AlertDialog({
     }
   };
 
+  const getButtonColor = () => {
+    switch (type) {
+      case "error":
+        return "danger";
+      case "success":
+        return "success";
+      case "warning":
+        return "warning";
+      case "info":
+      default:
+        return "primary";
+    }
+  };
+
   return (
-    <Dialog
-      open={open}
+    <Modal
+      isOpen={open}
       onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 2,
-        },
+      size="md"
+      placement="center"
+      isDismissable={true}
+      isKeyboardDismissDisabled={false}
+      classNames={{
+        base: "rounded-xl",
+        header: "text-slate-800",
+        body: "text-slate-800",
+        footer: "text-slate-800",
       }}
     >
-      <DialogTitle sx={{ pb: 1 }}>{getTitle()}</DialogTitle>
-      <DialogContent>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-            py: 2,
-          }}
-        >
-          {getIcon()}
-          <Typography variant="body1" align="center" sx={{ mt: 1 }}>
-            {message}
-          </Typography>
-        </Box>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2, justifyContent: "center" }}>
-        <Button
-          variant="contained"
-          onClick={onClose}
-          color={type === "error" ? "error" : type === "success" ? "success" : "primary"}
-        >
-          {buttonText}
-        </Button>
-      </DialogActions>
-    </Dialog>
+      <ModalContent>
+        <ModalHeader className="flex flex-col gap-1 pb-2 text-slate-800">
+          {getTitle()}
+        </ModalHeader>
+        <ModalBody className="text-slate-800">
+          <div className="flex flex-col items-center gap-4 py-2">
+            {getIcon()}
+            <p className="text-center text-base">{message}</p>
+          </div>
+        </ModalBody>
+        <ModalFooter className="justify-center pt-2 text-slate-800">
+          <Button
+            color={getButtonColor()}
+            onPress={onClose}
+            className="min-w-24"
+          >
+            {buttonText}
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   );
 }

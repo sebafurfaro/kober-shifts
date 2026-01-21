@@ -2,29 +2,19 @@
 
 import * as React from "react";
 import {
-    Container,
-    Box,
-    Typography,
     Accordion,
-    AccordionSummary,
-    AccordionDetails,
-    Stack,
-    TextField,
-    InputAdornment,
-    CircularProgress,
-    IconButton,
-    List,
-    ListItem,
-    ListItemText,
-    Paper,
-    Divider,
-} from "@mui/material";
+    AccordionItem,
+    Input,
+    Spinner,
+    Button,
+    Card,
+    CardBody,
+} from "@heroui/react";
 import {
-    ExpandMore as ExpandMoreIcon,
-    Search as SearchIcon,
-    Edit as EditIcon,
-    Delete as DeleteIcon,
-} from "@mui/icons-material";
+    Search,
+    Pencil,
+    Trash2,
+} from "lucide-react";
 import { PanelHeader } from "../../components/PanelHeader";
 import { CoverageFormDialog } from "../components/CoverageFormDialog";
 import { ConfirmationDialog } from "../../components/alerts/ConfirmationDialog";
@@ -92,15 +82,13 @@ export default function CoveragesPage() {
         setDialogOpen(true);
     };
 
-    const handleEdit = (coverage: Coverage, e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent accordion from toggling
+    const handleEdit = (coverage: Coverage) => {
         setDialogMode("edit");
         setCurrentCoverage(coverage);
         setDialogOpen(true);
     };
 
-    const handleDelete = (id: string, name: string, e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent accordion from toggling
+    const handleDelete = (id: string, name: string) => {
         setConfirmationDialog({
           open: true,
           message: `¿Estás seguro de eliminar "${name}"? Se eliminarán todos sus planes asociados.`,
@@ -162,7 +150,7 @@ export default function CoveragesPage() {
     }, [coverages, search]);
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <div className="max-w-7xl mx-auto mt-8 mb-8 px-4">
             <PanelHeader
                 title="Coberturas"
                 subtitle="Carga de coberturas y planes"
@@ -171,87 +159,93 @@ export default function CoveragesPage() {
                     onClick: handleCreate
                 }}
             />
-            <Paper sx={{ p: 4 }}>
-                <TextField
-                    fullWidth
-                    placeholder="Buscar cobertura o plan..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <SearchIcon color="action" />
-                            </InputAdornment>
-                        ),
-                    }}
-                    size="small"
-                />
+            <Card className="card">
+                <CardBody className="p-0">
+                    <Input
+                        placeholder="Buscar cobertura o plan..."
+                        value={search}
+                        onValueChange={setSearch}
+                        startContent={<Search className="w-4 h-4 text-gray-400" />}
+                        size="sm"
+                        classNames={{
+                            base: "mb-4",
+                            inputWrapper: "h-11 border-2 border-gray-200 bg-white focus-within:ring-0 focus-within:outline-none",
+                            input: "px-4 text-sm text-gray-800 focus:outline-none focus:ring-0",
+                        }}
+                    />
 
-                {loading ? (
-                    <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
-                        <CircularProgress />
-                    </Box>
-                ) : filteredCoverages.length === 0 ? (
-                    <Paper sx={{ p: 4, textAlign: "center", bgcolor: "background.default" }}>
-                        <Typography color="text.secondary">
-                            {search ? "No se encontraron resultados para tu búsqueda." : "No hay coberturas cargadas."}
-                        </Typography>
-                    </Paper>
-                ) : (
-                    <Stack spacing={1} sx={{ mt: 2 }}>
-                        {filteredCoverages.map((coverage) => (
-                            <Accordion key={coverage.id} disableGutters elevation={0} variant="outlined">
-                                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                    <Box sx={{ display: "flex", alignItems: "center", width: "100%", pr: 2 }}>
-                                        <Typography sx={{ fontWeight: 600, flexGrow: 1 }}>
-                                            {coverage.name}
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary" sx={{ mr: 2 }}>
-                                            {coverage.plans.length} planes
-                                        </Typography>
-                                        <Box sx={{ display: "flex" }}>
-                                            <IconButton
-                                                component="div"
-                                                size="small"
-                                                onClick={(e) => handleEdit(coverage, e)}
-                                                sx={{ mr: 1 }}
-                                            >
-                                                <EditIcon fontSize="small" />
-                                            </IconButton>
-                                            <IconButton
-                                                component="div"
-                                                size="small"
-                                                color="error"
-                                                onClick={(e) => handleDelete(coverage.id, coverage.name, e)}
-                                            >
-                                                <DeleteIcon fontSize="small" />
-                                            </IconButton>
-                                        </Box>
-                                    </Box>
-                                </AccordionSummary>
-                                <AccordionDetails sx={{ bgcolor: "action.hover", p: 0 }}>
-                                    <Divider />
-                                    <List dense>
-                                        {coverage.plans.map((plan) => (
-                                            <ListItem key={plan.id}>
-                                                <ListItemText
-                                                    primary={plan.name}
-                                                    primaryTypographyProps={{ variant: "body2" }}
-                                                />
-                                            </ListItem>
-                                        ))}
-                                        {coverage.plans.length === 0 && (
-                                            <ListItem>
-                                                <ListItemText primary="Sin planes registrados" />
-                                            </ListItem>
-                                        )}
-                                    </List>
-                                </AccordionDetails>
-                            </Accordion>
-                        ))}
-                    </Stack>
-                )}
-            </Paper>
+                    {loading ? (
+                        <div className="flex justify-center items-center py-12">
+                            <Spinner size="lg" />
+                        </div>
+                    ) : filteredCoverages.length === 0 ? (
+                        <Card className="p-8 text-center bg-transparent">
+                            <CardBody>
+                                <p className="text-sm text-gray-600">
+                                    {search ? "No se encontraron resultados para tu búsqueda." : "No hay coberturas cargadas."}
+                                </p>
+                            </CardBody>
+                        </Card>
+                    ) : (
+                        <Accordion variant="splitted" className="w-full mt-4 space-y-2">
+                            {filteredCoverages.map((coverage) => (
+                                <AccordionItem
+                                    key={coverage.id}
+                                    aria-label={coverage.name}
+                                    classNames={{
+                                        base: "border-[1px] border-gray-200 rounded-lg px-0 shadow-none",
+                                        indicator: "mr-4",
+                                    }}
+                                    title={
+                                        <div className="flex items-center justify-between w-full pl-4">
+                                            <span className="font-semibold flex-1 text-left text-slate-800">{coverage.name}</span>
+                                            <span className="text-xs text-gray-500 mr-4">
+                                                {coverage.plans.length} planes
+                                            </span>
+                                            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                                <Button
+                                                    isIconOnly
+                                                    size="sm"
+                                                    variant="light"
+                                                    onPress={() => handleEdit(coverage)}
+                                                >
+                                                    <Pencil className="w-4 h-4 text-blue-500" />
+                                                </Button>
+                                                <Button
+                                                    isIconOnly
+                                                    size="sm"
+                                                    variant="light"
+                                                    color="danger"
+                                                    onPress={() => handleDelete(coverage.id, coverage.name)}
+                                                >
+                                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    }
+                                >
+                                    <div className="bg-gray-50 p-0">
+                                        <div className="border-t border-gray-200">
+                                            <div className="flex flex-col">
+                                                {coverage.plans.map((plan) => (
+                                                    <div key={plan.id} className="px-4 py-2 border-b border-gray-100 last:border-b-0">
+                                                        <p className="text-sm text-gray-900">{plan.name}</p>
+                                                    </div>
+                                                ))}
+                                                {coverage.plans.length === 0 && (
+                                                    <div className="px-4 py-2">
+                                                        <p className="text-sm text-gray-500">Sin planes registrados</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </AccordionItem>
+                            ))}
+                        </Accordion>
+                    )}
+                </CardBody>
+            </Card>
 
 
 
@@ -281,6 +275,6 @@ export default function CoveragesPage() {
               message={alertDialog.message}
               type={alertDialog.type}
             />
-        </Container>
+        </div>
     );
 }

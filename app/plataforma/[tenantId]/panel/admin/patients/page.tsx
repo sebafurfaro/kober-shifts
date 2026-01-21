@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Box, Container, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton } from "@mui/material";
-import { Edit as EditIcon } from "@mui/icons-material";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Spinner } from "@heroui/react";
+import { Edit } from "lucide-react";
 import { PatientFormDialog } from "../components/PatientFormDialog";
 import { PanelHeader } from "../../components/PanelHeader";
 import { useParams } from "next/navigation";
@@ -110,8 +110,8 @@ export default function AdminPatientsPage() {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Box sx={{ py: 4 }}>
+    <div className="max-w-7xl mx-auto mt-8">
+      <div className="py-8">
         <PanelHeader
           title="Pacientes"
           action={{
@@ -120,52 +120,45 @@ export default function AdminPatientsPage() {
           }}
         />
 
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Nombre</TableCell>
-                <TableCell>Apellido</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Teléfono</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center">
-                    Cargando...
-                  </TableCell>
-                </TableRow>
-              ) : patients.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center">
-                    No hay pacientes registrados
-                  </TableCell>
-                </TableRow>
-              ) : (
-                patients.map((patient) => (
-                  <TableRow key={patient.id}>
-                    <TableCell>{patient.firstName || patient.name}</TableCell>
-                    <TableCell>{patient.lastName || ""}</TableCell>
-                    <TableCell>{patient.email}</TableCell>
-                    <TableCell>{patient.phone || "-"}</TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEdit(patient)}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden text-slate-800">
+          <Table aria-label="Tabla de pacientes">
+            <TableHeader>
+              <TableColumn>Nombre</TableColumn>
+              <TableColumn>Apellido</TableColumn>
+              <TableColumn>Email</TableColumn>
+              <TableColumn>Teléfono</TableColumn>
+              <TableColumn align="end">Acciones</TableColumn>
+            </TableHeader>
+            <TableBody
+              isLoading={loading}
+              loadingContent={<Spinner label="Cargando..." />}
+              emptyContent={loading ? null : "No hay pacientes registrados"}
+            >
+              {patients.map((patient) => (
+                <TableRow key={patient.id}>
+                  <TableCell>{patient.firstName || patient.name}</TableCell>
+                  <TableCell>{patient.lastName || ""}</TableCell>
+                  <TableCell>{patient.email}</TableCell>
+                  <TableCell>{patient.phone || "-"}</TableCell>
+                  <TableCell>
+                    <div className="flex justify-end">
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        onPress={() => handleEdit(patient)}
                         aria-label="editar"
+                        className="text-gray-600 hover:text-gray-900"
                       >
-                        <EditIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
-        </TableContainer>
+        </div>
 
         <PatientFormDialog
           open={dialogOpen}
@@ -177,8 +170,8 @@ export default function AdminPatientsPage() {
           mode={editingPatient ? "edit" : "create"}
           initialData={editingPatient || undefined}
         />
-      </Box>
-    </Container>
+      </div>
+    </div>
   );
 }
 

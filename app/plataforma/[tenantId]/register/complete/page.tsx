@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Box, Button, Container, IconButton, InputAdornment, Stack, TextField, Typography, CircularProgress } from "@mui/material";
+import { Button, Input, Card, CardBody, Spinner } from "@heroui/react";
 import { useParams, useRouter } from "next/navigation";
-import { Visibility, VisibilityOff } from "@mui/icons-material";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function CompleteRegistrationPage() {
     const router = useRouter();
@@ -46,9 +46,9 @@ export default function CompleteRegistrationPage() {
 
     if (status === "loading" || !user) {
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-                <CircularProgress />
-            </Box>
+            <div className="flex justify-center py-8">
+                <Spinner />
+            </div>
         );
     }
 
@@ -94,53 +94,57 @@ export default function CompleteRegistrationPage() {
     const handleShowPassword = () => setShowPassword((show) => !show);
 
     return (
-        <Container maxWidth="sm">
-            <Box sx={{ py: 8 }}>
-                <Stack spacing={2} component="form" onSubmit={onSubmit}>
-                    <Typography variant="h5" fontWeight={700}>
-                        Completar Registro
-                    </Typography>
-                    <Typography variant="body1">
-                        Hola {user.name}, para finalizar tu registro por favor crea una contraseña.
-                    </Typography>
+        <div className="max-w-md mx-auto px-4 py-8">
+            <Card>
+                <CardBody>
+                    <form onSubmit={onSubmit} className="space-y-4">
+                        <h2 className="text-2xl font-bold">Completar Registro</h2>
+                        <p className="text-base">
+                            Hola {user.name}, para finalizar tu registro por favor crea una contraseña.
+                        </p>
 
-                    <TextField
-                        label="Contraseña"
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        disabled={loading}
-                        autoComplete="new-password"
-                        InputProps={{
-                            endAdornment: (
-                                <InputAdornment position="end">
-                                    <IconButton onClick={handleShowPassword} edge="end">
-                                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                                    </IconButton>
-                                </InputAdornment>
-                            ),
-                        }}
-                    />
-                    <TextField
-                        label="Confirmar Contraseña"
-                        type={showPassword ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        disabled={loading}
-                        autoComplete="new-password"
-                    />
+                        <Input
+                            label="Contraseña"
+                            type={showPassword ? "text" : "password"}
+                            value={password}
+                            onValueChange={setPassword}
+                            isDisabled={loading}
+                            autoComplete="new-password"
+                            endContent={
+                                <button
+                                    className="focus:outline-none"
+                                    type="button"
+                                    onClick={handleShowPassword}
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="w-4 h-4 text-gray-400" />
+                                    ) : (
+                                        <Eye className="w-4 h-4 text-gray-400" />
+                                    )}
+                                </button>
+                            }
+                            isRequired
+                        />
+                        <Input
+                            label="Confirmar Contraseña"
+                            type={showPassword ? "text" : "password"}
+                            value={confirmPassword}
+                            onValueChange={setConfirmPassword}
+                            isDisabled={loading}
+                            autoComplete="new-password"
+                            isRequired
+                        />
 
-                    {error ? (
-                        <Typography color="error" variant="body2">
-                            {error}
-                        </Typography>
-                    ) : null}
+                        {error ? (
+                            <p className="text-sm text-danger">{error}</p>
+                        ) : null}
 
-                    <Button type="submit" variant="contained" disabled={loading}>
-                        Finalizar Registro
-                    </Button>
-                </Stack>
-            </Box>
-        </Container>
+                        <Button type="submit" color="primary" isDisabled={loading} isLoading={loading} className="w-full">
+                            Finalizar Registro
+                        </Button>
+                    </form>
+                </CardBody>
+            </Card>
+        </div>
     );
 }

@@ -109,7 +109,7 @@ export const getAuthOptions = (tenantId: string): NextAuthOptions => ({
     session: {
         strategy: "jwt",
     },
-};
+});
 
 export async function GET(request: Request) {
     const tenantId = request.headers.get('x-tenant-id') ?? '';

@@ -1,8 +1,26 @@
 "use client";
 
 import * as React from "react";
-import { Container, Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert } from "@mui/material";
-import { Cancel as CancelIcon } from "@mui/icons-material";
+import {
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
+  Button,
+  Card,
+  CardBody,
+  Spinner,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Textarea,
+  Alert,
+} from "@heroui/react";
+import { X } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { PanelHeader } from "../components/PanelHeader";
@@ -114,7 +132,7 @@ export default function PatientPanelPage() {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
+    <div className="max-w-7xl mx-auto mt-8 px-4">
       <PanelHeader
         title="Mis Turnos"
         subtitle="Gestiona tus turnos médicos"
@@ -122,34 +140,24 @@ export default function PatientPanelPage() {
           label: "Nuevo Turno",
           onClick: handleCreate,
         }} />
-      <Box sx={{ py: 4 }}>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Profesional</TableCell>
-                <TableCell>Sede</TableCell>
-                <TableCell>Fecha</TableCell>
-                <TableCell>Hora</TableCell>
-                <TableCell>Estado</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center">
-                    Cargando...
-                  </TableCell>
-                </TableRow>
-              ) : appointments.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center">
-                    No tienes turnos asignados
-                  </TableCell>
-                </TableRow>
-              ) : (
-                appointments.map((appointment) => (
+      <div className="py-8">
+        <Card>
+          <CardBody className="p-0">
+            <Table aria-label="Tabla de turnos">
+              <TableHeader>
+                <TableColumn>Profesional</TableColumn>
+                <TableColumn>Sede</TableColumn>
+                <TableColumn>Fecha</TableColumn>
+                <TableColumn>Hora</TableColumn>
+                <TableColumn>Estado</TableColumn>
+                <TableColumn align="end">Acciones</TableColumn>
+              </TableHeader>
+              <TableBody
+                isLoading={loading}
+                loadingContent={<Spinner />}
+                emptyContent={loading ? "Cargando..." : "No tienes turnos asignados"}
+              >
+                {appointments.map((appointment) => (
                   <TableRow key={appointment.id}>
                     <TableCell>{appointment.professionalName}</TableCell>
                     <TableCell>{appointment.locationName}</TableCell>
@@ -160,70 +168,72 @@ export default function PatientPanelPage() {
                       {format(new Date(appointment.startAt), "HH:mm")} - {format(new Date(appointment.endAt), "HH:mm")}
                     </TableCell>
                     <TableCell>{getStatusLabel(appointment.status, appointment.cancelledBy)}</TableCell>
-                    <TableCell align="right">
+                    <TableCell>
                       {appointment.status !== "CANCELLED" && (
                         <Button
-                          size="small"
-                          color="error"
-                          startIcon={<CancelIcon />}
-                          onClick={() => handleCancelClick(appointment)}
+                          size="sm"
+                          color="danger"
+                          startContent={<X className="w-4 h-4" />}
+                          onPress={() => handleCancelClick(appointment)}
                         >
                           Cancelar
                         </Button>
                       )}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ))}
+              </TableBody>
+            </Table>
+          </CardBody>
+        </Card>
 
         {/* Cancel Dialog */}
-        <Dialog open={cancelDialogOpen} onClose={() => setCancelDialogOpen(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>Cancelar Turno</DialogTitle>
-          <DialogContent>
-            <Box sx={{ pt: 2 }}>
+        <Modal isOpen={cancelDialogOpen} onClose={() => setCancelDialogOpen(false)} size="md">
+          <ModalContent>
+            <ModalHeader>Cancelar Turno</ModalHeader>
+            <ModalBody>
               {cancelError && (
-                <Alert severity="error" sx={{ mb: 2 }} onClose={() => setCancelError(null)}>
+                <Alert color="danger" onClose={() => setCancelError(null)} className="mb-4">
                   {cancelError}
                 </Alert>
               )}
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              <p className="text-sm text-gray-600 mb-4">
                 Por favor, indica el motivo de la cancelación (mínimo 100 caracteres):
-              </Typography>
-              <TextField
-                autoComplete="off"
+              </p>
+              <Textarea
                 label="Motivo de cancelación"
-                multiline
-                rows={4}
-                fullWidth
+                placeholder="Escribe el motivo de cancelación..."
                 value={cancelReason}
-                onChange={(e) => {
-                  setCancelReason(e.target.value);
+                onValueChange={(value) => {
+                  setCancelReason(value);
                   setCancelError(null);
                 }}
-                error={!!cancelError}
-                helperText={`${cancelReason.length}/100 caracteres mínimo`}
-                required
+                isInvalid={!!cancelError}
+                errorMessage={cancelError || `${cancelReason.length}/100 caracteres mínimo`}
+                isRequired
+                minRows={4}
               />
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setCancelDialogOpen(false)} disabled={cancelLoading}>
-              Cerrar
-            </Button>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={handleCancelSubmit}
-              disabled={cancelLoading || cancelReason.trim().length < 100}
-            >
-              {cancelLoading ? "Cancelando..." : "Confirmar Cancelación"}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </Box>
-    </Container>
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                variant="light"
+                onPress={() => setCancelDialogOpen(false)}
+                isDisabled={cancelLoading}
+              >
+                Cerrar
+              </Button>
+              <Button
+                color="danger"
+                onPress={handleCancelSubmit}
+                isDisabled={cancelLoading || cancelReason.trim().length < 100}
+                isLoading={cancelLoading}
+              >
+                {cancelLoading ? "Cancelando..." : "Confirmar Cancelación"}
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      </div>
+    </div>
   );
 }

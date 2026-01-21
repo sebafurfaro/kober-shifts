@@ -2,37 +2,22 @@
 
 import * as React from "react";
 import {
-  Box,
-  Typography,
   Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  AccordionItem,
   Chip,
-  Stack,
-  Paper,
-  IconButton,
-  Grid,
-  TextField,
+  Input,
   Select,
-  MenuItem,
+  SelectItem,
   Button,
-  InputAdornment,
-  CircularProgress,
-} from "@mui/material";
+  Spinner,
+  Card,
+  CardBody,
+} from "@heroui/react";
 import {
-  ExpandMore as ExpandMoreIcon,
-  Delete as DeleteIcon,
-  Add as AddIcon,
-} from "@mui/icons-material";
-import { Theme } from "@mui/material/styles";
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { AvailabilityConfig, Slot } from "./types";
-
-const FIELD_STYLE = {
-  "& .MuiInputBase-input::-webkit-calendar-picker-indicator": {
-    filter: "invert(39%) sepia(51%) saturate(2878%) hue-rotate(190deg) brightness(101%) contrast(101%)",
-    cursor: "pointer",
-  },
-};
 
 interface AvailabilityTabProps {
   availabilityConfig: AvailabilityConfig;
@@ -119,194 +104,169 @@ export function AvailabilityTab({ availabilityConfig, setFormData, onSave, loadi
   };
 
   return (
-    <Box>
-      <Typography variant="h6" gutterBottom>
+    <div>
+      <h3 className="text-lg font-semibold mb-2 text-gray-800">
         Configuración de Horarios
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+      </h3>
+      <p className="text-sm text-gray-600 mb-6">
         Configura los rangos horarios para cada día. Si la fecha de fin queda vacía, se considera recurrente indefinidamente.
-      </Typography>
+      </p>
 
-      {DAYS_NAMES.map((day) => {
-        const dayConfig = availabilityConfig.days[day.value] || { slots: [] };
-        const hasSlots = dayConfig.slots.length > 0;
+      <Accordion variant="bordered" className="w-full">
+        {DAYS_NAMES.map((day) => {
+          const dayConfig = availabilityConfig.days[day.value] || { slots: [] };
+          const hasSlots = dayConfig.slots.length > 0;
 
-        return (
-          <Accordion
-            key={day.value}
-            sx={{
-              mb: 1,
-              backgroundColor: hasSlots ? "white" : "#fafafa",
-              border: "1px solid",
-              borderColor: hasSlots ? "divider" : "transparent",
-              "&:before": { display: "none" }
-            }}
-            elevation={0}
-          >
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography sx={{ flexGrow: 1, fontWeight: 600, color: hasSlots ? "text.primary" : "text.secondary" }}>
-                {day.label}
-              </Typography>
-              <Chip
-                label={hasSlots ? `${dayConfig.slots.length} ${dayConfig.slots.length === 1 ? 'franja' : 'franjas'}` : "No atiende"}
-                size="small"
-                color={hasSlots ? "primary" : "default"}
-                variant={hasSlots ? "filled" : "outlined"}
-                sx={{ fontWeight: 600 }}
-              />
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 2, pt: 0 }}>
-              <Stack spacing={2}>
+          return (
+            <AccordionItem
+              key={day.value}
+              aria-label={day.label}
+              title={
+                <div className="flex items-center justify-between w-full">
+                  <span className={`font-semibold flex-1 ${hasSlots ? "text-gray-900" : "text-gray-800"}`}>
+                    {day.label}
+                  </span>
+                  <Chip
+                    size="sm"
+                    color={hasSlots ? "primary" : "default"}
+                    variant={hasSlots ? "solid" : "bordered"}
+                    className={hasSlots ? "font-semibold text-white" : "font-semibold text-slate-800"}
+                  >
+                    {hasSlots ? `${dayConfig.slots.length} ${dayConfig.slots.length === 1 ? 'franja' : 'franjas'}` : "No atiende"}
+                  </Chip>
+                </div>
+              }
+              className={hasSlots ? "bg-white" : "bg-gray-50"}
+            >
+              <div className="space-y-4 p-2">
                 {hasSlots ? (
                   dayConfig.slots.map((slot: Slot) => (
-                    <Paper
-                      key={slot.id}
-                      variant="outlined"
-                      sx={{
-                        p: 2,
-                        position: "relative",
-                        bgcolor: "white",
-                        borderRadius: 2,
-                        borderColor: "divider"
-                      }}
-                    >
-                      <Grid container spacing={3}>
-                        {/* Columna Izquierda: Horarios y Fecha Inicio */}
-                        <Grid item xs={12} sm={6}>
-                          <Stack spacing={2}>
+                    <Card key={slot.id} className="p-4 border border-gray-200">
+                      <CardBody className="p-0">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                          {/* Columna Izquierda: Horarios y Fecha Inicio */}
+                          <div className="space-y-4">
                             {/* Grupo 1: startTime - endTime */}
-                            <Box>
-                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 600 }}>
+                            <div>
+                              <p className="text-xs font-semibold text-gray-600 mb-2">
                                 Horario de Atención
-                              </Typography>
-                              <Box sx={{ display: 'flex', gap: 2 }}>
-                                <TextField
-                                  fullWidth
+                              </p>
+                              <div className="flex gap-3">
+                                <Input
                                   label="Inicio"
                                   type="time"
-                                  size="small"
+                                  size="sm"
                                   value={slot.startTime}
-                                  onChange={(e) =>
-                                    updateSlot(day.value, slot.id, { startTime: e.target.value })
+                                  onValueChange={(value) =>
+                                    updateSlot(day.value, slot.id, { startTime: value })
                                   }
-                                  InputLabelProps={{ shrink: true }}
-                                  sx={FIELD_STYLE}
+                                  className="flex-1"
                                 />
-                                <TextField
-                                  fullWidth
+                                <Input
                                   label="Fin"
                                   type="time"
-                                  size="small"
+                                  size="sm"
                                   value={slot.endTime}
-                                  onChange={(e) =>
-                                    updateSlot(day.value, slot.id, { endTime: e.target.value })
+                                  onValueChange={(value) =>
+                                    updateSlot(day.value, slot.id, { endTime: value })
                                   }
-                                  InputLabelProps={{ shrink: true }}
-                                  sx={FIELD_STYLE}
+                                  className="flex-1"
                                 />
-                              </Box>
-                            </Box>
+                              </div>
+                            </div>
                             {/* Grupo 2: fromDate */}
-                            <TextField
-                              fullWidth
+                            <Input
                               label="Vigente desde"
                               type="date"
-                              size="small"
+                              size="sm"
                               value={slot.fromDate}
-                              onChange={(e) =>
-                                updateSlot(day.value, slot.id, { fromDate: e.target.value })
+                              onValueChange={(value) =>
+                                updateSlot(day.value, slot.id, { fromDate: value })
                               }
-                              InputLabelProps={{ shrink: true }}
-                              sx={FIELD_STYLE}
+                              className="w-full"
                             />
-                          </Stack>
-                        </Grid>
+                          </div>
 
-                        {/* Columna Derecha: Recurrencia y Fecha Fin */}
-                        <Grid item xs={12} sm={6}>
-                          <Stack spacing={2}>
+                          {/* Columna Derecha: Recurrencia y Fecha Fin */}
+                          <div className="space-y-4">
                             {/* Grupo 3: repeat */}
-                            <Box>
-                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 600 }}>
+                            <div>
+                              <p className="text-xs font-semibold text-gray-600 mb-2">
                                 Recurrencia
-                              </Typography>
+                              </p>
                               <Select
-                                fullWidth
-                                size="small"
-                                value={slot.repeat}
-                                onChange={(e) =>
+                                size="sm"
+                                selectedKeys={[slot.repeat]}
+                                onSelectionChange={(keys) => {
+                                  const selected = Array.from(keys)[0] as string;
                                   updateSlot(day.value, slot.id, {
-                                    repeat: e.target.value as any,
-                                  })
-                                }
+                                    repeat: selected as any,
+                                  });
+                                }}
+                                className="w-full"
                               >
-                                <MenuItem value="weekly">Semanal</MenuItem>
-                                <MenuItem value="biweekly">Quincenal</MenuItem>
-                                <MenuItem value="monthly">Mensual</MenuItem>
+                                <SelectItem key="weekly">Semanal</SelectItem>
+                                <SelectItem key="biweekly">Quincenal</SelectItem>
+                                <SelectItem key="monthly">Mensual</SelectItem>
                               </Select>
-                            </Box>
+                            </div>
                             {/* Grupo 4: toDate */}
-                            <TextField
-                              fullWidth
+                            <Input
                               label="Vigente hasta (opcional)"
                               type="date"
-                              size="small"
+                              size="sm"
                               value={slot.toDate || ""}
-                              onChange={(e) =>
-                                updateSlot(day.value, slot.id, { toDate: e.target.value || null })
+                              onValueChange={(value) =>
+                                updateSlot(day.value, slot.id, { toDate: value || null })
                               }
-                              InputLabelProps={{ shrink: true }}
-                              sx={FIELD_STYLE}
+                              className="w-full"
                             />
-                          </Stack>
-                        </Grid>
-                      </Grid>
-                      <Box sx={{ mt: 3, display: "flex", gap: 2, justifyContent: "flex-end" }}>
-                        <Button
-                          size="small"
-                          color="primary"
-                          variant="text"
-                          onClick={() => removeSlot(day.value, slot.id)}
-                        >
-                          Eliminar
-                        </Button>
-                        <Button
-                          size="small"
-                          color="primary"
-                          variant="contained"
-                          onClick={() => onSave?.()}
-                          disabled={loading}
-                          startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
-                        >
-                          {loading ? "Guardando..." : "Guardar Franja"}
-                        </Button>
-                      </Box>
-                    </Paper>
+                          </div>
+                        </div>
+                        <div className="mt-6 flex gap-3 justify-end">
+                          <Button
+                            size="sm"
+                            variant="light"
+                            color="danger"
+                            onPress={() => removeSlot(day.value, slot.id)}
+                            startContent={<Trash2 className="w-4 h-4" />}
+                          >
+                            Eliminar
+                          </Button>
+                          <Button
+                            size="sm"
+                            color="primary"
+                            onPress={() => onSave?.()}
+                            isDisabled={loading}
+                            isLoading={loading}
+                          >
+                            {loading ? "Guardando..." : "Guardar Franja"}
+                          </Button>
+                        </div>
+                      </CardBody>
+                    </Card>
                   ))
                 ) : (
-                  <Box sx={{ py: 2, textAlign: "center" }}>
-                    <Typography variant="body2" color="text.secondary">
+                  <div className="py-4 text-center">
+                    <p className="text-sm text-gray-600">
                       No hay franjas horarias configuradas para este día. El profesional no figurará disponible para atención.
-                    </Typography>
-                  </Box>
+                    </p>
+                  </div>
                 )}
                 <Button
-                  startIcon={<AddIcon />}
-                  variant="outlined"
-                  onClick={() => addSlot(day.value)}
-                  sx={{
-                    borderStyle: "dashed",
-                    py: 1,
-                    "&:hover": { borderStyle: "dashed" }
-                  }}
+                  startContent={<Plus className="w-4 h-4" />}
+                  variant="bordered"
+                  color="secondary"
+                  onPress={() => addSlot(day.value)}
+                  className="w-full border-dashed"
                 >
                   Añadir Franja Horaria
                 </Button>
-              </Stack>
-            </AccordionDetails>
-          </Accordion>
-        );
-      })}
-    </Box>
+              </div>
+            </AccordionItem>
+          );
+        })}
+      </Accordion>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Grid, TextField, Typography } from "@mui/material";
+import { Input } from "@heroui/react";
 import { ProfessionalFormData } from "./types";
 import { ColorPicker } from "../../components/ColorPicker";
 
@@ -14,68 +14,53 @@ interface ContactTabProps {
 
 export function ContactTab({ formData, handleChange, errors, mode }: ContactTabProps) {
     return (
-        <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-                <TextField
-                    fullWidth
-                    label="Nombre y Apellido"
-                    value={formData.name}
-                    onChange={(e) => handleChange("name", e.target.value)}
-                    error={!!errors.name}
-                    helperText={errors.name}
-                    required
-                />
-            </Grid>
-            <Grid item xs={12} md={6}>
-                <TextField
-                    fullWidth
-                    label="Email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleChange("email", e.target.value)}
-                    error={!!errors.email}
-                    helperText={errors.email}
-                    required
-                    disabled={mode === "edit"}
-                />
-            </Grid>
-            <Grid item xs={12} md={6}>
-                <TextField
-                    fullWidth
-                    label={mode === "create" ? "Contraseña" : "Nueva Contraseña (opcional)"}
-                    type="password"
-                    value={formData.tempPassword}
-                    onChange={(e) => handleChange("tempPassword", e.target.value)}
-                    error={!!errors.tempPassword}
-                    helperText={errors.tempPassword}
-                    required={mode === "create"}
-                />
-            </Grid>
-            <Grid item xs={12} md={6}>
-                <TextField
-                    fullWidth
-                    label="Teléfono"
-                    value={formData.phone}
-                    onChange={(e) => handleChange("phone", e.target.value)}
-                />
-            </Grid>
-            <Grid item xs={12} md={6}>
-                <TextField
-                    fullWidth
-                    label="Matrícula"
-                    value={formData.licenseNumber}
-                    onChange={(e) => handleChange("licenseNumber", e.target.value)}
-                />
-            </Grid>
-            <Grid item xs={12} md={6}>
-                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Input
+                label="Nombre y Apellido"
+                value={formData.name}
+                onValueChange={(value) => handleChange("name", value)}
+                isInvalid={!!errors.name}
+                errorMessage={errors.name}
+                isRequired
+            />
+            <Input
+                label="Email"
+                type="email"
+                value={formData.email}
+                onValueChange={(value) => handleChange("email", value)}
+                isInvalid={!!errors.email}
+                errorMessage={errors.email}
+                isRequired
+                isDisabled={mode === "edit"}
+            />
+            <Input
+                label={mode === "create" ? "Contraseña" : "Nueva Contraseña (opcional)"}
+                type="password"
+                value={formData.tempPassword}
+                onValueChange={(value) => handleChange("tempPassword", value)}
+                isInvalid={!!errors.tempPassword}
+                errorMessage={errors.tempPassword}
+                isRequired={mode === "create"}
+            />
+            <Input
+                label="Teléfono"
+                value={formData.phone || ""}
+                onValueChange={(value) => handleChange("phone", value)}
+            />
+            <Input
+                label="Matrícula"
+                value={formData.licenseNumber || ""}
+                onValueChange={(value) => handleChange("licenseNumber", value)}
+            />
+            <div className="">
+                <p className="text-sm font-medium mb-2 text-gray-700">
                     Color en Calendario
-                </Typography>
+                </p>
                 <ColorPicker
                     value={formData.color}
                     onChange={(color) => handleChange("color", color)}
                 />
-            </Grid>
-        </Grid>
+            </div>
+        </div>
     );
 }

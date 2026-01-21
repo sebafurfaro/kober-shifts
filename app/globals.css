@@ -1,7 +1,6 @@
-/* Configurar capas CSS para que Tailwind tenga prioridad sobre MUI */
-@layer base, theme, mui, components, utilities;
-
 @import "tailwindcss";
+@config "../tailwind.config.js";
+@source "../node_modules/@heroui/theme/dist/";
 
 :root {
   --background: #ffffff;
@@ -11,8 +10,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-open-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-montserrat);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -25,10 +24,10 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-open-sans), sans-serif;
+  font-family: var(--font-inter), sans-serif;
 }
 
-/* Asegurar que MUI y Tailwind trabajen juntos */
+/* Global box-sizing */
 * {
   box-sizing: border-box;
 }
@@ -60,4 +59,44 @@ body {
 
 .animate-slide-up {
   animation: slideUp 0.3s ease-out;
+}
+
+.gradient-nodo {
+  background-image: linear-gradient(135deg, #1A237E 0%, #1497B5 50%, #26A69A 100%);
+}
+
+.button {
+  @apply transition-all duration-300 ease-in-out flex items-center justify-center gap-2 rounded-lg py-3 px-6 text-base font-medium cursor-pointer;
+}
+.button-primary {
+  @apply text-white bg-[#1A237E] hover:bg-[#1497B5] hover:shadow-lg;
+}
+.button-secondary {
+  @apply text-white bg-[#1497B5] hover:bg-[#1A237E] hover:shadow-lg;
+}
+.button-tertiary {
+  @apply text-white bg-[#26A69A] hover:bg-[#1497B5] hover:shadow-lg;
+}
+.button-quaternary {
+  @apply text-white bg-[#1A237E] hover:bg-[#1497B5] hover:shadow-lg;
+}
+.button-danger {
+  @apply text-white bg-red-500 hover:bg-red-600 hover:shadow-lg;
+}
+.button-warning {
+  @apply text-white bg-yellow-500 hover:bg-yellow-600 hover:shadow-lg;
+}
+.button-success {
+  @apply text-white bg-green-500 hover:bg-green-600 hover:shadow-lg;
+}
+.button-info {
+  @apply text-white bg-blue-500 hover:bg-blue-600 hover:shadow-lg;
+}
+
+.link-danger {
+  @apply text-red-500 hover:text-red-600 transition-colors duration-150;
+}
+
+.card {
+  @apply p-6 bg-white shadow-sm rounded-lg;
 }

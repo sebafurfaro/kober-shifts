@@ -1,26 +1,22 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Box, Button, Container, IconButton, InputAdornment, Stack, TextField, Typography } from "@mui/material";
+import { Button, Input, Card, CardBody } from "@heroui/react";
 import { useParams, useRouter } from "next/navigation";
-import { Visibility, VisibilityOff, Google, CheckCircle, Cancel } from "@mui/icons-material";
+import { Eye, EyeOff, CheckCircle2, XCircle } from "lucide-react";
 
 function ValidationItem({ isValid, text }: { isValid: boolean; text: string }) {
   return (
-    <Stack direction="row" spacing={1} alignItems="center">
+    <div className="flex items-center gap-2">
       {isValid ? (
-        <CheckCircle color="success" sx={{ fontSize: 16 }} />
+        <CheckCircle2 className="w-4 h-4 text-success" />
       ) : (
-        <Cancel color="action" sx={{ fontSize: 16, opacity: 0.5 }} />
+        <XCircle className="w-4 h-4 text-gray-400 opacity-50" />
       )}
-      <Typography
-        variant="caption"
-        color={isValid ? "success.main" : "text.secondary"}
-        sx={{ transition: "color 0.2s" }}
-      >
+      <span className={`text-xs transition-colors ${isValid ? "text-success" : "text-gray-500"}`}>
         {text}
-      </Typography>
-    </Stack>
+      </span>
+    </div>
   );
 }
 
@@ -72,101 +68,93 @@ export default function RegisterPage() {
   }
 
   const handleShowPassword = () => setShowPassword((show) => !show);
-  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-  };
-  const handleMouseUpPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-  };
 
   return (
-    <Container maxWidth="sm">
-      <Box sx={{ py: 8 }}>
-        <Stack spacing={2} component="form" onSubmit={onSubmit}>
-          <Typography variant="h5" fontWeight={700}>
-            Crear cuenta
-          </Typography>
-          <TextField label="Nombre y apellido" value={name} onChange={(e) => setName(e.target.value)} />
-          <TextField
-            label="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-          />
-          <TextField
-            label="Contraseña"
-            type={showPassword ? "text" : "password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="new-password"
-            error={isPasswordTouched && !Object.values(validations).every(Boolean)}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label="toggle password visibility"
-                    onClick={handleShowPassword}
-                    onMouseDown={handleMouseDownPassword}
-                    onMouseUp={handleMouseUpPassword}
-                    edge="end"
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-            onBlur={() => setIsPasswordTouched(true)}
-          />
+    <div className="max-w-md mx-auto px-4 py-8">
+      <Card>
+        <CardBody>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <h2 className="text-2xl font-bold">Crear cuenta</h2>
+            <Input
+              label="Nombre y apellido"
+              value={name}
+              onValueChange={setName}
+              isRequired
+            />
+            <Input
+              label="Email"
+              type="email"
+              value={email}
+              onValueChange={setEmail}
+              autoComplete="email"
+              isRequired
+            />
+            <Input
+              label="Contraseña"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onValueChange={setPassword}
+              autoComplete="new-password"
+              isInvalid={isPasswordTouched && !Object.values(validations).every(Boolean)}
+              endContent={
+                <button
+                  className="focus:outline-none"
+                  type="button"
+                  onClick={handleShowPassword}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4 text-gray-400" />
+                  ) : (
+                    <Eye className="w-4 h-4 text-gray-400" />
+                  )}
+                </button>
+              }
+              onBlur={() => setIsPasswordTouched(true)}
+              isRequired
+            />
 
-          {/* Password Requirements */}
-          <Box sx={{ mt: 1, p: 1, bgcolor: 'background.paper', borderRadius: 1 }}>
-            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>
-              Requisitos de la contraseña:
-            </Typography>
-            <Stack spacing={0.5}>
-              <ValidationItem isValid={validations.minLength} text="Mínimo 8 caracteres" />
-              <ValidationItem isValid={validations.hasUpperCase} text="Al menos una mayúscula" />
-              <ValidationItem isValid={validations.hasNumber} text="Al menos un número" />
-              <ValidationItem isValid={validations.hasSpecialChar} text="Al menos un carácter especial (@$!%*?&)" />
-            </Stack>
-          </Box>
+            {/* Password Requirements */}
+            <div className="mt-2 p-3 bg-white rounded-lg border border-gray-200">
+              <p className="text-xs font-semibold mb-2">Requisitos de la contraseña:</p>
+              <div className="space-y-1">
+                <ValidationItem isValid={validations.minLength} text="Mínimo 8 caracteres" />
+                <ValidationItem isValid={validations.hasUpperCase} text="Al menos una mayúscula" />
+                <ValidationItem isValid={validations.hasNumber} text="Al menos un número" />
+                <ValidationItem isValid={validations.hasSpecialChar} text="Al menos un carácter especial (@$!%*?&)" />
+              </div>
+            </div>
 
-          {error ? (
-            <Typography color="error" variant="body2">
-              {error}
-            </Typography>
-          ) : null}
-          <Button type="submit" variant="contained" disabled={loading || (isPasswordTouched && !Object.values(validations).every(Boolean))}>
-            Registrarme
-          </Button>
+            {error ? (
+              <p className="text-sm text-danger">{error}</p>
+            ) : null}
+            <Button
+              type="submit"
+              color="primary"
+              isDisabled={loading || (isPasswordTouched && !Object.values(validations).every(Boolean))}
+              isLoading={loading}
+              className="w-full"
+            >
+              Registrarme
+            </Button>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', my: 2 }}>
-            <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-            <Typography variant="caption" sx={{ px: 2, color: 'text.secondary' }}>O</Typography>
-            <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-          </Box>
+            <div className="flex items-center my-4">
+              <div className="flex-1 h-px bg-gray-300" />
+              <span className="px-2 text-sm text-gray-500">O</span>
+              <div className="flex-1 h-px bg-gray-300" />
+            </div>
 
-          <Button
-            variant="outlined"
-            startIcon={<Google />}
-            onClick={() => window.location.href = `/api/plataforma/${tenantId}/auth/google`}
-            disabled={loading}
-            fullWidth
-            sx={{
-              textTransform: "none",
-              borderColor: "#ddd",
-              color: "#555",
-              "&:hover": {
-                borderColor: "#ccc",
-                backgroundColor: "#f5f5f5",
-              },
-            }}
-          >
-            Registrarse con Google
-          </Button>
-        </Stack>
-      </Box>
-    </Container>
+            <Button
+              variant="bordered"
+              onPress={() => window.location.href = `/api/plataforma/${tenantId}/auth/google`}
+              isDisabled={loading}
+              className="w-full"
+            >
+              Registrarse con Google
+            </Button>
+          </form>
+        </CardBody>
+      </Card>
+    </div>
   );
 }
 

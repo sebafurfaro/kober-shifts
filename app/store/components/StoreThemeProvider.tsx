@@ -1,16 +1,12 @@
 "use client";
 
-import { ThemeProvider, StyledEngineProvider } from "@mui/material/styles";
-import CssBaseline from "@mui/material/CssBaseline";
-import { theme } from "../../theme";
+import { HeroUIProvider } from "@heroui/react";
 
 export function StoreThemeProvider({ children }: { children: React.ReactNode }) {
+  // Using HeroUIProvider for consistent theming across the app
   return (
-    <StyledEngineProvider injectFirst>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        {children}
-      </ThemeProvider>
-    </StyledEngineProvider>
+    <HeroUIProvider>
+      {children}
+    </HeroUIProvider>
   );
 }

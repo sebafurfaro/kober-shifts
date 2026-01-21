@@ -2,21 +2,16 @@
 
 import * as React from "react";
 import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
+    Modal,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
     Button,
-    TextField,
-    Box,
+    Input,
     Alert,
-    CircularProgress,
-    IconButton,
-    Typography,
-    Stack,
-    Divider,
-} from "@mui/material";
-import { Delete as DeleteIcon, Add as AddIcon } from "@mui/icons-material";
+} from "@heroui/react";
+import { Trash2, Plus } from "lucide-react";
 
 interface PlanData {
     id?: string;
@@ -142,92 +137,106 @@ export function CoverageFormDialog({
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-            <form onSubmit={handleSubmit}>
-                <DialogTitle>
-                    {mode === "create" ? "Crear Cobertura Médica" : "Editar Cobertura Médica"}
-                </DialogTitle>
-                <DialogContent>
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 3, pt: 1 }}>
-                        {submitError && (
-                            <Alert severity="error" onClose={() => setSubmitError(null)}>
-                                {submitError}
-                            </Alert>
-                        )}
+        <Modal isOpen={open} onClose={onClose} size="md" scrollBehavior="inside">
+            <ModalContent>
+                <form onSubmit={handleSubmit}>
+                    <ModalHeader className="text-slate-800">
+                        {mode === "create" ? "Crear Cobertura Médica" : "Editar Cobertura Médica"}
+                    </ModalHeader>
+                    <ModalBody className="text-slate-800">
+                        <div className="flex flex-col gap-6">
+                            {submitError && (
+                                <Alert color="danger" onClose={() => setSubmitError(null)}>
+                                    {submitError}
+                                </Alert>
+                            )}
 
-                        <TextField
-                            label="Nombre de cobertura"
-                            value={formData.name}
-                            onChange={handleNameChange}
-                            error={!!errors.name}
-                            helperText={errors.name}
-                            required
-                            disabled={loading}
-                            fullWidth
-                            autoFocus
-                            autoComplete="off"
-                        />
+                            <Input
+                                label="Nombre de cobertura"
+                                value={formData.name}
+                                onValueChange={(value) => {
+                                    setFormData((prev) => ({ ...prev, name: value }));
+                                    if (errors.name) {
+                                        setErrors((prev) => ({ ...prev, name: undefined }));
+                                    }
+                                }}
+                                isInvalid={!!errors.name}
+                                errorMessage={errors.name}
+                                isRequired
+                                isDisabled={loading}
+                                autoFocus
+                                autoComplete="off"
+                            />
 
-                        <Divider>
-                            <Typography variant="caption" color="text.secondary">
-                                PLANES
-                            </Typography>
-                        </Divider>
+                            <div className="relative">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-gray-300"></div>
+                                </div>
+                                <div className="relative flex justify-center">
+                                    <span className="bg-white px-2 text-xs text-gray-500">PLANES</span>
+                                </div>
+                            </div>
 
-                        <Stack spacing={2}>
-                            {formData.plans.map((plan, index) => (
-                                <Box key={index} sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
-                                    <TextField
-                                        label={`Título del plan ${index + 1}`}
-                                        value={plan.name}
-                                        onChange={(e) => handlePlanChange(index, e.target.value)}
-                                        error={!!errors[`plan_${index}`]}
-                                        helperText={errors[`plan_${index}`]}
-                                        required
-                                        disabled={loading}
-                                        fullWidth
-                                        size="small"
-                                        autoComplete="off"
-                                    />
-                                    <IconButton
-                                        color="error"
-                                        onClick={() => removePlan(index)}
-                                        disabled={loading || formData.plans.length <= 1}
-                                        sx={{ mt: 0.5 }}
-                                    >
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </Box>
-                            ))}
+                            <div className="flex flex-col gap-4">
+                                {formData.plans.map((plan, index) => (
+                                    <div key={index} className="flex gap-2 items-start">
+                                        <Input
+                                            label={`Título del plan ${index + 1}`}
+                                            value={plan.name}
+                                            onValueChange={(value) => handlePlanChange(index, value)}
+                                            isInvalid={!!errors[`plan_${index}`]}
+                                            errorMessage={errors[`plan_${index}`]}
+                                            isRequired
+                                            isDisabled={loading}
+                                            size="sm"
+                                            autoComplete="off"
+                                            className="flex-1"
+                                        />
+                                        <Button
+                                            isIconOnly
+                                            color="danger"
+                                            variant="light"
+                                            onPress={() => removePlan(index)}
+                                            isDisabled={loading || formData.plans.length <= 1}
+                                            className="mt-1"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                ))}
 
-                            <Button
-                                startIcon={<AddIcon />}
-                                onClick={addPlan}
-                                disabled={loading}
-                                variant="outlined"
-                                size="small"
-                                sx={{ alignSelf: "flex-start" }}
-                            >
-                                Agregar Plan
-                            </Button>
-                        </Stack>
-                    </Box>
-                </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 2 }}>
-                    <Button onClick={onClose} disabled={loading}>
-                        Cancelar
-                    </Button>
-                    <Button
-                        type="submit"
-                        variant="contained"
-                        color="primary"
-                        disabled={loading}
-                        startIcon={loading ? <CircularProgress size={16} /> : null}
-                    >
-                        {loading ? "Guardando..." : mode === "create" ? "Crear" : "Guardar"}
-                    </Button>
-                </DialogActions>
-            </form>
-        </Dialog>
+                                <Button
+                                    startContent={<Plus className="w-4 h-4" />}
+                                    onPress={addPlan}
+                                    isDisabled={loading}
+                                    variant="flat"
+                                    size="sm"
+                                    className="self-start button-secondary"
+                                >
+                                    Agregar Plan
+                                </Button>
+                            </div>
+                        </div>
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button
+                            variant="light"
+                            onPress={onClose}
+                            isDisabled={loading}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="submit"
+                            color="primary"
+                            isDisabled={loading}
+                            isLoading={loading}
+                        >
+                            {loading ? "Guardando..." : mode === "create" ? "Crear" : "Guardar"}
+                        </Button>
+                    </ModalFooter>
+                </form>
+            </ModalContent>
+        </Modal>
     );
 }

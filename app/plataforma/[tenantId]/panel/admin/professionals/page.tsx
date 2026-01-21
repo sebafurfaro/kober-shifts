@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Box, Container, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Avatar, Chip, Typography } from "@mui/material";
-import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Avatar, Chip, Button, Spinner, Card } from "@heroui/react";
+import { Edit, Trash2 } from "lucide-react";
 import { PanelHeader } from "../../components/PanelHeader";
 import { useRouter, useParams } from "next/navigation";
 import { ConfirmationDialog } from "../../components/alerts/ConfirmationDialog";
@@ -72,11 +72,16 @@ export default function AdminProfessionalsPage() {
   };
 
   const confirmDelete = async () => {
-    if (!deleteDialog.professional) return;
+    const professionalToDelete = deleteDialog.professional;
+    if (!professionalToDelete) return;
+
+    // Cerrar el diálogo inmediatamente
+    setDeleteDialog({ open: false, professional: null });
 
     try {
-      const res = await fetch(`/api/plataforma/${tenantId}/admin/professionals/${deleteDialog.professional.id}`, {
+      const res = await fetch(`/api/plataforma/${tenantId}/admin/professionals/${professionalToDelete.id}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       if (!res.ok) {
@@ -85,9 +90,7 @@ export default function AdminProfessionalsPage() {
       }
 
       await loadData();
-      setDeleteDialog({ open: false, professional: null });
     } catch (error: any) {
-      setDeleteDialog({ open: false, professional: null });
       setAlertDialog({
         open: true,
         message: error.message || "Error al eliminar profesional",
@@ -97,8 +100,8 @@ export default function AdminProfessionalsPage() {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Box sx={{ py: 4 }}>
+    <div className="max-w-7xl mx-auto mt-8">
+      <div className="py-8">
         <PanelHeader
           title="Profesionales"
           action={{
@@ -108,110 +111,99 @@ export default function AdminProfessionalsPage() {
           }}
         />
 
-        <TableContainer component={Paper} sx={{ mt: 3 }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Color</TableCell>
-                <TableCell>Nombre</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Especialidades</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
-                    Cargando...
-                  </TableCell>
-                </TableRow>
-              ) : professionals.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
-                    No hay profesionales registrados
-                  </TableCell>
-                </TableRow>
-              ) : (
-                professionals.map((professional) => {
-                  const color = professional.color || professional.professional?.color || "#2196f3";
-                  const initials = professional.name
-                    .split(" ")
-                    .filter(n => n.length > 0)
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()
-                    .slice(0, 2);
+        <Card className="card">
+          <Table aria-label="Tabla de profesionales">
+            <TableHeader>
+              <TableColumn className="rounded-tl-lg rounded-bl-lg text-slate-800 text-base">Color</TableColumn>
+              <TableColumn className="text-slate-800 text-base">Nombre</TableColumn>
+              <TableColumn className="text-slate-800 text-base">Email</TableColumn>
+              <TableColumn className="text-slate-800 text-base">Especialidades</TableColumn>
+              <TableColumn className="text-right rounded-tr-lg rounded-br-lg text-slate-800 text-base">Acciones</TableColumn>
+            </TableHeader>
+            <TableBody
+              isLoading={loading}
+              loadingContent={<Spinner label="Cargando..." />}
+              emptyContent={loading ? null : "No hay profesionales registrados"}
+            >
+              {professionals.map((professional) => {
+                const color = professional.color || professional.professional?.color || "#2196f3";
+                const initials = professional.name
+                  .split(" ")
+                  .filter(n => n.length > 0)
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()
+                  .slice(0, 2);
 
-                  return (
-                    <TableRow key={professional.id} hover>
-                      <TableCell>
-                        <Avatar
-                          sx={{
-                            bgcolor: color,
-                            width: 36,
-                            height: 36,
-                            fontSize: "0.80rem",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {initials}
-                        </Avatar>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {professional.name}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {professional.email}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                          {professional.professional?.specialties && professional.professional.specialties.length > 0 ? (
-                            professional.professional.specialties.map((specialty) => (
-                              <Chip
-                                key={specialty.id}
-                                label={specialty.name}
-                                size="small"
-                                variant="outlined"
-                                sx={{ fontSize: "0.7rem", height: "20px" }}
-                              />
-                            ))
-                          ) : (
-                            <Typography variant="caption" color="text.secondary">
-                              Sin especialidad
-                            </Typography>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEdit(professional)}
+                return (
+                  <TableRow key={professional.id}>
+                    <TableCell>
+                      <Avatar
+                        name={initials}
+                        style={{ backgroundColor: color }}
+                        className="w-9 h-9 text-xs font-semibold rounded-full text-white"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <p className="text-sm font-medium text-gray-900">
+                        {professional.name}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      <p className="text-sm text-gray-600">
+                        {professional.email}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-2">
+                        {professional.professional?.specialties && professional.professional.specialties.length > 0 ? (
+                          professional.professional.specialties.map((specialty) => (
+                            <Chip
+                              key={specialty.id}
+                              variant="bordered"
+                              color="secondary"
+                              size="sm"
+                              className="text-xs"
+                            >
+                              {specialty.name}
+                            </Chip>
+                          ))
+                        ) : (
+                          <span className="text-xs text-gray-500">Sin especialidad</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          isIconOnly
+                          size="sm"
+                          variant="light"
+                          onPress={() => handleEdit(professional)}
                           title="Editar"
+                          className="text-gray-600 hover:text-gray-900"
                         >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDelete(professional)}
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          isIconOnly
+                          size="sm"
+                          variant="light"
+                          color="danger"
+                          onPress={() => handleDelete(professional)}
                           title="Eliminar"
-                          color="error"
                         >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
-        </TableContainer>
-      </Box>
+        </Card>
+      </div>
 
       <ConfirmationDialog
         open={deleteDialog.open}
@@ -234,6 +226,6 @@ export default function AdminProfessionalsPage() {
         message={alertDialog.message}
         type={alertDialog.type}
       />
-    </Container>
+    </div>
   );
 }

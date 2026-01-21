@@ -2,18 +2,18 @@
 
 import * as React from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
   Button,
-  TextField,
-  MenuItem,
-  Box,
+  Input,
+  Select,
+  SelectItem,
+  Textarea,
   Alert,
-  CircularProgress,
-  Grid,
-} from "@mui/material";
+} from "@heroui/react";
 import { format, differenceInYears, parseISO } from "date-fns";
 
 interface PatientFormData {
@@ -179,209 +179,217 @@ export function PatientFormDialog({
     }
   };
 
-  const handleChange = (field: keyof PatientFormData) => (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-    // Clear error for this field when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-    setSubmitError(null);
-  };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <form onSubmit={handleSubmit}>
-        <DialogTitle>
-          {mode === "create" ? "Crear Paciente" : "Editar Paciente"}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
-            {submitError && (
-              <Alert severity="error" onClose={() => setSubmitError(null)}>
-                {submitError}
-              </Alert>
-            )}
+    <Modal isOpen={open} onClose={onClose} size="2xl" scrollBehavior="inside">
+      <ModalContent>
+        <form onSubmit={handleSubmit}>
+          <ModalHeader className="text-slate-800">
+            {mode === "create" ? "Crear Paciente" : "Editar Paciente"}
+          </ModalHeader>
+          <ModalBody className="text-slate-800">
+            <div className="flex flex-col gap-4">
+              {submitError && (
+                <Alert color="danger" onClose={() => setSubmitError(null)}>
+                  {submitError}
+                </Alert>
+              )}
 
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <TextField
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
                   label="Nombre"
                   value={formData.firstName}
-                  onChange={handleChange("firstName")}
-                  error={!!errors.firstName}
-                  helperText={errors.firstName}
-                  required
-                  disabled={loading}
-                  fullWidth
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({ ...prev, firstName: value }));
+                    if (errors.firstName) {
+                      setErrors((prev) => ({ ...prev, firstName: undefined }));
+                    }
+                    setSubmitError(null);
+                  }}
+                  isInvalid={!!errors.firstName}
+                  errorMessage={errors.firstName}
+                  isRequired
+                  isDisabled={loading}
                   autoComplete="off"
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
+                <Input
                   label="Apellido"
                   value={formData.lastName}
-                  onChange={handleChange("lastName")}
-                  error={!!errors.lastName}
-                  helperText={errors.lastName}
-                  required
-                  disabled={loading}
-                  fullWidth
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({ ...prev, lastName: value }));
+                    if (errors.lastName) {
+                      setErrors((prev) => ({ ...prev, lastName: undefined }));
+                    }
+                    setSubmitError(null);
+                  }}
+                  isInvalid={!!errors.lastName}
+                  errorMessage={errors.lastName}
+                  isRequired
+                  isDisabled={loading}
                   autoComplete="off"
                 />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
+                <Input
                   label="Email"
                   type="email"
                   value={formData.email}
-                  onChange={handleChange("email")}
-                  error={!!errors.email}
-                  helperText={mode === "edit" ? "El email no se puede modificar" : errors.email}
-                  required
-                  disabled={loading || mode === "edit"}
-                  fullWidth
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({ ...prev, email: value }));
+                    if (errors.email) {
+                      setErrors((prev) => ({ ...prev, email: undefined }));
+                    }
+                    setSubmitError(null);
+                  }}
+                  isInvalid={!!errors.email}
+                  errorMessage={mode === "edit" ? "El email no se puede modificar" : errors.email}
+                  isRequired
+                  isDisabled={loading || mode === "edit"}
                   autoComplete="off"
                 />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
+                <Input
                   label="Teléfono"
                   value={formData.phone}
-                  onChange={handleChange("phone")}
-                  error={!!errors.phone}
-                  helperText={errors.phone}
-                  disabled={loading}
-                  fullWidth
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({ ...prev, phone: value }));
+                    if (errors.phone) {
+                      setErrors((prev) => ({ ...prev, phone: undefined }));
+                    }
+                    setSubmitError(null);
+                  }}
+                  isInvalid={!!errors.phone}
+                  errorMessage={errors.phone}
+                  isDisabled={loading}
                   autoComplete="off"
                 />
-              </Grid>
-
-              <Grid item xs={12}>
-                <TextField
-                  label="Dirección"
-                  value={formData.address}
-                  onChange={handleChange("address")}
-                  error={!!errors.address}
-                  helperText={errors.address}
-                  disabled={loading}
-                  fullWidth
-                  multiline
-                  rows={2}
-                  autoComplete="off"
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
+                <Input
                   label="Fecha de Nacimiento"
                   type="date"
                   value={formData.dateOfBirth}
-                  onChange={handleChange("dateOfBirth")}
-                  error={!!errors.dateOfBirth}
-                  helperText={errors.dateOfBirth || (age !== null ? `Edad: ${age} años` : "")}
-                  disabled={loading}
-                  fullWidth
-                  InputLabelProps={{
-                    shrink: true,
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({ ...prev, dateOfBirth: value }));
+                    if (errors.dateOfBirth) {
+                      setErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
+                    }
+                    setSubmitError(null);
                   }}
+                  isInvalid={!!errors.dateOfBirth}
+                  errorMessage={errors.dateOfBirth || (age !== null ? `Edad: ${age} años` : "")}
+                  isDisabled={loading}
                   autoComplete="off"
                 />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
+                <Input
                   label="Fecha de Ingreso"
                   type="date"
                   value={formData.admissionDate}
-                  onChange={handleChange("admissionDate")}
-                  error={!!errors.admissionDate}
-                  helperText={errors.admissionDate}
-                  disabled={loading}
-                  fullWidth
-                  InputLabelProps={{
-                    shrink: true,
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({ ...prev, admissionDate: value }));
+                    if (errors.admissionDate) {
+                      setErrors((prev) => ({ ...prev, admissionDate: undefined }));
+                    }
+                    setSubmitError(null);
                   }}
-                  inputProps={{
-                    min: "1900-01-01",
-                    max: new Date().toISOString().split("T")[0],
-                  }}
+                  isInvalid={!!errors.admissionDate}
+                  errorMessage={errors.admissionDate}
+                  isDisabled={loading}
+                  min="1900-01-01"
+                  max={new Date().toISOString().split("T")[0]}
                   autoComplete="off"
                 />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  select
+                <Select
                   label="Género"
-                  value={formData.gender}
-                  onChange={handleChange("gender")}
-                  error={!!errors.gender}
-                  helperText={errors.gender}
-                  disabled={loading}
-                  fullWidth
-                  autoComplete="off"
+                  selectedKeys={formData.gender ? [formData.gender] : []}
+                  onSelectionChange={(keys) => {
+                    const selected = Array.from(keys)[0] as string;
+                    setFormData((prev) => ({ ...prev, gender: selected || "" }));
+                    if (errors.gender) {
+                      setErrors((prev) => ({ ...prev, gender: undefined }));
+                    }
+                    setSubmitError(null);
+                  }}
+                  isInvalid={!!errors.gender}
+                  errorMessage={errors.gender}
+                  isDisabled={loading}
                 >
-                  <MenuItem value="">Seleccionar...</MenuItem>
-                  <MenuItem value="Masculino">Masculino</MenuItem>
-                  <MenuItem value="Femenino">Femenino</MenuItem>
-                  <MenuItem value="No binario">No binario</MenuItem>
-                </TextField>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
+                  <SelectItem key="" value="">Seleccionar...</SelectItem>
+                  <SelectItem key="Masculino" value="Masculino">Masculino</SelectItem>
+                  <SelectItem key="Femenino" value="Femenino">Femenino</SelectItem>
+                  <SelectItem key="No binario" value="No binario">No binario</SelectItem>
+                </Select>
+                <Input
                   label="Nacionalidad"
                   value={formData.nationality}
-                  onChange={handleChange("nationality")}
-                  error={!!errors.nationality}
-                  helperText={errors.nationality}
-                  disabled={loading}
-                  fullWidth
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({ ...prev, nationality: value }));
+                    if (errors.nationality) {
+                      setErrors((prev) => ({ ...prev, nationality: undefined }));
+                    }
+                    setSubmitError(null);
+                  }}
+                  isInvalid={!!errors.nationality}
+                  errorMessage={errors.nationality}
+                  isDisabled={loading}
                   autoComplete="off"
                 />
-              </Grid>
-
-              <Grid item xs={12}>
-                <TextField
-                  label="Contraseña Temporal"
-                  type="password"
-                  value={formData.tempPassword}
-                  onChange={handleChange("tempPassword")}
-                  error={!!errors.tempPassword}
-                  helperText={
-                    errors.tempPassword ||
-                    (mode === "edit"
-                      ? "Dejar vacío para mantener la contraseña actual"
-                      : "Mínimo 6 caracteres")
+              </div>
+              <Textarea
+                label="Dirección"
+                value={formData.address}
+                onValueChange={(value) => {
+                  setFormData((prev) => ({ ...prev, address: value }));
+                  if (errors.address) {
+                    setErrors((prev) => ({ ...prev, address: undefined }));
                   }
-                  required={mode === "create"}
-                  disabled={loading}
-                  fullWidth
-                  autoComplete="new-password"
-                />
-              </Grid>
-            </Grid>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={loading}
-            startIcon={loading ? <CircularProgress size={16} /> : null}
-          >
-            {loading ? "Guardando..." : mode === "create" ? "Crear" : "Guardar"}
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+                  setSubmitError(null);
+                }}
+                isInvalid={!!errors.address}
+                errorMessage={errors.address}
+                isDisabled={loading}
+                minRows={2}
+                autoComplete="off"
+              />
+              <Input
+                label="Contraseña Temporal"
+                type="password"
+                value={formData.tempPassword}
+                onValueChange={(value) => {
+                  setFormData((prev) => ({ ...prev, tempPassword: value }));
+                  if (errors.tempPassword) {
+                    setErrors((prev) => ({ ...prev, tempPassword: undefined }));
+                  }
+                  setSubmitError(null);
+                }}
+                isInvalid={!!errors.tempPassword}
+                errorMessage={
+                  errors.tempPassword ||
+                  (mode === "edit"
+                    ? "Dejar vacío para mantener la contraseña actual"
+                    : "Mínimo 6 caracteres")
+                }
+                isRequired={mode === "create"}
+                isDisabled={loading}
+                autoComplete="new-password"
+              />
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="light"
+              onPress={onClose}
+              isDisabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              className="button button-secondary"
+              isDisabled={loading}
+              isLoading={loading}
+            >
+              {loading ? "Guardando..." : mode === "create" ? "Crear" : "Guardar"}
+            </Button>
+          </ModalFooter>
+        </form>
+      </ModalContent>
+    </Modal>
   );
 }
 

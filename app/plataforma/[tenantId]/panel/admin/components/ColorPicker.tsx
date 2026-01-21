@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { Box, Typography } from "@mui/material";
 
 // 36 colores predefinidos organizados en una paleta variada
 const COLOR_PALETTE = [
@@ -18,7 +17,7 @@ const COLOR_PALETTE = [
   "#341f97", // Púrpura muy oscuro
   "#00d2d3", // Cian
   "#54a0ff", // Azul cielo
-  "#2196f3", // Azul Material-UI (color por defecto)
+  "#2196f3", // Azul (color por defecto)
   "#1e90ff", // Azul dodger
   "#0abde3", // Azul turquesa
   "#00a8ff", // Azul brillante
@@ -57,55 +56,35 @@ export function ColorPicker({ value, onChange, disabled = false, error = false }
   };
 
   return (
-    <Box>
-      <Box
-        sx={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 1.5,
-          p: 1.5,
-          border: "1px solid",
-          borderColor: error ? "error.main" : "divider",
-          borderRadius: 1,
-          backgroundColor: "background.paper",
-        }}
+    <div>
+      <div
+        className={`flex flex-wrap gap-3 p-3 border rounded-lg bg-white ${
+          error ? "border-danger" : "border-gray-300"
+        }`}
       >
         {COLOR_PALETTE.map((color) => (
-          <Box
+          <div
             key={color}
             onClick={() => handleColorClick(color)}
-            sx={{
-              width: "30px",
-              aspectRatio: "1",
-              borderRadius: "2px",
+            className={`w-[30px] aspect-square rounded-sm transition-all duration-200 ${
+              disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer opacity-100 hover:scale-110"
+            } ${
+              value === color
+                ? "border-[3px] border-primary"
+                : "border-2 border-transparent"
+            }`}
+            style={{
               backgroundColor: color,
-              cursor: disabled ? "not-allowed" : "pointer",
-              opacity: disabled ? 0.5 : 1,
-              border: value === color ? "3px solid" : "2px solid",
-              borderColor: value === color ? "primary.main" : "transparent",
-              transition: "all 0.2s ease-in-out",
-              "&:hover": {
-                transform: disabled ? "none" : "scale(1.1)",
-                boxShadow: disabled ? "none" : `0 2px 8px ${color}40`,
-              },
+              boxShadow: !disabled && value === color ? `0 2px 8px ${color}40` : "none",
             }}
           />
         ))}
-      </Box>
+      </div>
       {value && (
-        <Typography
-          variant="caption"
-          sx={{
-            mt: 1,
-            display: "block",
-            textAlign: "center",
-            color: "text.secondary",
-            fontFamily: "monospace",
-          }}
-        >
+        <p className="mt-2 text-xs text-center text-gray-500 font-mono">
           {value.toUpperCase()}
-        </Typography>
+        </p>
       )}
-    </Box>
+    </div>
   );
 }

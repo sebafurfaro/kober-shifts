@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Box, Button, Container, Stack, TextField, Typography, Paper } from "@mui/material";
+import { Button, Input, Card, CardBody } from "@heroui/react";
 import { useRouter } from "next/navigation";
 
 export default function StoreLoginPage() {
@@ -53,53 +53,39 @@ export default function StoreLoginPage() {
   }
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "100vh",
-        backgroundColor: "grey.100",
-      }}
-    >
-      <Container maxWidth="sm">
-        <Paper sx={{ p: 4, borderRadius: 2 }}>
-          <Stack spacing={3} component="form" onSubmit={onSubmit}>
-            <Typography variant="h5" fontWeight={700} textAlign="center">
-              Store - Gestión de Tenants
-            </Typography>
-            <Typography variant="body2" color="text.secondary" textAlign="center">
-              Acceso restringido
-            </Typography>
-            <TextField
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-              fullWidth
-            />
-            <TextField
-              label="Contraseña"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-              fullWidth
-            />
-            {error ? (
-              <Typography color="error" variant="body2" textAlign="center">
-                {error}
-              </Typography>
-            ) : null}
-            <Button type="submit" variant="contained" disabled={loading} fullWidth>
-              {loading ? "Iniciando sesión..." : "Entrar"}
-            </Button>
-          </Stack>
-        </Paper>
-      </Container>
-    </Box>
+    <div className="flex justify-center items-center min-h-screen bg-gray-100">
+      <div className="max-w-md w-full px-4">
+        <Card className="p-6">
+          <CardBody>
+            <form onSubmit={onSubmit} className="space-y-4">
+              <h2 className="text-2xl font-bold text-center">Store - Gestión de Tenants</h2>
+              <p className="text-sm text-gray-500 text-center">Acceso restringido</p>
+              <Input
+                label="Email"
+                type="email"
+                value={email}
+                onValueChange={setEmail}
+                autoComplete="email"
+                isRequired
+              />
+              <Input
+                label="Contraseña"
+                type="password"
+                value={password}
+                onValueChange={setPassword}
+                autoComplete="current-password"
+                isRequired
+              />
+              {error ? (
+                <p className="text-sm text-danger text-center">{error}</p>
+              ) : null}
+              <Button type="submit" color="primary" isDisabled={loading} isLoading={loading} className="w-full">
+                {loading ? "Iniciando sesión..." : "Entrar"}
+              </Button>
+            </form>
+          </CardBody>
+        </Card>
+      </div>
+    </div>
   );
 }

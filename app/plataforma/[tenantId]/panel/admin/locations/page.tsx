@@ -2,18 +2,18 @@
 
 import * as React from "react";
 import {
-  Box,
-  Container,
-  Paper,
   Table,
+  TableHeader,
+  TableColumn,
   TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
-  IconButton,
-} from "@mui/material";
-import { Edit as EditIcon } from "@mui/icons-material";
+  TableCell,
+  Button,
+  Card,
+  CardBody,
+  Spinner,
+} from "@heroui/react";
+import { Pencil } from "lucide-react";
 import { LocationFormDialog } from "../components/LocationFormDialog";
 import { PanelHeader } from "../../components/PanelHeader";
 import { useParams } from "next/navigation";
@@ -102,8 +102,8 @@ export default function AdminLocationsPage() {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Box sx={{ py: 4 }}>
+    <div className="max-w-7xl mx-auto mt-8 px-4">
+      <div className="py-8">
         <PanelHeader
           title="Sedes"
           subtitle="Configura todas las sedes que tengas asociadas"
@@ -113,54 +113,50 @@ export default function AdminLocationsPage() {
           }}
         />
 
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Nombre del Centro</TableCell>
-                <TableCell>Dirección</TableCell>
-                <TableCell>Teléfono</TableCell>
-                <TableCell align="right">Citas Asociadas</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center">
-                    Cargando...
-                  </TableCell>
-                </TableRow>
-              ) : locations.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center">
-                    No hay sedes registradas
-                  </TableCell>
-                </TableRow>
-              ) : (
-                locations.map((location) => (
+        <Card>
+          <CardBody className="p-0">
+            <Table aria-label="Tabla de sedes">
+              <TableHeader>
+                <TableColumn>Nombre del Centro</TableColumn>
+                <TableColumn>Dirección</TableColumn>
+                <TableColumn>Teléfono</TableColumn>
+                <TableColumn align="end">Citas Asociadas</TableColumn>
+                <TableColumn align="end">Acciones</TableColumn>
+              </TableHeader>
+              <TableBody
+                isLoading={loading}
+                loadingContent={<Spinner />}
+                emptyContent={
+                  loading ? "Cargando..." : "No hay sedes registradas"
+                }
+              >
+                {locations.map((location) => (
                   <TableRow key={location.id}>
                     <TableCell>{location.name}</TableCell>
                     <TableCell>{location.address}</TableCell>
                     <TableCell>{location.phone || "-"}</TableCell>
-                    <TableCell align="right">
+                    <TableCell className="text-right">
                       {location.appointmentCount ?? 0}
                     </TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEdit(location)}
-                        aria-label="editar"
-                      >
-                        <EditIcon />
-                      </IconButton>
+                    <TableCell>
+                      <div className="flex justify-end">
+                        <Button
+                          isIconOnly
+                          size="sm"
+                          variant="light"
+                          onPress={() => handleEdit(location)}
+                          aria-label="editar"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ))}
+              </TableBody>
+            </Table>
+          </CardBody>
+        </Card>
 
         <LocationFormDialog
           open={dialogOpen}
@@ -172,8 +168,8 @@ export default function AdminLocationsPage() {
           mode={editingLocation ? "edit" : "create"}
           initialData={editingLocation || undefined}
         />
-      </Box>
-    </Container>
+      </div>
+    </div>
   );
 }
 

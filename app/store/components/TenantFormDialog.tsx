@@ -2,17 +2,15 @@
 
 import * as React from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
   Button,
-  TextField,
-  Box,
+  Input,
   Alert,
-  CircularProgress,
-  Typography,
-} from "@mui/material";
+} from "@heroui/react";
 
 interface TenantFormData {
   name: string;
@@ -108,74 +106,91 @@ export function TenantFormDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <form onSubmit={handleSubmit}>
-        <DialogTitle>Crear Tenant</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
-            {submitError && (
-              <Alert severity="error" onClose={() => setSubmitError(null)}>
-                {submitError}
-              </Alert>
-            )}
+    <Modal isOpen={open} onClose={onClose} size="md" scrollBehavior="inside">
+      <ModalContent>
+        <form onSubmit={handleSubmit}>
+          <ModalHeader>Crear Tenant</ModalHeader>
+          <ModalBody>
+            <div className="flex flex-col gap-4">
+              {submitError && (
+                <Alert color="danger" onClose={() => setSubmitError(null)}>
+                  {submitError}
+                </Alert>
+              )}
 
-            <TextField
-              label="Nombre"
-              value={formData.name}
-              onChange={handleChange("name")}
-              error={!!errors.name}
-              helperText={errors.name}
-              required
-              disabled={loading}
-              fullWidth
-              autoFocus
-              autoComplete="off"
-            />
-
-            <Box>
-              <TextField
-                label="ID (Opcional)"
-                value={formData.id}
-                onChange={handleChange("id")}
-                error={!!errors.id}
-                helperText={errors.id || "Si no se especifica, se generará automáticamente desde el nombre"}
-                disabled={loading}
-                fullWidth
+              <Input
+                label="Nombre"
+                value={formData.name}
+                onValueChange={(value) => {
+                  setFormData((prev) => ({ ...prev, name: value }));
+                  if (errors.name) {
+                    setErrors((prev) => ({ ...prev, name: undefined }));
+                  }
+                  setSubmitError(null);
+                }}
+                isInvalid={!!errors.name}
+                errorMessage={errors.name}
+                isRequired
+                isDisabled={loading}
+                autoFocus
                 autoComplete="off"
-                placeholder="ej: mi-tenant"
               />
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
-                Solo letras minúsculas, números y guiones
-              </Typography>
-            </Box>
 
-            <TextField
-              label="Logo URL (Opcional)"
-              value={formData.logoUrl}
-              onChange={handleChange("logoUrl")}
-              error={!!errors.logoUrl}
-              helperText={errors.logoUrl || "URL de la imagen del logo del tenant"}
-              disabled={loading}
-              fullWidth
-              autoComplete="off"
-              placeholder="https://ejemplo.com/logo.png"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={loading}
-            startIcon={loading ? <CircularProgress size={16} /> : null}
-          >
-            {loading ? "Creando..." : "Crear"}
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+              <div>
+                <Input
+                  label="ID (Opcional)"
+                  value={formData.id || ""}
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({ ...prev, id: value }));
+                    if (errors.id) {
+                      setErrors((prev) => ({ ...prev, id: undefined }));
+                    }
+                    setSubmitError(null);
+                  }}
+                  isInvalid={!!errors.id}
+                  errorMessage={errors.id || "Si no se especifica, se generará automáticamente desde el nombre"}
+                  isDisabled={loading}
+                  placeholder="ej: mi-tenant"
+                  autoComplete="off"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Solo letras minúsculas, números y guiones
+                </p>
+              </div>
+
+              <Input
+                label="Logo URL (Opcional)"
+                value={formData.logoUrl || ""}
+                onValueChange={(value) => {
+                  setFormData((prev) => ({ ...prev, logoUrl: value }));
+                  if (errors.logoUrl) {
+                    setErrors((prev) => ({ ...prev, logoUrl: undefined }));
+                  }
+                  setSubmitError(null);
+                }}
+                isInvalid={!!errors.logoUrl}
+                errorMessage={errors.logoUrl || "URL de la imagen del logo del tenant"}
+                isDisabled={loading}
+                placeholder="https://ejemplo.com/logo.png"
+                autoComplete="off"
+              />
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button onPress={onClose} isDisabled={loading} variant="light">
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              color="primary"
+              isDisabled={loading}
+              isLoading={loading}
+            >
+              {loading ? "Creando..." : "Crear"}
+            </Button>
+          </ModalFooter>
+        </form>
+      </ModalContent>
+    </Modal>
   );
 }

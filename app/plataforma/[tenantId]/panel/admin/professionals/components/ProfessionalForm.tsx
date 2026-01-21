@@ -2,14 +2,13 @@
 
 import * as React from "react";
 import {
-    Box,
     Button,
-    CircularProgress,
-    Paper,
-    Divider,
+    Spinner,
+    Card,
+    CardBody,
     Tabs,
     Tab,
-} from "@mui/material";
+} from "@heroui/react";
 import { ProfessionalFormData, INITIAL_AVAILABILITY, Specialty } from "./types";
 import { ContactTab } from "./ContactTab";
 import { SpecialtiesTab } from "./SpecialtiesTab";
@@ -31,7 +30,11 @@ export function ProfessionalForm({
     mode,
     specialties,
 }: ProfessionalFormProps) {
-    const [activeTab, setActiveTab] = React.useState(0);
+    const [selectedTab, setSelectedTab] = React.useState<string>("contacto");
+    
+    const handleSelectionChange = (key: React.Key) => {
+        setSelectedTab(String(key));
+    };
     const [formData, setFormData] = React.useState<ProfessionalFormData>({
         name: initialData?.name || "",
         email: initialData?.email || "",
@@ -45,10 +48,6 @@ export function ProfessionalForm({
     });
 
     const [errors, setErrors] = React.useState<Record<string, string>>({});
-
-    const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-        setActiveTab(newValue);
-    };
 
     const handleChange = (field: keyof ProfessionalFormData, value: any) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -77,75 +76,90 @@ export function ProfessionalForm({
         if (validate()) {
             onSubmit(formData);
         } else {
-            setActiveTab(0); // Go back to first tab if there are core errors
+            setSelectedTab("contacto"); // Go back to first tab if there are core errors
         }
     };
 
     return (
-        <form onSubmit={handleSubmit}>
-            <Paper sx={{ mb: 4 }}>
-                <Tabs
-                    value={activeTab}
-                    onChange={handleTabChange}
-                    indicatorColor="primary"
-                    textColor="primary"
-                    variant="fullWidth"
+        <form onSubmit={handleSubmit} className="flex w-full flex-col card">
+            <Tabs
+                selectedKey={selectedTab}
+                onSelectionChange={handleSelectionChange}
+                aria-label="Tabs del formulario de profesional"
+                className="w-full"
+                classNames={{
+                    base: "w-full",
+                    tabList: "gap-6 w-full relative bg-gray-100 rounded-lg p-1",
+                    cursor: "bg-white rounded-lg transition-all duration-300 ease-in-out font-medium",
+                    tab: "max-w-fit px-4 h-12 rounded-md text-slate-800",
+                    tabContent: "group-data-[selected=true]:text-primary",
+                    panel: "p-0",
+                }}
+            >
+                <Tab key="contacto" title="Contacto">
+                    <Card>
+                        <CardBody>
+                            <ContactTab
+                                formData={formData}
+                                handleChange={handleChange}
+                                errors={errors}
+                                mode={mode}
+                            />
+                        </CardBody>
+                    </Card>
+                </Tab>
+                <Tab key="especialidades" title="Especialidades">
+                    <Card>
+                        <CardBody>
+                            <SpecialtiesTab
+                                formData={formData}
+                                handleChange={handleChange}
+                                errors={errors}
+                                specialties={specialties}
+                            />
+                        </CardBody>
+                    </Card>
+                </Tab>
+                <Tab key="coberturas" title="Coberturas">
+                    <Card>
+                        <CardBody>
+                            <CoveragesTab formData={formData} setFormData={setFormData} />
+                        </CardBody>
+                    </Card>
+                </Tab>
+                <Tab key="disponibilidad" title="Disponibilidad">
+                    <Card>
+                        <CardBody>
+                            <AvailabilityTab
+                                availabilityConfig={formData.availabilityConfig}
+                                setFormData={setFormData}
+                                onSave={handleSubmit}
+                                loading={loading}
+                            />
+                        </CardBody>
+                    </Card>
+                </Tab>
+            </Tabs>
+
+            <div className="mt-6 flex justify-end gap-3">
+                <Button 
+                    variant="bordered" 
+                    onPress={() => window.history.back()} 
+                    isDisabled={loading}
+                    color="danger"
                 >
-                    <Tab label="Contacto" />
-                    <Tab label="Especialidades" />
-                    <Tab label="Coberturas" />
-                    <Tab label="Disponibilidad" />
-                </Tabs>
-
-                <Box sx={{ p: 4 }}>
-                    {activeTab === 0 && (
-                        <ContactTab
-                            formData={formData}
-                            handleChange={handleChange}
-                            errors={errors}
-                            mode={mode}
-                        />
-                    )}
-
-                    {activeTab === 1 && (
-                        <SpecialtiesTab
-                            formData={formData}
-                            handleChange={handleChange}
-                            errors={errors}
-                            specialties={specialties}
-                        />
-                    )}
-
-                    {activeTab === 2 && (
-                        <CoveragesTab formData={formData} setFormData={setFormData} />
-                    )}
-
-                    {activeTab === 3 && (
-                        <AvailabilityTab
-                            availabilityConfig={formData.availabilityConfig}
-                            setFormData={setFormData}
-                            onSave={handleSubmit}
-                            loading={loading}
-                        />
-                    )}
-                </Box>
-
-                <Divider />
-                <Box sx={{ p: 4, display: "flex", justifyContent: "flex-end", gap: 2 }}>
-                    <Button variant="outlined" onClick={() => window.history.back()} disabled={loading}>
-                        Cancelar
-                    </Button>
-                    <Button
-                        type="submit"
-                        variant="contained"
-                        color="success"
-                        disabled={loading}
-                        startIcon={loading ? <CircularProgress size={16} /> : null}
-                    >
-                        {loading ? "Guardando..." : "Guardar"}
-                    </Button>
-                </Box>
-            </Paper>
+                    Cancelar
+                </Button>
+                <Button
+                    type="submit"
+                    color="success"
+                    isDisabled={loading}
+                    isLoading={loading}
+                    className="button button-success"
+                >
+                    {loading ? "Guardando..." : "Guardar"}
+                </Button>
+            </div>
         </form>
     );
 }

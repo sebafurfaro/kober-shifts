@@ -2,28 +2,19 @@
 
 import * as React from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
   Button,
-  TextField,
-  MenuItem,
-  Box,
-  Alert,
-  CircularProgress,
-  Typography,
+  Input,
   Select,
-  FormControl,
-  InputLabel,
-  FormHelperText,
+  SelectItem,
+  Alert,
   Chip,
-  OutlinedInput,
-  FormGroup,
-  FormControlLabel,
   Checkbox,
-  Stack,
-} from "@mui/material";
+} from "@heroui/react";
 import { ColorPicker } from "./ColorPicker";
 
 interface UserFormData {
@@ -169,132 +160,113 @@ export function UserFormDialog({
     }
   };
 
-  const handleChange = (field: keyof UserFormData) => (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-    // Clear error for this field when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-    setSubmitError(null);
-  };
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose}
-      maxWidth="sm" 
-      fullWidth
-    >
-      <form onSubmit={handleSubmit}>
-        <DialogTitle>
-          {mode === "create"
-            ? `Crear ${userType === "professional" ? "Profesional" : "Paciente"}`
-            : `Editar ${userType === "professional" ? "Profesional" : "Paciente"}`}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
-            {submitError && (
-              <Alert severity="error" onClose={() => setSubmitError(null)}>
-                {submitError}
-              </Alert>
-            )}
+    <Modal isOpen={open} onClose={onClose} size="md" scrollBehavior="inside">
+      <ModalContent>
+        <form onSubmit={handleSubmit}>
+          <ModalHeader>
+            {mode === "create"
+              ? `Crear ${userType === "professional" ? "Profesional" : "Paciente"}`
+              : `Editar ${userType === "professional" ? "Profesional" : "Paciente"}`}
+          </ModalHeader>
+          <ModalBody>
+            <div className="flex flex-col gap-4">
+              {submitError && (
+                <Alert color="danger" onClose={() => setSubmitError(null)}>
+                  {submitError}
+                </Alert>
+              )}
 
-            <TextField
-              label="Nombre"
-              value={formData.name}
-              onChange={handleChange("name")}
-              error={!!errors.name}
-              helperText={errors.name}
-              required
-              disabled={loading}
-              fullWidth
-              autoComplete="off"
-            />
+              <Input
+                label="Nombre"
+                value={formData.name}
+                onValueChange={(value) => {
+                  setFormData((prev) => ({ ...prev, name: value }));
+                  if (errors.name) {
+                    setErrors((prev) => ({ ...prev, name: undefined }));
+                  }
+                  setSubmitError(null);
+                }}
+                isInvalid={!!errors.name}
+                errorMessage={errors.name}
+                isRequired
+                isDisabled={loading}
+                autoComplete="off"
+              />
 
-            <TextField
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange("email")}
-              error={!!errors.email}
-              helperText={mode === "edit" ? "El email no se puede modificar" : errors.email}
-              required
-              disabled={loading || mode === "edit"}
-              fullWidth
-              autoComplete="off"
-            />
+              <Input
+                label="Email"
+                type="email"
+                value={formData.email}
+                onValueChange={(value) => {
+                  setFormData((prev) => ({ ...prev, email: value }));
+                  if (errors.email) {
+                    setErrors((prev) => ({ ...prev, email: undefined }));
+                  }
+                  setSubmitError(null);
+                }}
+                isInvalid={!!errors.email}
+                errorMessage={mode === "edit" ? "El email no se puede modificar" : errors.email}
+                isRequired
+                isDisabled={loading || mode === "edit"}
+                autoComplete="off"
+              />
 
-            {userType === "professional" && (
-              <>
-                <FormControl fullWidth error={!!errors.specialtyIds} required disabled={loading}>
-                  <InputLabel>Especialidades</InputLabel>
+              {userType === "professional" && (
+                <>
                   <Select
-                    multiple
-                    value={formData.specialtyIds || []}
-                    onChange={(e) => {
-                      const value = typeof e.target.value === 'string' ? [e.target.value] : e.target.value;
-                      setFormData((prev) => ({ ...prev, specialtyIds: value }));
+                    label="Especialidades"
+                    selectionMode="multiple"
+                    selectedKeys={formData.specialtyIds || []}
+                    onSelectionChange={(keys) => {
+                      const selected = Array.from(keys) as string[];
+                      setFormData((prev) => ({ ...prev, specialtyIds: selected }));
                       if (errors.specialtyIds) {
                         setErrors((prev) => ({ ...prev, specialtyIds: undefined }));
                       }
                       setSubmitError(null);
                     }}
-                    input={<OutlinedInput label="Especialidades" />}
-                    renderValue={(selected) => (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {(selected as string[]).map((value) => {
-                          const specialty = specialties.find(s => s.id === value);
-                          return (
-                            <Chip key={value} label={specialty?.name || value} size="small" />
-                          );
-                        })}
-                      </Box>
-                    )}
+                    isInvalid={!!errors.specialtyIds}
+                    errorMessage={errors.specialtyIds}
+                    isRequired
+                    isDisabled={loading}
                   >
                     {specialties.map((specialty) => (
-                      <MenuItem key={specialty.id} value={specialty.id}>
+                      <SelectItem key={specialty.id} value={specialty.id}>
                         {specialty.name}
-                      </MenuItem>
+                      </SelectItem>
                     ))}
                   </Select>
-                  {errors.specialtyIds && (
-                    <FormHelperText>{errors.specialtyIds}</FormHelperText>
-                  )}
-                </FormControl>
 
-                <Box>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Color para Calendario
-                  </Typography>
-                  <ColorPicker
-                    value={formData.color || "#2196f3"}
-                    onChange={(color) => {
-                      setFormData((prev) => ({ ...prev, color }));
-                      if (errors.color) {
-                        setErrors((prev) => ({ ...prev, color: undefined }));
-                      }
-                    }}
-                    disabled={loading}
-                    error={!!errors.color}
-                  />
-                  {errors.color && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5, display: "block" }}>
-                      {errors.color}
-                    </Typography>
-                  )}
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
-                    Color que se usará para los turnos de este profesional en el calendario
-                  </Typography>
-                </Box>
+                  <div>
+                    <p className="text-sm font-medium mb-2 text-gray-700">
+                      Color para Calendario
+                    </p>
+                    <ColorPicker
+                      value={formData.color || "#2196f3"}
+                      onChange={(color) => {
+                        setFormData((prev) => ({ ...prev, color }));
+                        if (errors.color) {
+                          setErrors((prev) => ({ ...prev, color: undefined }));
+                        }
+                      }}
+                      disabled={loading}
+                      error={!!errors.color}
+                    />
+                    {errors.color && (
+                      <p className="text-xs text-danger mt-1">{errors.color}</p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      Color que se usará para los turnos de este profesional en el calendario
+                    </p>
+                  </div>
 
-                <Box>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Días Disponibles
-                  </Typography>
-                  <FormGroup>
-                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                  <div>
+                    <p className="text-sm font-medium mb-2 text-gray-700">
+                      Días Disponibles
+                    </p>
+                    <div className="flex flex-wrap gap-3">
                       {[
                         { value: 1, label: "Lunes" },
                         { value: 2, label: "Martes" },
@@ -304,116 +276,116 @@ export function UserFormDialog({
                         { value: 6, label: "Sábado" },
                         { value: 0, label: "Domingo" },
                       ].map((day) => (
-                        <FormControlLabel
+                        <Checkbox
                           key={day.value}
-                          control={
-                            <Checkbox
-                              checked={formData.availableDays?.includes(day.value) || false}
-                              onChange={(e) => {
-                                const currentDays = formData.availableDays || [];
-                                const newDays = e.target.checked
-                                  ? [...currentDays, day.value]
-                                  : currentDays.filter((d) => d !== day.value);
-                                setFormData((prev) => ({ ...prev, availableDays: newDays }));
-                              }}
-                              disabled={loading}
-                            />
-                          }
-                          label={day.label}
-                        />
+                          isSelected={formData.availableDays?.includes(day.value) || false}
+                          onValueChange={(checked) => {
+                            const currentDays = formData.availableDays || [];
+                            const newDays = checked
+                              ? [...currentDays, day.value]
+                              : currentDays.filter((d) => d !== day.value);
+                            setFormData((prev) => ({ ...prev, availableDays: newDays }));
+                          }}
+                          isDisabled={loading}
+                        >
+                          {day.label}
+                        </Checkbox>
                       ))}
-                    </Box>
-                  </FormGroup>
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
-                    Selecciona los días de la semana en que el profesional está disponible
-                  </Typography>
-                </Box>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Selecciona los días de la semana en que el profesional está disponible
+                    </p>
+                  </div>
 
-                <Box>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Horarios Disponibles
-                  </Typography>
-                  <Stack direction="row" spacing={2}>
-                    <TextField
-                      label="Hora Inicio"
-                      type="time"
-                      value={formData.availableHours?.start || "09:00"}
-                      onChange={(e) => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          availableHours: {
-                            start: e.target.value,
-                            end: prev.availableHours?.end || "18:00",
-                          },
-                        }));
-                      }}
-                      disabled={loading}
-                      InputLabelProps={{
-                        shrink: true,
-                      }}
-                      fullWidth
-                    />
-                    <TextField
-                      label="Hora Fin"
-                      type="time"
-                      value={formData.availableHours?.end || "18:00"}
-                      onChange={(e) => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          availableHours: {
-                            start: prev.availableHours?.start || "09:00",
-                            end: e.target.value,
-                          },
-                        }));
-                      }}
-                      disabled={loading}
-                      InputLabelProps={{
-                        shrink: true,
-                      }}
-                      fullWidth
-                    />
-                  </Stack>
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
-                    Define el rango horario de disponibilidad del profesional
-                  </Typography>
-                </Box>
+                  <div>
+                    <p className="text-sm font-medium mb-2 text-gray-700">
+                      Horarios Disponibles
+                    </p>
+                    <div className="flex gap-3">
+                      <Input
+                        label="Hora Inicio"
+                        type="time"
+                        value={formData.availableHours?.start || "09:00"}
+                        onValueChange={(value) => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            availableHours: {
+                              start: value,
+                              end: prev.availableHours?.end || "18:00",
+                            },
+                          }));
+                        }}
+                        isDisabled={loading}
+                        className="flex-1"
+                      />
+                      <Input
+                        label="Hora Fin"
+                        type="time"
+                        value={formData.availableHours?.end || "18:00"}
+                        onValueChange={(value) => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            availableHours: {
+                              start: prev.availableHours?.start || "09:00",
+                              end: value,
+                            },
+                          }));
+                        }}
+                        isDisabled={loading}
+                        className="flex-1"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Define el rango horario de disponibilidad del profesional
+                    </p>
+                  </div>
 
-                <TextField
-                  label="Contraseña Temporal"
-                  type="password"
-                  value={formData.tempPassword}
-                  onChange={handleChange("tempPassword")}
-                  error={!!errors.tempPassword}
-                  helperText={
-                    errors.tempPassword ||
-                    (mode === "edit"
-                      ? "Dejar vacío para mantener la contraseña actual"
-                      : "Mínimo 6 caracteres")
-                  }
-                  required={mode === "create"}
-                  disabled={loading}
-                  fullWidth
-                  autoComplete="new-password"
-                />
-              </>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={loading}
-            startIcon={loading ? <CircularProgress size={16} /> : null}
-          >
-            {loading ? "Guardando..." : mode === "create" ? "Crear" : "Guardar"}
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+                  <Input
+                    label="Contraseña Temporal"
+                    type="password"
+                    value={formData.tempPassword}
+                    onValueChange={(value) => {
+                      setFormData((prev) => ({ ...prev, tempPassword: value }));
+                      if (errors.tempPassword) {
+                        setErrors((prev) => ({ ...prev, tempPassword: undefined }));
+                      }
+                      setSubmitError(null);
+                    }}
+                    isInvalid={!!errors.tempPassword}
+                    errorMessage={
+                      errors.tempPassword ||
+                      (mode === "edit"
+                        ? "Dejar vacío para mantener la contraseña actual"
+                        : "Mínimo 6 caracteres")
+                    }
+                    isRequired={mode === "create"}
+                    isDisabled={loading}
+                    autoComplete="new-password"
+                  />
+                </>
+              )}
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="light"
+              onPress={onClose}
+              isDisabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              color="primary"
+              isDisabled={loading}
+              isLoading={loading}
+            >
+              {loading ? "Guardando..." : mode === "create" ? "Crear" : "Guardar"}
+            </Button>
+          </ModalFooter>
+        </form>
+      </ModalContent>
+    </Modal>
   );
 }
 

@@ -2,90 +2,20 @@
 
 import * as React from "react";
 import {
-	Box,
-	Typography,
 	Accordion,
-	AccordionSummary,
-	AccordionDetails,
-	Stack,
-	TextField,
-	InputAdornment,
-	CircularProgress,
+	AccordionItem,
+	Input,
+	Spinner,
 	Button,
 	Switch,
-	Divider,
-	List,
-	ListItem,
-	ListItemText,
-} from "@mui/material";
+	Chip,
+} from "@heroui/react";
 import {
-	ExpandMore as ExpandMoreIcon,
-	Search as SearchIcon,
-	Add as AddIcon,
-} from "@mui/icons-material";
-import { styled } from "@mui/material/styles";
-import { SwitchProps } from "@mui/material";
+	Search,
+	Plus,
+} from "lucide-react";
 import { ProfessionalFormData, SelectedCoverage } from "./types";
-
-const IOSSwitch = styled((props: SwitchProps) => (
-	<Switch focusVisibleClassName=".Mui-focusVisible" disableRipple {...props} />
-))(({ theme }) => ({
-	width: 42,
-	height: 26,
-	padding: 0,
-	'& .MuiSwitch-switchBase': {
-		padding: 0,
-		margin: "2px",
-		transitionDuration: '300ms',
-		'&.Mui-checked': {
-			transform: 'translateX(16px)',
-			color: '#fff',
-			'& + .MuiSwitch-track': {
-				backgroundColor: '#2e72caff',
-				opacity: 1,
-				border: 0,
-				...theme.applyStyles('dark', {
-					backgroundColor: '#2e72caff',
-				}),
-			},
-			'&.Mui-disabled + .MuiSwitch-track': {
-				opacity: 0.5,
-			},
-		},
-		'&.Mui-focusVisible .MuiSwitch-thumb': {
-			color: '#2e72ca',
-			border: '6px solid #fff',
-		},
-		'&.Mui-disabled .MuiSwitch-thumb': {
-			color: theme.palette.grey[100],
-			...theme.applyStyles('dark', {
-				color: theme.palette.grey[600],
-			}),
-		},
-		'&.Mui-disabled + .MuiSwitch-track': {
-			opacity: 0.7,
-			...theme.applyStyles('dark', {
-				opacity: 0.3,
-			}),
-		},
-	},
-	'& .MuiSwitch-thumb': {
-		boxSizing: 'border-box',
-		width: 22,
-		height: 22,
-	},
-	'& .MuiSwitch-track': {
-		borderRadius: 26 / 2,
-		backgroundColor: '#E9E9EA',
-		opacity: 1,
-		transition: theme.transitions.create(['background-color'], {
-			duration: 500,
-		}),
-		...theme.applyStyles('dark', {
-			backgroundColor: '#39393D',
-		}),
-	},
-}));
+import { useParams } from "next/navigation";
 
 interface CoveragePlan {
 	id: string;
@@ -108,10 +38,13 @@ export function CoveragesTab({ formData, setFormData }: CoveragesTabProps) {
 	const [loading, setLoading] = React.useState(true);
 	const [search, setSearch] = React.useState("");
 
+	const params = useParams();
+	const tenantId = params.tenantId as string;
+
 	React.useEffect(() => {
 		async function fetchCoverages() {
 			try {
-				const res = await fetch("/api/admin/coverages");
+				const res = await fetch(`/api/plataforma/${tenantId}/admin/coverages`);
 				const data = await res.json();
 				setAllCoverages(data);
 			} catch (error) {
@@ -121,7 +54,7 @@ export function CoveragesTab({ formData, setFormData }: CoveragesTabProps) {
 			}
 		}
 		fetchCoverages();
-	}, []);
+	}, [tenantId]);
 
 	const getSelectedCoverage = (coverageId: string) => {
 		return formData.medicalCoverages?.find((c) => c.coverageId === coverageId);
@@ -173,127 +106,139 @@ export function CoveragesTab({ formData, setFormData }: CoveragesTabProps) {
 
 	if (loading) {
 		return (
-			<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-				<CircularProgress size={24} />
-			</Box>
+			<div className="flex justify-center items-center py-8">
+				<Spinner size="md" />
+			</div>
 		);
 	}
 
 	return (
-		<Box>
-			<Box sx={{ mb: 3 }}>
-				<TextField
+		<div>
+			<div className="mb-6">
+				<Input
 					fullWidth
-					size="small"
+					size="sm"
 					placeholder="Buscar cobertura o plan..."
 					value={search}
-					onChange={(e) => setSearch(e.target.value)}
-					InputProps={{
-						startAdornment: (
-							<InputAdornment position="start">
-								<SearchIcon fontSize="small" color="action" />
-							</InputAdornment>
-						),
+					onValueChange={setSearch}
+					startContent={<Search className="w-4 h-4 text-gray-400" />}
+					className="w-full"
+					classNames={{
+						base: "mb-4",
+						inputWrapper: "h-11 border-2 border-gray-200 bg-white focus-within:ring-0 focus-within:outline-none",
+						input: "px-4 text-sm text-gray-800 focus:outline-none focus:ring-0",
+						label: "text-sm font-medium text-gray-500",
 					}}
 				/>
-			</Box>
+			</div>
 
-			<Stack spacing={1}>
+			<Accordion variant="splitted" className="w-full mt-4 space-y-2">
 				{filteredCoverages.map((coverage) => {
 					const selected = getSelectedCoverage(coverage.id);
 					const activePlansCount = selected?.plans.filter((p) => p.active).length || 0;
 					const totalPlansCount = coverage.plans.length;
 
 					return (
-						<Accordion key={coverage.id} variant="outlined" disableGutters>
-							<AccordionSummary expandIcon={<ExpandMoreIcon />}>
-								<Box sx={{ display: "flex", alignItems: "center", width: "100%", pr: 2 }}>
-									<Typography sx={{ flexGrow: 1, fontWeight: 600 }}>
-										{coverage.name}
-									</Typography>
-									<Typography variant="caption" color="text.secondary" sx={{ mr: 2 }}>
+						<AccordionItem
+							key={coverage.id}
+							aria-label={coverage.name}
+							classNames={{
+								base: "border-[1px] border-gray-200 rounded-lg px-0",
+								indicator: "mr-4 text-slate-800",
+							}}
+							title={
+								<div className="flex items-center justify-between w-full pl-4">
+									<span className="font-semibold flex-1 text-left text-slate-800">{coverage.name}</span>
+									<span className="text-xs text-gray-500 mr-4">
 										{selected ? `${activePlansCount}/${totalPlansCount}` : totalPlansCount} planes
-									</Typography>
-									<Button
-										size="small"
-										variant={selected ? "outlined" : "contained"}
-										color={selected ? "error" : "success"}
-										startIcon={selected ? null : <AddIcon />}
+									</span>
+									<div
 										onClick={(e) => {
 											e.stopPropagation();
+											e.preventDefault();
 											toggleCoverage(coverage);
 										}}
-										sx={{ minWidth: 100 }}
+										onMouseDown={(e) => {
+											e.stopPropagation();
+										}}
+										className={`
+											min-w-24 px-3 py-1.5 text-sm font-medium rounded-lg cursor-pointer
+											transition-all duration-200 flex items-center gap-2 justify-center
+											${selected 
+												? "border-2 border-red-500 text-red-600 hover:bg-red-50" 
+												: "button-secondary"
+											}
+										`}
+										role="button"
+										tabIndex={0}
+										onKeyDown={(e) => {
+											if (e.key === "Enter" || e.key === " ") {
+												e.preventDefault();
+												e.stopPropagation();
+												toggleCoverage(coverage);
+											}
+										}}
 									>
+										{!selected && <Plus className="w-4 h-4" />}
 										{selected ? "Quitar" : "Agregar"}
-									</Button>
-								</Box>
-							</AccordionSummary>
-							<AccordionDetails sx={{ bgcolor: "white", p: 1 }}>
+									</div>
+								</div>
+							}
+						>
 								{!selected ? (
-									<Box sx={{ p: 4, textAlign: "center" }}>
-										<Typography variant="body2" color="text.secondary" gutterBottom>
+									<div className="p-8 text-center">
+										<p className="text-sm text-gray-600 mb-4">
 											Esta cobertura no está activa para este profesional.
-										</Typography>
+										</p>
 										<Button
-											size="small"
-											variant="text"
-											onClick={() => toggleCoverage(coverage)}
+											size="sm"
+											variant="light"
+											onPress={() => toggleCoverage(coverage)}
 										>
 											Habilitar Cobertura
 										</Button>
-									</Box>
+									</div>
 								) : (
-									<Box>
-										<List dense sx={{ py: 0, display: "flex", flexDirection: "column", gap: 1, width: "100%" }}>
+									<div>
+										<div className="flex flex-col gap-2 py-2 w-full">
 											{coverage.plans.map((plan) => {
 												const planState = selected.plans.find((p) => p.planId === plan.id);
 												const isActive = planState?.active ?? false;
 
 												return (
-													<ListItem
+													<div
 														key={plan.id}
-														secondaryAction={
-															<IOSSwitch
-																edge="end"
-																checked={isActive}
-																onChange={() => togglePlan(coverage.id, plan.id)}
-															/>
-														}
-														sx={{
-															transitionDuration: '300ms',
-															bgcolor: "#f8fafc",
-															p: 1,
-															borderRadius: 1,
-															"&:hover": { bgcolor: "#f1f5f9" }
-														}}
+														className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
 													>
-														<ListItemText
-															primary={plan.name}
-															secondary={isActive ? "Incluido" : "No incluido"}
-															secondaryTypographyProps={{
-																color: isActive ? "success.main" : "text.secondary",
-																sx: { fontWeight: isActive ? 600 : 400, fontSize: "12px" }
-															}}
+														<div className="flex-1">
+															<p className="text-sm font-medium text-gray-900">{plan.name}</p>
+															<p className={`text-xs ${isActive ? "text-success font-semibold" : "text-gray-500"}`}>
+																{isActive ? "Incluido" : "No incluido"}
+															</p>
+														</div>
+														<Switch
+															isSelected={isActive}
+															onValueChange={() => togglePlan(coverage.id, plan.id)}
+															color="success"
+															size="md"
 														/>
-													</ListItem>
+													</div>
 												);
 											})}
-										</List>
-									</Box>
+										</div>
+									</div>
 								)}
-							</AccordionDetails>
-						</Accordion>
+							</AccordionItem>
 					);
 				})}
-				{filteredCoverages.length === 0 && (
-					<Box sx={{ p: 4, textAlign: "center", bgcolor: "background.default", borderRadius: 1 }}>
-						<Typography color="text.secondary">
-							No se encontraron coberturas que coincidan con la búsqueda.
-						</Typography>
-					</Box>
-				)}
-			</Stack>
-		</Box>
+			</Accordion>
+			{filteredCoverages.length === 0 && (
+				<div className="p-8 text-center bg-gray-50 rounded-lg">
+					<p className="text-sm text-gray-600">
+						No se encontraron coberturas que coincidan con la búsqueda.
+					</p>
+				</div>
+			)}
+		</div>
 	);
 }

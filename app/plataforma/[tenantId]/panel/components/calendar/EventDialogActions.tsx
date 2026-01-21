@@ -1,4 +1,4 @@
-import { Button, DialogActions } from "@mui/material";
+import { Button } from "@heroui/react";
 
 interface EventDialogData {
   id?: string;
@@ -31,26 +31,26 @@ export function EventDialogActions({
   onSave,
 }: EventDialogActionsProps) {
   return (
-    <DialogActions>
+    <>
       {mode === "view" && (
         <>
-          <Button variant="outlined" onClick={onEdit}>
+          <Button variant="bordered" onPress={onEdit}>
             Editar
           </Button>
-          <Button color="error" onClick={onDelete}>
+          <Button color="danger" onPress={onDelete}>
             Eliminar
           </Button>
         </>
       )}
-      <Button onClick={onCancel}>
+      <Button variant="light" onPress={onCancel}>
         {mode === "view" ? "Cerrar" : "Cancelar"}
       </Button>
       {mode !== "view" && (
-        <Button variant="contained" onClick={onSave}>
+        <Button color="primary" onPress={onSave}>
           Guardar
         </Button>
       )}
-    </DialogActions>
+    </>
   );
 }
 

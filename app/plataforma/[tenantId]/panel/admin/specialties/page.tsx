@@ -2,18 +2,18 @@
 
 import * as React from "react";
 import {
-  Box,
-  Container,
-  Paper,
   Table,
+  TableHeader,
+  TableColumn,
   TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
-  IconButton,
-} from "@mui/material";
-import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
+  TableCell,
+  Button,
+  Card,
+  CardBody,
+  Spinner,
+} from "@heroui/react";
+import { Pencil, Trash2 } from "lucide-react";
 import { SpecialtyFormDialog } from "../components/SpecialtyFormDialog";
 import { ConfirmationDialog } from "../../components/alerts/ConfirmationDialog";
 import { AlertDialog } from "../../components/alerts/AlertDialog";
@@ -133,8 +133,8 @@ export default function AdminSpecialtiesPage() {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Box sx={{ py: 4 }}>
+    <div className="max-w-7xl mx-auto px-4">
+      <div>
         <PanelHeader
           title="Especialidades"
           subtitle="Agrega todas las especialidades disponibles en tu centro"
@@ -144,61 +144,57 @@ export default function AdminSpecialtiesPage() {
           }}
         />
 
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Nombre</TableCell>
-                <TableCell align="right">Profesionales Asociados</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={3} align="center">
-                    Cargando...
-                  </TableCell>
-                </TableRow>
-              ) : specialties.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={3} align="center">
-                    No hay especialidades registradas
-                  </TableCell>
-                </TableRow>
-              ) : (
-                specialties.map((specialty) => (
+        <Card>
+          <CardBody className="p-0">
+            <Table aria-label="Tabla de especialidades">
+              <TableHeader>
+                <TableColumn className="text-slate-800 text-base">Nombre</TableColumn>
+                <TableColumn className="text-slate-800 text-base" align="end">Profesionales Asociados</TableColumn>
+                <TableColumn className="text-slate-800 text-base" align="end">Acciones</TableColumn>
+              </TableHeader>
+              <TableBody
+                isLoading={loading}
+                loadingContent={<Spinner />}
+                emptyContent={
+                  loading ? "Cargando..." : "No hay especialidades registradas"
+                }
+              >
+                {specialties.map((specialty) => (
                   <TableRow key={specialty.id}>
                     <TableCell>{specialty.name}</TableCell>
-                    <TableCell align="right">
+                    <TableCell className="text-right">
                       {specialty.professionalCount ?? 0}
                     </TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEdit(specialty)}
-                          aria-label="editar"
+                    <TableCell>
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          isIconOnly
+                          size="sm"
+                          variant="light"
                           color="primary"
+                          onPress={() => handleEdit(specialty)}
+                          aria-label="editar"
                         >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDelete(specialty)}
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          isIconOnly
+                          size="sm"
+                          variant="light"
+                          color="danger"
+                          onPress={() => handleDelete(specialty)}
                           aria-label="eliminar"
-                          color="error"
                         >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Box>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ))}
+              </TableBody>
+            </Table>
+          </CardBody>
+        </Card>
 
         <SpecialtyFormDialog
           open={dialogOpen}
@@ -228,8 +224,8 @@ export default function AdminSpecialtiesPage() {
           message={alertDialog.message}
           type={alertDialog.type}
         />
-      </Box>
-    </Container>
+      </div>
+    </div>
   );
 }
 

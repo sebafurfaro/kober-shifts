@@ -6,10 +6,14 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import {
-  Box,
-  Dialog,
-  Paper,
-} from "@mui/material";
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Card,
+  CardBody,
+} from "@heroui/react";
 import { useParams } from "next/navigation";
 import { Toolbar } from "./calendar/Toolbar";
 
@@ -571,7 +575,7 @@ export function Calendar() {
   } as const;
 
   return (
-    <Box sx={{ height: "100%", display: "flex", flexDirection: "column", mt: 4 }}>
+    <div className="h-full flex flex-col mt-8">
       {/* Toolbar */}
       <Toolbar
         currentDate={currentDate}
@@ -586,253 +590,261 @@ export function Calendar() {
       />
 
       {/* Calendar */}
-      <Paper sx={{ p: 2, mb: 2 }}>
-        {mounted && (
-          <Box sx={{ flexGrow: 1, minHeight: 0, "& .fc": { height: "100%" } }}>
-            <FullCalendar
-              ref={calendarRef}
-              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-              initialView={currentView}
-              headerToolbar={false}
-              events={events}
-              editable={true}
-              selectable={true}
-              selectMirror={true}
-              dayMaxEvents={true}
-              weekends={true}
-              dateClick={handleDateClick}
-              select={handleDateSelect}
-              eventClick={handleEventClick}
-              eventChange={handleEventChange}
-              datesSet={handleDatesSet}
-              timeZone={timezone}
-              firstDay={1}
-              locale={spanishLocale as any}
-              height="auto"
-              slotMinTime="08:00:00"
-              slotMaxTime="20:00:00"
-              allDaySlot={false}
-              contentHeight="auto"
-            />
-          </Box>
-        )}
-      </Paper>
+      <Card className="p-4 mb-4">
+        <CardBody className="p-0">
+          {mounted && (
+            <div className="flex-grow min-h-0 [&_.fc]:h-full">
+              <FullCalendar
+                ref={calendarRef}
+                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                initialView={currentView}
+                headerToolbar={false}
+                events={events}
+                editable={true}
+                selectable={true}
+                selectMirror={true}
+                dayMaxEvents={true}
+                weekends={true}
+                dateClick={handleDateClick}
+                select={handleDateSelect}
+                eventClick={handleEventClick}
+                eventChange={handleEventChange}
+                datesSet={handleDatesSet}
+                timeZone={timezone}
+                firstDay={1}
+                locale={spanishLocale as any}
+                height="auto"
+                slotMinTime="08:00:00"
+                slotMaxTime="20:00:00"
+                allDaySlot={false}
+                contentHeight="auto"
+              />
+            </div>
+          )}
+        </CardBody>
+      </Card>
 
       {/* Event Dialog */}
       {mounted && (
-        <Dialog
-          open={eventDialogOpen}
+        <Modal
+          isOpen={eventDialogOpen}
           onClose={() => setEventDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
+          size="md"
+          scrollBehavior="inside"
         >
-          <EventDialogTitle
-            mode={eventDialogMode}
-            eventId={selectedEvent?.id || eventDialogData?.id}
-          />
-
-          <EventDialogContent
-            mode={eventDialogMode}
-            selectedEvent={selectedEvent}
-            eventDialogData={eventDialogData}
-            onDataChange={setEventDialogData}
-            patients={patients}
-            professionals={professionals}
-            locations={locations}
-            specialties={specialties}
-            timezone={timezone}
-            statusColors={statusColors}
-            statusLabels={statusLabels}
-          />
-
-          <EventDialogActions
-            mode={eventDialogMode}
-            selectedEventId={selectedEvent?.id}
-            eventDialogData={eventDialogData}
-            onEdit={() => setEventDialogMode("edit")}
-            onDelete={() => {
-              if (!selectedEvent) return;
-              setConfirmationDialog({
-                open: true,
-                message: "¿Está seguro de que desea eliminar este turno?",
-                type: "warning",
-                onConfirm: async () => {
-                  try {
-                    const res = await fetch(`/api/plataforma/${tenantId}/appointments/${selectedEvent.id}`, {
-                      method: "DELETE",
-                    });
-                    if (!res.ok) throw new Error("Failed to delete appointment");
+          <ModalContent>
+            <ModalHeader>
+              <EventDialogTitle
+                mode={eventDialogMode}
+                eventId={selectedEvent?.id || eventDialogData?.id}
+              />
+            </ModalHeader>
+            <ModalBody>
+              <EventDialogContent
+                mode={eventDialogMode}
+                selectedEvent={selectedEvent}
+                eventDialogData={eventDialogData}
+                onDataChange={setEventDialogData}
+                patients={patients}
+                professionals={professionals}
+                locations={locations}
+                specialties={specialties}
+                timezone={timezone}
+                statusColors={statusColors}
+                statusLabels={statusLabels}
+              />
+            </ModalBody>
+            <ModalFooter>
+              <EventDialogActions
+                mode={eventDialogMode}
+                selectedEventId={selectedEvent?.id}
+                eventDialogData={eventDialogData}
+                onEdit={() => setEventDialogMode("edit")}
+                onDelete={async () => {
+                  if (!selectedEvent) return;
+                  setConfirmationDialog({
+                    open: true,
+                    message: "¿Está seguro de que desea eliminar este turno?",
+                    type: "warning",
+                    onConfirm: async () => {
+                      try {
+                        const res = await fetch(`/api/plataforma/${tenantId}/appointments/${selectedEvent.id}`, {
+                          method: "DELETE",
+                        });
+                        if (!res.ok) throw new Error("Failed to delete appointment");
+                        setEventDialogOpen(false);
+                        if (calendarRef.current) {
+                          const calendar = calendarRef.current.getApi();
+                          loadEvents(calendar.view.activeStart, calendar.view.activeEnd, true);
+                        }
+                      } catch (error) {
+                        console.error("Error deleting appointment:", error);
+                        setAlertDialog({
+                          open: true,
+                          message: "Error al eliminar el turno",
+                          type: "error",
+                        });
+                      }
+                    },
+                  });
+                }}
+                onCancel={() => {
+                  if (eventDialogMode === "edit") {
+                    setEventDialogMode("view");
+                  } else {
                     setEventDialogOpen(false);
-                    if (calendarRef.current) {
-                      const calendar = calendarRef.current.getApi();
-                      loadEvents(calendar.view.activeStart, calendar.view.activeEnd, true);
-                    }
-                  } catch (error) {
-                    console.error("Error deleting appointment:", error);
+                  }
+                }}
+                onSave={async () => {
+                  if (!eventDialogData) return;
+
+                  // Default section visibility
+                  const showLocations = true;
+                  const showSpecialties = true;
+
+                  // Validate required fields (only those that are visible)
+                  if (!eventDialogData.patientId || !eventDialogData.professionalId) {
                     setAlertDialog({
                       open: true,
-                      message: "Error al eliminar el turno",
+                      message: "Por favor complete todos los campos requeridos",
+                      type: "warning",
+                    });
+                    return;
+                  }
+
+                  if (showLocations && !eventDialogData.locationId) {
+                    setAlertDialog({
+                      open: true,
+                      message: "Por favor seleccione una ubicación",
+                      type: "warning",
+                    });
+                    return;
+                  }
+
+                  if (showSpecialties && !eventDialogData.specialtyId) {
+                    setAlertDialog({
+                      open: true,
+                      message: "Por favor seleccione una especialidad",
+                      type: "warning",
+                    });
+                    return;
+                  }
+
+                  // Validate professional availability
+                  if (eventDialogData.professionalId) {
+                    const selectedProfessional = professionals.find(p => p.id === eventDialogData.professionalId);
+                    if (selectedProfessional) {
+                      const availableDays = selectedProfessional.availableDays;
+                      const availableHours = selectedProfessional.availableHours;
+
+                      // Check if professional has availability configured
+                      if (availableDays && availableDays.length > 0) {
+                        // Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+                        const eventDay = eventDialogData.start.getUTCDay();
+                        if (!availableDays.includes(eventDay)) {
+                          const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+                          const availableDayNames = availableDays
+                            .sort((a: number, b: number) => a - b)
+                            .map((d: number) => dayNames[d])
+                            .join(", ");
+                          setAlertDialog({
+                            open: true,
+                            message: `El profesional ${selectedProfessional.name} no está disponible los ${dayNames[eventDay]}. Días disponibles: ${availableDayNames}`,
+                            type: "warning",
+                          });
+                          return;
+                        }
+                      }
+
+                      // Check if professional has hours configured
+                      if (availableHours && availableHours.start && availableHours.end) {
+                        const eventStartHour = eventDialogData.start.getUTCHours();
+                        const eventStartMinute = eventDialogData.start.getUTCMinutes();
+                        const eventEndHour = eventDialogData.end.getUTCHours();
+                        const eventEndMinute = eventDialogData.end.getUTCMinutes();
+
+                        const [startHour, startMin] = availableHours.start.split(":").map(Number);
+                        const [endHour, endMin] = availableHours.end.split(":").map(Number);
+
+                        const eventStartMinutes = eventStartHour * 60 + eventStartMinute;
+                        const eventEndMinutes = eventEndHour * 60 + eventEndMinute;
+                        const availableStartMinutes = startHour * 60 + startMin;
+                        const availableEndMinutes = endHour * 60 + endMin;
+
+                        if (eventStartMinutes < availableStartMinutes || eventEndMinutes > availableEndMinutes) {
+                          setAlertDialog({
+                            open: true,
+                            message: `El profesional ${selectedProfessional.name} solo está disponible de ${availableHours.start} a ${availableHours.end}`,
+                            type: "warning",
+                          });
+                          return;
+                        }
+                      }
+                    }
+                  }
+                  if (!eventDialogData.start || !eventDialogData.end) {
+                    setAlertDialog({
+                      open: true,
+                      message: "Por favor seleccione las fechas de inicio y fin",
+                      type: "warning",
+                    });
+                    return;
+                  }
+                  if (eventDialogData.end <= eventDialogData.start) {
+                    setAlertDialog({
+                      open: true,
+                      message: "La fecha de fin debe ser posterior a la fecha de inicio",
+                      type: "warning",
+                    });
+                    return;
+                  }
+                  try {
+                    const res = await fetch(
+                      eventDialogMode === "edit"
+                        ? `/api/appointments/${eventDialogData.id}`
+                        : "/api/appointments",
+                      {
+                        method: eventDialogMode === "edit" ? "PATCH" : "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          ...(eventDialogMode === "edit" && { id: eventDialogData.id }),
+                          patientId: eventDialogData.patientId,
+                          professionalId: eventDialogData.professionalId,
+                          locationId: showLocations ? eventDialogData.locationId : null,
+                          specialtyId: showSpecialties ? eventDialogData.specialtyId : null,
+                          startAt: eventDialogData.start.toISOString(),
+                          endAt: eventDialogData.end.toISOString(),
+                          notes: eventDialogData.notes || null,
+                        }),
+                      }
+                    );
+                    if (!res.ok) {
+                      const errorData = await res.json().catch(() => ({}));
+                      throw new Error(errorData.error || "Failed to save");
+                    }
+                    setEventDialogOpen(false);
+                    setEventDialogMode("view");
+                    // Force reload to get updated event with professional color
+                    if (calendarRef.current) {
+                      const calendar = calendarRef.current.getApi();
+                      // Small delay to ensure database is updated
+                      setTimeout(() => {
+                        loadEvents(calendar.view.activeStart, calendar.view.activeEnd, true);
+                      }, 100);
+                    }
+                  } catch (error) {
+                    console.error("Error saving event:", error);
+                    setAlertDialog({
+                      open: true,
+                      message: error instanceof Error ? error.message : "Error al guardar el turno",
                       type: "error",
                     });
                   }
-                },
-              });
-            }}
-            onCancel={() => {
-              if (eventDialogMode === "edit") {
-                setEventDialogMode("view");
-              } else {
-                setEventDialogOpen(false);
-              }
-            }}
-            onSave={async () => {
-              if (!eventDialogData) return;
-
-              // Default section visibility
-              const showLocations = true;
-              const showSpecialties = true;
-
-              // Validate required fields (only those that are visible)
-              if (!eventDialogData.patientId || !eventDialogData.professionalId) {
-                setAlertDialog({
-                  open: true,
-                  message: "Por favor complete todos los campos requeridos",
-                  type: "warning",
-                });
-                return;
-              }
-
-              if (showLocations && !eventDialogData.locationId) {
-                setAlertDialog({
-                  open: true,
-                  message: "Por favor seleccione una ubicación",
-                  type: "warning",
-                });
-                return;
-              }
-
-              if (showSpecialties && !eventDialogData.specialtyId) {
-                setAlertDialog({
-                  open: true,
-                  message: "Por favor seleccione una especialidad",
-                  type: "warning",
-                });
-                return;
-              }
-
-              // Validate professional availability
-              if (eventDialogData.professionalId) {
-                const selectedProfessional = professionals.find(p => p.id === eventDialogData.professionalId);
-                if (selectedProfessional) {
-                  const availableDays = selectedProfessional.availableDays;
-                  const availableHours = selectedProfessional.availableHours;
-
-                  // Check if professional has availability configured
-                  if (availableDays && availableDays.length > 0) {
-                    // Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
-                    const eventDay = eventDialogData.start.getUTCDay();
-                    if (!availableDays.includes(eventDay)) {
-                      const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-                      const availableDayNames = availableDays
-                        .sort((a: number, b: number) => a - b)
-                        .map((d: number) => dayNames[d])
-                        .join(", ");
-                      setAlertDialog({
-                        open: true,
-                        message: `El profesional ${selectedProfessional.name} no está disponible los ${dayNames[eventDay]}. Días disponibles: ${availableDayNames}`,
-                        type: "warning",
-                      });
-                      return;
-                    }
-                  }
-
-                  // Check if professional has hours configured
-                  if (availableHours && availableHours.start && availableHours.end) {
-                    const eventStartHour = eventDialogData.start.getUTCHours();
-                    const eventStartMinute = eventDialogData.start.getUTCMinutes();
-                    const eventEndHour = eventDialogData.end.getUTCHours();
-                    const eventEndMinute = eventDialogData.end.getUTCMinutes();
-
-                    const [startHour, startMin] = availableHours.start.split(":").map(Number);
-                    const [endHour, endMin] = availableHours.end.split(":").map(Number);
-
-                    const eventStartMinutes = eventStartHour * 60 + eventStartMinute;
-                    const eventEndMinutes = eventEndHour * 60 + eventEndMinute;
-                    const availableStartMinutes = startHour * 60 + startMin;
-                    const availableEndMinutes = endHour * 60 + endMin;
-
-                    if (eventStartMinutes < availableStartMinutes || eventEndMinutes > availableEndMinutes) {
-                      setAlertDialog({
-                        open: true,
-                        message: `El profesional ${selectedProfessional.name} solo está disponible de ${availableHours.start} a ${availableHours.end}`,
-                        type: "warning",
-                      });
-                      return;
-                    }
-                  }
-                }
-              }
-              if (!eventDialogData.start || !eventDialogData.end) {
-                setAlertDialog({
-                  open: true,
-                  message: "Por favor seleccione las fechas de inicio y fin",
-                  type: "warning",
-                });
-                return;
-              }
-              if (eventDialogData.end <= eventDialogData.start) {
-                setAlertDialog({
-                  open: true,
-                  message: "La fecha de fin debe ser posterior a la fecha de inicio",
-                  type: "warning",
-                });
-                return;
-              }
-              try {
-                const res = await fetch(
-                  eventDialogMode === "edit"
-                    ? `/api/appointments/${eventDialogData.id}`
-                    : "/api/appointments",
-                  {
-                    method: eventDialogMode === "edit" ? "PATCH" : "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      ...(eventDialogMode === "edit" && { id: eventDialogData.id }),
-                      patientId: eventDialogData.patientId,
-                      professionalId: eventDialogData.professionalId,
-                      locationId: showLocations ? eventDialogData.locationId : null,
-                      specialtyId: showSpecialties ? eventDialogData.specialtyId : null,
-                      startAt: eventDialogData.start.toISOString(),
-                      endAt: eventDialogData.end.toISOString(),
-                      notes: eventDialogData.notes || null,
-                    }),
-                  }
-                );
-                if (!res.ok) {
-                  const errorData = await res.json().catch(() => ({}));
-                  throw new Error(errorData.error || "Failed to save");
-                }
-                setEventDialogOpen(false);
-                setEventDialogMode("view");
-                // Force reload to get updated event with professional color
-                if (calendarRef.current) {
-                  const calendar = calendarRef.current.getApi();
-                  // Small delay to ensure database is updated
-                  setTimeout(() => {
-                    loadEvents(calendar.view.activeStart, calendar.view.activeEnd, true);
-                  }, 100);
-                }
-              } catch (error) {
-                console.error("Error saving event:", error);
-                setAlertDialog({
-                  open: true,
-                  message: error instanceof Error ? error.message : "Error al guardar el turno",
-                  type: "error",
-                });
-              }
-            }}
-          />
-        </Dialog>
+                }}
+              />
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
       )}
 
       {/* Confirmation Dialog */}
@@ -851,7 +863,7 @@ export function Calendar() {
         message={alertDialog.message}
         type={alertDialog.type}
       />
-    </Box>
+    </div>
   );
 }
 
