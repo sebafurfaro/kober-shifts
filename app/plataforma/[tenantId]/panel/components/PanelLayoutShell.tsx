@@ -11,9 +11,11 @@ import {
   CalendarDays,
   Settings,
   MapPin,
-  Badge,
+  BookUser,
   FolderTree,
   FileText,
+  BarChart3,
+  Hospital
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import Logo from "@/app/branding/Logo";
@@ -106,13 +108,13 @@ export function PanelLayoutShell({
     {
       label: "Profesionales",
       href: `/plataforma/${currentTenantId}/panel/admin/professionals`,
-      icon: <Badge className="w-5 h-5" />,
+      icon: <Hospital className="w-5 h-5" />,
       show: true,
     },
     {
       label: "Pacientes",
       href: `/plataforma/${currentTenantId}/panel/admin/patients`,
-      icon: <User className="w-5 h-5" />,
+      icon: <BookUser className="w-5 h-5" />,
       show: true,
     },
     {
@@ -180,6 +182,14 @@ export function PanelLayoutShell({
               />
             )}
 
+            {(role === "ADMIN" || role === "PROFESSIONAL") && (
+              <NavItem
+                href={`/plataforma/${currentTenantId}/panel/analytics`}
+                label="Analíticas"
+                icon={<BarChart3 className="w-5 h-5" />}
+              />
+            )}
+
             <div className="border-t border-white/20 my-2" />
 
             {(role === "PATIENT" || role === "ADMIN") && (
@@ -193,7 +203,7 @@ export function PanelLayoutShell({
               <NavItem
                 href={`/plataforma/${currentTenantId}/panel/professional`}
                 label="Profesional"
-                icon={<CalendarDays className="w-5 h-5" />}
+                icon={<User className="w-5 h-5" />}
               />
             )}
             {role === "ADMIN" && (
