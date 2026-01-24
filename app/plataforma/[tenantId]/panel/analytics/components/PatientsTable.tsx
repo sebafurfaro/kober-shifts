@@ -48,17 +48,18 @@ export function PatientsTable({
       <CardBody className="p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-800">
-            Listado de Pacientes
+            Pacientes
           </h3>
           <Select
             label="Ordenar por"
             selectedKeys={[sortBy]}
             onSelectionChange={handleSortChange}
-            className="w-64"
+            className="w-48 text-gray-800"
             size="sm"
+            variant="underlined"
           >
-            <SelectItem key="totalAppointments">Turnos Totales</SelectItem>
-            <SelectItem key="cancelledAppointments">Turnos Cancelados</SelectItem>
+            <SelectItem key="totalAppointments" className="text-gray-800">Turnos Totales</SelectItem>
+            <SelectItem key="cancelledAppointments" className="text-gray-800">Turnos Cancelados</SelectItem>
           </Select>
         </div>
 

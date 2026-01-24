@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Input, Card, CardBody } from "@heroui/react";
+import { Button, Input, Card, CardBody, CardHeader, Divider } from "@heroui/react";
 import { useParams, useRouter } from "next/navigation";
+import Logo from "@/app/branding/Logo";
+import { GoogleIcon } from "@/app/branding/GoogleIcon";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -36,18 +38,23 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/p-1.png')" }}>
+    <div className="flex justify-center items-center min-h-screen bg-white bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/p-1.png')" }}>
       <div className="max-w-md w-full px-4">
-        <Card className="py-8">
-          <CardBody>
+        <Card shadow="md" isBlurred className="bg-white/80">
+          <CardHeader className="flex justify-center flex-col">
+            <Logo width={50} height={50} />
+            <h2 className="text-2xl font-semibold text-slate-800 font-primary">Ingresar</h2>
+          </CardHeader>
+          <Divider />
+          <CardBody className="py-4 px-10">
             <form onSubmit={onSubmit} className="space-y-4">
-              <h2 className="text-2xl font-bold">Ingresar</h2>
               <Input
                 label="Email"
                 type="email"
                 value={email}
                 onValueChange={setEmail}
                 autoComplete="email"
+                variant="underlined"
                 isRequired
               />
               <Input
@@ -56,12 +63,13 @@ export default function LoginPage() {
                 value={password}
                 onValueChange={setPassword}
                 autoComplete="current-password"
+                variant="underlined"
                 isRequired
               />
               {error ? (
                 <p className="text-sm text-danger">{error}</p>
               ) : null}
-              <Button type="submit" color="primary" isDisabled={loading} className="w-full">
+              <Button type="submit" color="secondary" radius="none" size="lg" isDisabled={loading} className="w-full">
                 Entrar
               </Button>
 
@@ -72,11 +80,13 @@ export default function LoginPage() {
               </div>
 
               <Button
-                variant="bordered"
+                variant="flat"
                 onPress={() => window.location.href = `/api/plataforma/${tenantId}/auth/google`}
                 isDisabled={loading}
-                className="w-full"
+                className="w-full bg-white text-black hover:bg-gray-100"
+                radius="none"
               >
+                <GoogleIcon />
                 Ingresar con Google
               </Button>
             </form>

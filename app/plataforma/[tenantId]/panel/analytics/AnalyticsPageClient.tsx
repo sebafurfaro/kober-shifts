@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useParams } from "next/navigation";
 import { Spinner, Card, CardBody } from "@heroui/react";
-import { PanelHeader } from "../components/PanelHeader";
 import { SummaryCards } from "./components/SummaryCards";
 import { DailyChart } from "./components/DailyChart";
 import { WeeklyChart } from "./components/WeeklyChart";
@@ -65,7 +64,7 @@ export default function AnalyticsPageClient() {
   }, [loadPatients]);
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
+    <div className="lg:max-w-7xl w-full mx-auto mt-8">
       {loading ? (
         <div className="flex justify-center items-center py-16">
           <Spinner size="lg" />
@@ -83,13 +82,6 @@ export default function AnalyticsPageClient() {
             onSortChange={setSortBy}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <DailyChart stats={stats} />
-            <WeeklyChart stats={stats} />
-            <MonthlyChart stats={stats} />
-          </div>
-
-          {/* Top Services - Disabled for now */}
           <Card className="mt-6 opacity-50">
             <CardBody className="p-6">
               <h3 className="text-lg font-semibold mb-4 text-gray-800">

@@ -40,7 +40,7 @@ export default function AdminPanelPage() {
     const loadData = async () => {
       try {
         setLoading(true);
-        
+
         // Load user info
         const userRes = await fetch(`/api/plataforma/${tenantId}/auth/me`, {
           credentials: "include",
@@ -71,7 +71,7 @@ export default function AdminPanelPage() {
   const handleToggle = async (key: keyof NotificationSettings) => {
     // Save previous state for rollback
     const previousSettings = settings;
-    
+
     // Optimistically update UI
     const newSettings: Settings = {
       notifications: {
@@ -145,9 +145,9 @@ export default function AdminPanelPage() {
         subtitle={`Hola, ${userName}. Configura tu centro de trabajo.`}
       />
       {error && (
-        <Alert 
-          color="danger" 
-          className="mb-6 animate-fade-in" 
+        <Alert
+          color="danger"
+          className="mb-6 animate-fade-in"
           onClose={() => setError(null)}
         >
           {error}
@@ -161,8 +161,8 @@ export default function AdminPanelPage() {
             </h3>
             <div className="mt-4 space-y-4">
               {notifications.map((notif) => (
-                <div 
-                  key={notif.key} 
+                <div
+                  key={notif.key}
                   className="flex items-center justify-between py-3 px-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors duration-150 rounded-md"
                 >
                   <p className="font-medium text-gray-700 flex-1">
@@ -187,7 +187,7 @@ export default function AdminPanelPage() {
               Configuración general de turnos
             </h3>
             <div className="flex gap-2 items-center text-slate-800">
-              Permitir cancelacion de turnos hasta 
+              Permitir cancelacion de turnos hasta
               <Input
                 type="number"
                 value={settings.cancelationLimit}
