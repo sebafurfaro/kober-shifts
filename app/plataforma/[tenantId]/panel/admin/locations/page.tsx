@@ -115,7 +115,7 @@ export default function AdminLocationsPage() {
 
         <Card>
           <CardBody className="p-0">
-            <Table aria-label="Tabla de sedes">
+            <Table aria-label="Tabla de sedes" className="text-slate-800">
               <TableHeader>
                 <TableColumn>Nombre del Centro</TableColumn>
                 <TableColumn>Dirección</TableColumn>

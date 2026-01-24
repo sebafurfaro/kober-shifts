@@ -32,7 +32,7 @@ export function ProfessionalForm({
     specialties,
 }: ProfessionalFormProps) {
     const [selectedTab, setSelectedTab] = React.useState<string>("contacto");
-    
+
     const handleSelectionChange = (key: React.Key) => {
         setSelectedTab(String(key));
     };
@@ -91,9 +91,9 @@ export function ProfessionalForm({
                 className="w-full"
                 classNames={{
                     base: "w-full",
-                    tabList: "gap-6 w-full relative bg-gray-100 rounded-lg p-1",
+                    tabList: "gap-2 md:gap-6 w-full relative bg-gray-100 rounded-lg p-1",
                     cursor: "bg-white rounded-lg transition-all duration-300 ease-in-out font-medium",
-                    tab: "max-w-fit px-4 h-12 rounded-md text-slate-800",
+                    tab: "md:max-w-fit px-2 md:px-4 h-12 rounded-md text-slate-800",
                     tabContent: "group-data-[selected=true]:text-primary",
                     panel: "p-0",
                 }}
@@ -144,10 +144,10 @@ export function ProfessionalForm({
                 <Tab key="vacaciones" title="Vacaciones">
                     <Card>
                         <CardBody>
-                            <HolidaysTab formData={formData} setFormData={setFormData}  onSave={handleSubmit} loading={loading} />
+                            <HolidaysTab formData={formData} setFormData={setFormData} onSave={handleSubmit} loading={loading} />
                         </CardBody>
                     </Card>
-                </Tab>  
+                </Tab>
             </Tabs>
 
             <div className="mt-6 flex justify-end gap-3">

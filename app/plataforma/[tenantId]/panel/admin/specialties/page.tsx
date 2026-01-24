@@ -146,7 +146,7 @@ export default function AdminSpecialtiesPage() {
 
         <Card>
           <CardBody className="p-0">
-            <Table aria-label="Tabla de especialidades">
+            <Table aria-label="Tabla de especialidades" className="text-slate-800">
               <TableHeader>
                 <TableColumn className="text-slate-800 text-base">Nombre</TableColumn>
                 <TableColumn className="text-slate-800 text-base" align="end">Profesionales Asociados</TableColumn>

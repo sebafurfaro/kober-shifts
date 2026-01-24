@@ -110,7 +110,7 @@ export function LocationFormDialog({
     <Modal isOpen={open} onClose={onClose} size="md">
       <ModalContent>
         <form onSubmit={handleSubmit}>
-          <ModalHeader>
+          <ModalHeader className="text-slate-800">
             {mode === "create" ? "Crear Sede" : "Editar Sede"}
           </ModalHeader>
           <ModalBody>

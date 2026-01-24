@@ -26,7 +26,7 @@ interface HolidaysTabProps {
 
 export function HolidaysTab({ formData, setFormData, onSave, loading }: HolidaysTabProps) {
   const holidays = formData.holidays || formData.availabilityConfig?.holidays || [];
-  
+
   const [newHoliday, setNewHoliday] = React.useState<Partial<Holiday>>({
     startDate: "",
     endDate: "",
@@ -37,7 +37,7 @@ export function HolidaysTab({ formData, setFormData, onSave, loading }: Holidays
 
   const validateHoliday = (holiday: Partial<Holiday>): boolean => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!holiday.startDate) {
       newErrors.startDate = "La fecha de inicio es requerida";
     }
@@ -67,7 +67,7 @@ export function HolidaysTab({ formData, setFormData, onSave, loading }: Holidays
     };
 
     const updatedHolidays = [...holidays, holiday];
-    
+
     setFormData((prev: any) => {
       const updatedAvailabilityConfig = {
         ...prev.availabilityConfig,
@@ -86,7 +86,7 @@ export function HolidaysTab({ formData, setFormData, onSave, loading }: Holidays
 
   const removeHoliday = (id: string) => {
     const updatedHolidays = holidays.filter((h: Holiday) => h.id !== id);
-    
+
     setFormData((prev: any) => {
       const updatedAvailabilityConfig = {
         ...prev.availabilityConfig,
@@ -140,7 +140,7 @@ export function HolidaysTab({ formData, setFormData, onSave, loading }: Holidays
                 }
                 isInvalid={!!errors.startDate}
                 errorMessage={errors.startDate}
-                labelPlacement="outside"
+                variant="underlined"
                 classNames={{
                   inputWrapper: "h-11",
                 }}
@@ -154,7 +154,7 @@ export function HolidaysTab({ formData, setFormData, onSave, loading }: Holidays
                 }
                 isInvalid={!!errors.endDate}
                 errorMessage={errors.endDate}
-                labelPlacement="outside"
+                variant="underlined"
                 classNames={{
                   inputWrapper: "h-11",
                 }}
@@ -166,7 +166,7 @@ export function HolidaysTab({ formData, setFormData, onSave, loading }: Holidays
                   setNewHoliday((prev) => ({ ...prev, description: e.target.value }))
                 }
                 placeholder="Ej: Vacaciones de verano"
-                labelPlacement="outside"
+                variant="underlined"
                 classNames={{
                   inputWrapper: "h-11",
                 }}

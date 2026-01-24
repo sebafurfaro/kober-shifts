@@ -160,7 +160,7 @@ export default function AdminProfessionalsPage() {
                           professional.professional.specialties.map((specialty) => (
                             <Chip
                               key={specialty.id}
-                              variant="bordered"
+                              variant="flat"
                               color="secondary"
                               size="sm"
                               className="text-xs"

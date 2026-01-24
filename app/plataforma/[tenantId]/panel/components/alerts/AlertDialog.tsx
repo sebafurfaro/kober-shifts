@@ -8,6 +8,7 @@ import {
   ModalBody,
   ModalFooter,
   Button,
+  Divider,
 } from "@heroui/react";
 import { AlertCircle, CheckCircle2, AlertTriangle, Info } from "lucide-react";
 
@@ -85,8 +86,8 @@ export function AlertDialog({
       isKeyboardDismissDisabled={false}
       classNames={{
         base: "rounded-xl",
-        header: "text-slate-800",
-        body: "text-slate-800",
+        header: "text-slate-800 border-b-[1px] border-slate-200",
+        body: "text-slate-800 border-b-[1px] border-slate-200",
         footer: "text-slate-800",
       }}
     >
