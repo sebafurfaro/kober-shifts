@@ -87,7 +87,14 @@ export function SpecialtyFormDialog({
 
 
   return (
-    <Modal isOpen={open} onClose={onClose} size="md">
+    <Modal 
+      isOpen={open} 
+      onClose={onClose} 
+      size="md"
+      classNames={{
+        wrapper: "z-[99999]"
+      }}
+    >
       <ModalContent>
         <form onSubmit={handleSubmit}>
           <ModalHeader className="text-slate-800">
@@ -117,6 +124,10 @@ export function SpecialtyFormDialog({
                 isDisabled={loading}
                 autoFocus
                 autoComplete="off"
+                classNames={{
+                  input: "text-slate-800",
+                  inputWrapper: "text-slate-800",
+                }}
               />
             </div>
           </ModalBody>

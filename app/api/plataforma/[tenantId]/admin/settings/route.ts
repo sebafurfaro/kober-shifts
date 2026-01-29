@@ -34,6 +34,9 @@ export async function GET(
         sms: false,
         email: false,
       },
+      cancelationLimit: 0,
+      patientLabel: "Pacientes",
+      professionalLabel: "Profesionales",
     };
 
     return NextResponse.json(settings?.settings || defaultSettings);
@@ -82,12 +85,29 @@ export async function PUT(
     const db = client.db();
     const collection = db.collection("tenant_settings");
 
+    const cancelationLimit = typeof body.cancelationLimit === "number" 
+      ? body.cancelationLimit 
+      : typeof body.cancelationLimit === "string" 
+        ? parseInt(body.cancelationLimit, 10) || 0
+        : 0;
+
+    const patientLabel = typeof body.patientLabel === "string" && body.patientLabel.trim()
+      ? body.patientLabel.trim()
+      : "Pacientes";
+
+    const professionalLabel = typeof body.professionalLabel === "string" && body.professionalLabel.trim()
+      ? body.professionalLabel.trim()
+      : "Profesionales";
+
     const settings = {
       notifications: {
         whatsapp: notifications.whatsapp ?? false,
         sms: notifications.sms ?? false,
         email: notifications.email ?? false,
       },
+      cancelationLimit,
+      patientLabel,
+      professionalLabel,
     };
 
     await collection.updateOne(

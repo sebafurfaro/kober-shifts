@@ -45,6 +45,9 @@ export async function PUT(
   const lastName = typeof body.lastName === "string" ? body.lastName.trim() : "";
   const phone = typeof body.phone === "string" ? body.phone.trim() : null;
   const address = typeof body.address === "string" ? body.address.trim() : null;
+  const dni = typeof body.dni === "string" ? body.dni.trim() : null;
+  const coverage = typeof body.coverage === "string" ? body.coverage.trim() : null;
+  const plan = typeof body.plan === "string" ? body.plan.trim() : null;
   const dateOfBirth = typeof body.dateOfBirth === "string" && body.dateOfBirth ? new Date(body.dateOfBirth) : null;
   const admissionDate = typeof body.admissionDate === "string" && body.admissionDate ? new Date(body.admissionDate) : null;
   const genderString = typeof body.gender === "string" ? body.gender : null;
@@ -66,12 +69,15 @@ export async function PUT(
   }
 
   const name = `${firstName} ${lastName}`.trim();
-  const updateData: Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'phone' | 'address' | 'dateOfBirth' | 'admissionDate' | 'gender' | 'nationality' | 'passwordHash'>> = {
+  const updateData: Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'phone' | 'address' | 'dni' | 'coverage' | 'plan' | 'dateOfBirth' | 'admissionDate' | 'gender' | 'nationality' | 'passwordHash'>> = {
     name,
     firstName,
     lastName,
     phone,
     address,
+    dni,
+    coverage,
+    plan,
     dateOfBirth,
     admissionDate,
     gender,
@@ -86,7 +92,7 @@ export async function PUT(
     updateData.passwordHash = hashPassword(tempPassword);
   }
 
-  const updatedUser = await updateUser(id, tenantId, updateData as Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'phone' | 'address' | 'dateOfBirth' | 'admissionDate' | 'gender' | 'nationality' | 'passwordHash'>>);
+  const updatedUser = await updateUser(id, tenantId, updateData as Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'phone' | 'address' | 'dni' | 'coverage' | 'plan' | 'dateOfBirth' | 'admissionDate' | 'gender' | 'nationality' | 'passwordHash'>>);
   return NextResponse.json({
     id: updatedUser.id,
     email: updatedUser.email,
@@ -95,6 +101,9 @@ export async function PUT(
     lastName: updatedUser.lastName,
     phone: updatedUser.phone,
     address: updatedUser.address,
+    dni: updatedUser.dni,
+    coverage: updatedUser.coverage,
+    plan: updatedUser.plan,
     dateOfBirth: updatedUser.dateOfBirth,
     admissionDate: updatedUser.admissionDate,
     gender: updatedUser.gender,

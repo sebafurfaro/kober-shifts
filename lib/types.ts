@@ -37,6 +37,9 @@ export interface User {
   lastName?: string | null;
   phone?: string | null;
   address?: string | null;
+  dni?: string | null;
+  coverage?: string | null;
+  plan?: string | null;
   dateOfBirth?: Date | null;
   admissionDate?: Date | null;
   gender?: Gender | null;
@@ -61,6 +64,14 @@ export interface Location {
   tenantId: string;
   name: string;
   address: string;
+  street?: string | null;
+  streetNumber?: string | null;
+  floor?: string | null;
+  apartment?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+  province?: string | null;
+  neighborhood?: string | null;
   phone: string | null;
   createdAt: Date;
   updatedAt: Date;

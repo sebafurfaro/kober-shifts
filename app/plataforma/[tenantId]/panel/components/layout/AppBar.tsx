@@ -1,26 +1,30 @@
 "use client";
 
-import Logo from "@/app/branding/Logo";
-import { Menu, LogOut, User } from "lucide-react";
+import { LogOut, User, Menu } from "lucide-react";
 import { Dispatch, SetStateAction } from "react";
 
 interface AppBarProps {
     isMobile: boolean;
-    mobileDrawerOpen: boolean;
     setMobileDrawerOpen: Dispatch<SetStateAction<boolean>>;
     userName: string;
     logout: () => void;
+    asideWidth: number;
 }
 
 export default function AppBar({
     isMobile,
-    mobileDrawerOpen,
     setMobileDrawerOpen,
     userName,
     logout,
+    asideWidth,
 }: AppBarProps) {
     return (
-        <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-40 flex items-center justify-between px-4 md:px-6 shadow-sm">
+        <header 
+            className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-40 flex items-center justify-between px-4 md:px-6 shadow-sm transition-all duration-300"
+            style={{
+                marginLeft: isMobile ? 0 : `${asideWidth}px`,
+            }}
+        >
             <div className="flex items-center gap-4">
                 {isMobile && (
                     <button
@@ -31,13 +35,6 @@ export default function AppBar({
                         <Menu className="w-5 h-5" />
                     </button>
                 )}
-
-                <div className="flex items-center gap-2">
-                    <Logo width={40} height={40} />
-                    <span className="text-xl font-bold text-[#0e5287] hidden md:block">
-                        NODO App
-                    </span>
-                </div>
             </div>
 
             <div className="flex items-center gap-4">

@@ -15,6 +15,13 @@ import {
   Alert,
 } from "@heroui/react";
 import { format, differenceInYears, parseISO } from "date-fns";
+import { useParams } from "next/navigation";
+
+interface Coverage {
+  id: string;
+  name: string;
+  plans: Array<{ id: string; name: string }>;
+}
 
 interface PatientFormData {
   firstName: string;
@@ -22,6 +29,9 @@ interface PatientFormData {
   email: string;
   phone: string;
   address: string;
+  dni: string;
+  coverage: string;
+  plan: string;
   dateOfBirth: string;
   admissionDate: string;
   gender: string;
@@ -41,6 +51,9 @@ interface PatientFormDialogProps {
     email?: string;
     phone?: string | null;
     address?: string | null;
+    dni?: string | null;
+    coverage?: string | null;
+    plan?: string | null;
     dateOfBirth?: Date | string | null;
     admissionDate?: Date | string | null;
     gender?: string | null;
@@ -63,6 +76,9 @@ export function PatientFormDialog({
     email: initialData?.email || "",
     phone: initialData?.phone || "",
     address: initialData?.address || "",
+    dni: initialData?.dni || "",
+    coverage: initialData?.coverage || "",
+    plan: initialData?.plan || "",
     dateOfBirth: initialData?.dateOfBirth
       ? typeof initialData.dateOfBirth === "string"
         ? initialData.dateOfBirth.split("T")[0]
@@ -80,6 +96,36 @@ export function PatientFormDialog({
 
   const [errors, setErrors] = React.useState<Partial<Record<keyof PatientFormData, string>>>({});
   const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const params = useParams();
+  const tenantId = params.tenantId as string;
+  const [coverages, setCoverages] = React.useState<Coverage[]>([]);
+  const [loadingCoverages, setLoadingCoverages] = React.useState(false);
+
+  // Load coverages
+  React.useEffect(() => {
+    if (open) {
+      setLoadingCoverages(true);
+      fetch(`/api/plataforma/${tenantId}/admin/coverages`)
+        .then((res) => res.json())
+        .then((data) => {
+          setCoverages(data || []);
+        })
+        .catch((error) => {
+          console.error("Error loading coverages:", error);
+          setCoverages([]);
+        })
+        .finally(() => {
+          setLoadingCoverages(false);
+        });
+    }
+  }, [open, tenantId]);
+
+  // Get available plans for selected coverage
+  const availablePlans = React.useMemo(() => {
+    if (!formData.coverage) return [];
+    const selectedCoverage = coverages.find((c) => c.name === formData.coverage);
+    return selectedCoverage?.plans || [];
+  }, [formData.coverage, coverages]);
 
   // Calculate age from date of birth
   const age = React.useMemo(() => {
@@ -101,6 +147,9 @@ export function PatientFormDialog({
         email: initialData?.email || "",
         phone: initialData?.phone || "",
         address: initialData?.address || "",
+        dni: initialData?.dni || "",
+        coverage: initialData?.coverage || "",
+        plan: initialData?.plan || "",
         dateOfBirth: initialData?.dateOfBirth
           ? typeof initialData.dateOfBirth === "string"
             ? initialData.dateOfBirth.split("T")[0]
@@ -140,10 +189,8 @@ export function PatientFormDialog({
       }
     }
 
-    if (mode === "create" && !formData.tempPassword) {
-      newErrors.tempPassword = "La contraseña temporal es requerida";
-    } else if (mode === "edit" && formData.tempPassword && formData.tempPassword.length < 6) {
-      newErrors.tempPassword = "La contraseña debe tener al menos 6 caracteres";
+    if (mode === "create" && !formData.dni.trim()) {
+      newErrors.dni = "El DNI es requerido";
     }
 
     setErrors(newErrors);
@@ -165,11 +212,15 @@ export function PatientFormDialog({
         email: formData.email.trim().toLowerCase(),
         phone: formData.phone.trim() || "",
         address: formData.address.trim() || "",
+        dni: formData.dni.trim(),
+        coverage: formData.coverage.trim() || "",
+        plan: formData.plan.trim() || "",
         dateOfBirth: formData.dateOfBirth || "",
         admissionDate: formData.admissionDate || "",
         gender: formData.gender || "",
         nationality: formData.nationality.trim() || "",
-        ...(formData.tempPassword ? { tempPassword: formData.tempPassword } : {}),
+        // En modo create, la contraseña será el DNI automáticamente
+        ...(mode === "create" ? { tempPassword: formData.dni.trim() } : formData.tempPassword ? { tempPassword: formData.tempPassword } : {}),
       };
 
       await onSubmit(submitData);
@@ -181,7 +232,15 @@ export function PatientFormDialog({
 
 
   return (
-    <Modal isOpen={open} onClose={onClose} size="2xl" scrollBehavior="inside">
+    <Modal 
+      isOpen={open} 
+      onClose={onClose} 
+      size="2xl" 
+      scrollBehavior="inside"
+      classNames={{
+        wrapper: "z-[99999]"
+      }}
+    >
       <ModalContent>
         <form onSubmit={handleSubmit}>
           <ModalHeader className="text-slate-800">
@@ -195,7 +254,7 @@ export function PatientFormDialog({
                 </Alert>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Input
                   label="Nombre"
                   value={formData.firstName}
@@ -211,6 +270,10 @@ export function PatientFormDialog({
                   isRequired
                   isDisabled={loading}
                   autoComplete="off"
+                  classNames={{
+                    input: "text-slate-800",
+                    inputWrapper: "text-slate-800",
+                  }}
                 />
                 <Input
                   label="Apellido"
@@ -227,6 +290,10 @@ export function PatientFormDialog({
                   isRequired
                   isDisabled={loading}
                   autoComplete="off"
+                  classNames={{
+                    input: "text-slate-800",
+                    inputWrapper: "text-slate-800",
+                  }}
                 />
                 <Input
                   label="Email"
@@ -244,6 +311,10 @@ export function PatientFormDialog({
                   isRequired
                   isDisabled={loading || mode === "edit"}
                   autoComplete="off"
+                  classNames={{
+                    input: "text-slate-800",
+                    inputWrapper: "text-slate-800",
+                  }}
                 />
                 <Input
                   label="Teléfono"
@@ -259,6 +330,10 @@ export function PatientFormDialog({
                   errorMessage={errors.phone}
                   isDisabled={loading}
                   autoComplete="off"
+                  classNames={{
+                    input: "text-slate-800",
+                    inputWrapper: "text-slate-800",
+                  }}
                 />
                 <Input
                   label="Fecha de Nacimiento"
@@ -275,6 +350,10 @@ export function PatientFormDialog({
                   errorMessage={errors.dateOfBirth || (age !== null ? `Edad: ${age} años` : "")}
                   isDisabled={loading}
                   autoComplete="off"
+                  classNames={{
+                    input: "text-slate-800",
+                    inputWrapper: "text-slate-800",
+                  }}
                 />
                 <Input
                   label="Fecha de Ingreso"
@@ -293,6 +372,10 @@ export function PatientFormDialog({
                   min="1900-01-01"
                   max={new Date().toISOString().split("T")[0]}
                   autoComplete="off"
+                  classNames={{
+                    input: "text-slate-800",
+                    inputWrapper: "text-slate-800",
+                  }}
                 />
                 <Select
                   label="Género"
@@ -308,11 +391,15 @@ export function PatientFormDialog({
                   isInvalid={!!errors.gender}
                   errorMessage={errors.gender}
                   isDisabled={loading}
+                  classNames={{
+                    value: "text-slate-800",
+                    popoverContent: "text-slate-800",
+                  }}
                 >
-                  <SelectItem key="" value="">Seleccionar...</SelectItem>
-                  <SelectItem key="Masculino" value="Masculino">Masculino</SelectItem>
-                  <SelectItem key="Femenino" value="Femenino">Femenino</SelectItem>
-                  <SelectItem key="No binario" value="No binario">No binario</SelectItem>
+                  <SelectItem key="" className="text-slate-800">Seleccionar...</SelectItem>
+                  <SelectItem key="Masculino" className="text-slate-800">Masculino</SelectItem>
+                  <SelectItem key="Femenino" className="text-slate-800">Femenino</SelectItem>
+                  <SelectItem key="No binario" className="text-slate-800">No binario</SelectItem>
                 </Select>
                 <Input
                   label="Nacionalidad"
@@ -328,6 +415,30 @@ export function PatientFormDialog({
                   errorMessage={errors.nationality}
                   isDisabled={loading}
                   autoComplete="off"
+                  classNames={{
+                    input: "text-slate-800",
+                    inputWrapper: "text-slate-800",
+                  }}
+                />
+                <Input
+                  label="DNI"
+                  value={formData.dni}
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({ ...prev, dni: value }));
+                    if (errors.dni) {
+                      setErrors((prev) => ({ ...prev, dni: undefined }));
+                    }
+                    setSubmitError(null);
+                  }}
+                  isInvalid={!!errors.dni}
+                  errorMessage={errors.dni}
+                  isRequired={mode === "create"}
+                  isDisabled={loading}
+                  autoComplete="off"
+                  classNames={{
+                    input: "text-slate-800",
+                    inputWrapper: "text-slate-800",
+                  }}
                 />
               </div>
               <Textarea
@@ -345,29 +456,93 @@ export function PatientFormDialog({
                 isDisabled={loading}
                 minRows={2}
                 autoComplete="off"
-              />
-              <Input
-                label="Contraseña Temporal"
-                type="password"
-                value={formData.tempPassword}
-                onValueChange={(value) => {
-                  setFormData((prev) => ({ ...prev, tempPassword: value }));
-                  if (errors.tempPassword) {
-                    setErrors((prev) => ({ ...prev, tempPassword: undefined }));
-                  }
-                  setSubmitError(null);
+                classNames={{
+                  input: "text-slate-800",
+                  inputWrapper: "text-slate-800",
                 }}
-                isInvalid={!!errors.tempPassword}
-                errorMessage={
-                  errors.tempPassword ||
-                  (mode === "edit"
-                    ? "Dejar vacío para mantener la contraseña actual"
-                    : "Mínimo 6 caracteres")
-                }
-                isRequired={mode === "create"}
-                isDisabled={loading}
-                autoComplete="new-password"
               />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Select
+                  label="Cobertura"
+                  selectedKeys={formData.coverage ? [formData.coverage] : []}
+                  onSelectionChange={(keys) => {
+                    const selected = Array.from(keys)[0] as string;
+                    setFormData((prev) => ({ 
+                      ...prev, 
+                      coverage: selected || "",
+                      plan: "" // Clear plan when coverage changes
+                    }));
+                    if (errors.coverage) {
+                      setErrors((prev) => ({ ...prev, coverage: undefined }));
+                    }
+                    setSubmitError(null);
+                  }}
+                  isInvalid={!!errors.coverage}
+                  errorMessage={errors.coverage}
+                  isDisabled={loading || loadingCoverages}
+                  isLoading={loadingCoverages}
+                  classNames={{
+                    value: "text-slate-800",
+                    popoverContent: "text-slate-800",
+                  }}
+                >
+                  <SelectItem key="" className="text-slate-800">Seleccionar...</SelectItem>
+                  <>
+                    {coverages.map((coverage) => (
+                      <SelectItem key={coverage.name} className="text-slate-800">{coverage.name}</SelectItem>
+                    ))}
+                  </>
+                </Select>
+                <Select
+                  label="Plan"
+                  selectedKeys={formData.plan ? [formData.plan] : []}
+                  onSelectionChange={(keys) => {
+                    const selected = Array.from(keys)[0] as string;
+                    setFormData((prev) => ({ ...prev, plan: selected || "" }));
+                    if (errors.plan) {
+                      setErrors((prev) => ({ ...prev, plan: undefined }));
+                    }
+                    setSubmitError(null);
+                  }}
+                  isInvalid={!!errors.plan}
+                  errorMessage={errors.plan}
+                  isDisabled={loading || !formData.coverage || availablePlans.length === 0}
+                  placeholder={!formData.coverage ? "Seleccione una cobertura primero" : availablePlans.length === 0 ? "No hay planes disponibles" : "Seleccionar plan"}
+                  classNames={{
+                    value: "text-slate-800",
+                    popoverContent: "text-slate-800",
+                  }}
+                >
+                  {availablePlans.map((plan) => (
+                    <SelectItem key={plan.name} className="text-slate-800">{plan.name}</SelectItem>
+                  ))}
+                </Select>
+              </div>
+              
+              {mode === "edit" && (
+                <Input
+                  label="Contraseña Temporal"
+                  type="password"
+                  value={formData.tempPassword}
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({ ...prev, tempPassword: value }));
+                    if (errors.tempPassword) {
+                      setErrors((prev) => ({ ...prev, tempPassword: undefined }));
+                    }
+                    setSubmitError(null);
+                  }}
+                  isInvalid={!!errors.tempPassword}
+                  errorMessage={
+                    errors.tempPassword || "Dejar vacío para mantener la contraseña actual"
+                  }
+                  isDisabled={loading}
+                  autoComplete="new-password"
+                  classNames={{
+                    input: "text-slate-800",
+                    inputWrapper: "text-slate-800",
+                  }}
+                />
+              )}
             </div>
           </ModalBody>
           <ModalFooter>

@@ -12,6 +12,9 @@ function rowToUser(row: any): User {
     lastName: row.lastName || null,
     phone: row.phone || null,
     address: row.address || null,
+    dni: row.dni !== undefined ? (row.dni || null) : null,
+    coverage: row.coverage !== undefined ? (row.coverage || null) : null,
+    plan: row.plan !== undefined ? (row.plan || null) : null,
     dateOfBirth: row.dateOfBirth || null,
     admissionDate: row.admissionDate || null,
     gender: row.gender || null,
@@ -40,6 +43,14 @@ function rowToLocation(row: any): Location {
     tenantId: row.tenantId,
     name: row.name,
     address: row.address,
+    street: row.street !== undefined ? (row.street || null) : null,
+    streetNumber: row.streetNumber !== undefined ? (row.streetNumber || null) : null,
+    floor: row.floor !== undefined ? (row.floor || null) : null,
+    apartment: row.apartment !== undefined ? (row.apartment || null) : null,
+    postalCode: row.postalCode !== undefined ? (row.postalCode || null) : null,
+    country: row.country !== undefined ? (row.country || null) : null,
+    province: row.province !== undefined ? (row.province || null) : null,
+    neighborhood: row.neighborhood !== undefined ? (row.neighborhood || null) : null,
     phone: row.phone,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -197,6 +208,9 @@ export async function createUser(data: {
   lastName?: string | null;
   phone?: string | null;
   address?: string | null;
+  dni?: string | null;
+  coverage?: string | null;
+  plan?: string | null;
   dateOfBirth?: Date | null;
   admissionDate?: Date | null;
   gender?: string | null;
@@ -206,26 +220,58 @@ export async function createUser(data: {
   role: Role;
   tenantId: string;
 }): Promise<User> {
-  await mysql.execute(
-    'INSERT INTO users (id, tenantId, email, name, firstName, lastName, phone, address, dateOfBirth, admissionDate, gender, nationality, googleId, passwordHash, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [
-      data.id,
-      data.tenantId,
-      data.email,
-      data.name,
-      data.firstName || null,
-      data.lastName || null,
-      data.phone || null,
-      data.address || null,
-      data.dateOfBirth || null,
-      data.admissionDate || null,
-      data.gender || null,
-      data.nationality || null,
-      data.googleId || null,
-      data.passwordHash,
-      data.role,
-    ]
-  );
+  // Try with all fields first (if migration has been run)
+  try {
+    await mysql.execute(
+      'INSERT INTO users (id, tenantId, email, name, firstName, lastName, phone, address, dni, coverage, plan, dateOfBirth, admissionDate, gender, nationality, googleId, passwordHash, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        data.id,
+        data.tenantId,
+        data.email,
+        data.name,
+        data.firstName || null,
+        data.lastName || null,
+        data.phone || null,
+        data.address || null,
+        data.dni || null,
+        data.coverage || null,
+        data.plan || null,
+        data.dateOfBirth || null,
+        data.admissionDate || null,
+        data.gender || null,
+        data.nationality || null,
+        data.googleId || null,
+        data.passwordHash,
+        data.role,
+      ]
+    );
+  } catch (error: any) {
+    // If new columns don't exist, fallback to basic fields only
+    if (error?.code === 'ER_BAD_FIELD_ERROR') {
+      await mysql.execute(
+        'INSERT INTO users (id, tenantId, email, name, firstName, lastName, phone, address, dateOfBirth, admissionDate, gender, nationality, googleId, passwordHash, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          data.id,
+          data.tenantId,
+          data.email,
+          data.name,
+          data.firstName || null,
+          data.lastName || null,
+          data.phone || null,
+          data.address || null,
+          data.dateOfBirth || null,
+          data.admissionDate || null,
+          data.gender || null,
+          data.nationality || null,
+          data.googleId || null,
+          data.passwordHash,
+          data.role,
+        ]
+      );
+    } else {
+      throw error;
+    }
+  }
   const user = await findUserById(data.id, data.tenantId);
   if (!user) throw new Error('Failed to create user');
   return user;
@@ -234,11 +280,14 @@ export async function createUser(data: {
 export async function updateUser(
   id: string,
   tenantId: string,
-  data: Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'email' | 'phone' | 'address' | 'dateOfBirth' | 'admissionDate' | 'gender' | 'nationality' | 'googleId' | 'passwordHash' | 'role'>>
+  data: Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'email' | 'phone' | 'address' | 'dni' | 'coverage' | 'plan' | 'dateOfBirth' | 'admissionDate' | 'gender' | 'nationality' | 'googleId' | 'passwordHash' | 'role'>>
 ): Promise<User> {
   const updates: string[] = [];
   const values: any[] = [];
+  const newFieldUpdates: string[] = [];
+  const newFieldValues: any[] = [];
 
+  // Basic fields (always available)
   if (data.name !== undefined) {
     updates.push('name = ?');
     values.push(data.name);
@@ -292,14 +341,42 @@ export async function updateUser(
     values.push(data.googleId);
   }
 
-  if (updates.length === 0) {
+  // New fields (may not exist yet)
+  if (data.dni !== undefined) {
+    newFieldUpdates.push('dni = ?');
+    newFieldValues.push(data.dni);
+  }
+  if (data.coverage !== undefined) {
+    newFieldUpdates.push('coverage = ?');
+    newFieldValues.push(data.coverage);
+  }
+  if (data.plan !== undefined) {
+    newFieldUpdates.push('plan = ?');
+    newFieldValues.push(data.plan);
+  }
+
+  if (updates.length === 0 && newFieldUpdates.length === 0) {
     const user = await findUserById(id, tenantId);
     if (!user) throw new Error('User not found');
     return user;
   }
 
-  values.push(id, tenantId);
-  await mysql.execute(`UPDATE users SET ${updates.join(', ')} WHERE id = ? AND tenantId = ?`, values);
+  // Try to update with all fields first
+  const allUpdates = [...updates, ...newFieldUpdates];
+  const allValues = [...values, ...newFieldValues, id, tenantId];
+  
+  try {
+    await mysql.execute(`UPDATE users SET ${allUpdates.join(', ')} WHERE id = ? AND tenantId = ?`, allValues);
+  } catch (error: any) {
+    // If new columns don't exist, only update basic fields
+    if (error?.code === 'ER_BAD_FIELD_ERROR' && updates.length > 0) {
+      const basicValues = [...values, id, tenantId];
+      await mysql.execute(`UPDATE users SET ${updates.join(', ')} WHERE id = ? AND tenantId = ?`, basicValues);
+    } else {
+      throw error;
+    }
+  }
+  
   const user = await findUserById(id, tenantId);
   if (!user) throw new Error('Failed to update user');
   return user;
@@ -494,11 +571,14 @@ export async function findAllLocations(tenantId: string): Promise<Location[]> {
 export async function updateLocation(
   id: string,
   tenantId: string,
-  data: Partial<Pick<Location, 'name' | 'address' | 'phone'>>
+  data: Partial<Pick<Location, 'name' | 'address' | 'phone' | 'street' | 'streetNumber' | 'floor' | 'apartment' | 'postalCode' | 'country' | 'province' | 'neighborhood'>>
 ): Promise<Location> {
   const updates: string[] = [];
   const values: any[] = [];
+  const newFieldUpdates: string[] = [];
+  const newFieldValues: any[] = [];
 
+  // Basic fields (always available)
   if (data.name !== undefined) {
     updates.push('name = ?');
     values.push(data.name);
@@ -512,14 +592,62 @@ export async function updateLocation(
     values.push(data.phone);
   }
 
-  if (updates.length === 0) {
+  // New fields (may not exist yet)
+  if (data.street !== undefined) {
+    newFieldUpdates.push('street = ?');
+    newFieldValues.push(data.street);
+  }
+  if (data.streetNumber !== undefined) {
+    newFieldUpdates.push('streetNumber = ?');
+    newFieldValues.push(data.streetNumber);
+  }
+  if (data.floor !== undefined) {
+    newFieldUpdates.push('floor = ?');
+    newFieldValues.push(data.floor);
+  }
+  if (data.apartment !== undefined) {
+    newFieldUpdates.push('apartment = ?');
+    newFieldValues.push(data.apartment);
+  }
+  if (data.postalCode !== undefined) {
+    newFieldUpdates.push('postalCode = ?');
+    newFieldValues.push(data.postalCode);
+  }
+  if (data.country !== undefined) {
+    newFieldUpdates.push('country = ?');
+    newFieldValues.push(data.country);
+  }
+  if (data.province !== undefined) {
+    newFieldUpdates.push('province = ?');
+    newFieldValues.push(data.province);
+  }
+  if (data.neighborhood !== undefined) {
+    newFieldUpdates.push('neighborhood = ?');
+    newFieldValues.push(data.neighborhood);
+  }
+
+  if (updates.length === 0 && newFieldUpdates.length === 0) {
     const location = await findLocationById(id, tenantId);
     if (!location) throw new Error('Location not found');
     return location;
   }
 
-  values.push(id, tenantId);
-  await mysql.execute(`UPDATE locations SET ${updates.join(', ')} WHERE id = ? AND tenantId = ?`, values);
+  // Try to update with all fields first
+  const allUpdates = [...updates, ...newFieldUpdates];
+  const allValues = [...values, ...newFieldValues, id, tenantId];
+  
+  try {
+    await mysql.execute(`UPDATE locations SET ${allUpdates.join(', ')} WHERE id = ? AND tenantId = ?`, allValues);
+  } catch (error: any) {
+    // If new columns don't exist, only update basic fields
+    if (error?.code === 'ER_BAD_FIELD_ERROR' && updates.length > 0) {
+      const basicValues = [...values, id, tenantId];
+      await mysql.execute(`UPDATE locations SET ${updates.join(', ')} WHERE id = ? AND tenantId = ?`, basicValues);
+    } else {
+      throw error;
+    }
+  }
+  
   const location = await findLocationById(id, tenantId);
   if (!location) throw new Error('Failed to update location');
   return location;
@@ -534,17 +662,56 @@ export async function countAppointmentsByLocation(locationId: string, tenantId: 
   return result.length > 0 ? Number(result[0].count) : 0;
 }
 
+export async function deleteLocation(id: string, tenantId: string): Promise<void> {
+  await mysql.execute('DELETE FROM locations WHERE id = ? AND tenantId = ?', [id, tenantId]);
+}
+
 export async function createLocation(data: {
   id: string;
   tenantId: string;
   name: string;
   address: string;
+  street?: string | null;
+  streetNumber?: string | null;
+  floor?: string | null;
+  apartment?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+  province?: string | null;
+  neighborhood?: string | null;
   phone?: string | null;
 }): Promise<Location> {
-  await mysql.execute(
-    'INSERT INTO locations (id, tenantId, name, address, phone) VALUES (?, ?, ?, ?, ?)',
-    [data.id, data.tenantId, data.name, data.address, data.phone || null]
-  );
+  // Try with all fields first (if migration has been run)
+  try {
+    await mysql.execute(
+      'INSERT INTO locations (id, tenantId, name, address, street, streetNumber, floor, apartment, postalCode, country, province, neighborhood, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        data.id,
+        data.tenantId,
+        data.name,
+        data.address,
+        data.street || null,
+        data.streetNumber || null,
+        data.floor || null,
+        data.apartment || null,
+        data.postalCode || null,
+        data.country || null,
+        data.province || null,
+        data.neighborhood || null,
+        data.phone || null,
+      ]
+    );
+  } catch (error: any) {
+    // If new columns don't exist, fallback to basic fields only
+    if (error?.code === 'ER_BAD_FIELD_ERROR') {
+      await mysql.execute(
+        'INSERT INTO locations (id, tenantId, name, address, phone) VALUES (?, ?, ?, ?, ?)',
+        [data.id, data.tenantId, data.name, data.address, data.phone || null]
+      );
+    } else {
+      throw error;
+    }
+  }
   const location = await findLocationById(data.id, data.tenantId);
   if (!location) throw new Error('Failed to create location');
   return location;

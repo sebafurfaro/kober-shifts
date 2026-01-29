@@ -11,7 +11,13 @@ module.exports = {
     "./node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        primary: "#1A237E",
+        accent: "#1497B5",
+        "accent-third": "#26A69A",
+      },
+    },
   },
   darkMode: "class",
   plugins: [

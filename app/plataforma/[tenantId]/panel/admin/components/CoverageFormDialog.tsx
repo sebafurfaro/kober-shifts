@@ -137,7 +137,15 @@ export function CoverageFormDialog({
     };
 
     return (
-        <Modal isOpen={open} onClose={onClose} size="md" scrollBehavior="inside">
+        <Modal 
+            isOpen={open} 
+            onClose={onClose} 
+            size="md" 
+            scrollBehavior="inside"
+            classNames={{
+                wrapper: "z-[99999]"
+            }}
+        >
             <ModalContent>
                 <form onSubmit={handleSubmit}>
                     <ModalHeader className="text-slate-800">
@@ -166,6 +174,10 @@ export function CoverageFormDialog({
                                 isDisabled={loading}
                                 autoFocus
                                 autoComplete="off"
+                                classNames={{
+                                    input: "text-slate-800",
+                                    inputWrapper: "text-slate-800",
+                                }}
                             />
 
                             <div className="relative">
@@ -191,6 +203,10 @@ export function CoverageFormDialog({
                                             size="sm"
                                             autoComplete="off"
                                             className="flex-1"
+                                            classNames={{
+                                                input: "text-slate-800",
+                                                inputWrapper: "text-slate-800",
+                                            }}
                                         />
                                         <Button
                                             isIconOnly

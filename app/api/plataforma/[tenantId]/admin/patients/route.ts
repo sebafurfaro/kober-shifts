@@ -37,11 +37,15 @@ export async function POST(
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const phone = typeof body.phone === "string" ? body.phone.trim() : null;
   const address = typeof body.address === "string" ? body.address.trim() : null;
+  const dni = typeof body.dni === "string" ? body.dni.trim() : null;
+  const coverage = typeof body.coverage === "string" ? body.coverage.trim() : null;
+  const plan = typeof body.plan === "string" ? body.plan.trim() : null;
   const dateOfBirth = typeof body.dateOfBirth === "string" && body.dateOfBirth ? new Date(body.dateOfBirth) : null;
   const admissionDate = typeof body.admissionDate === "string" && body.admissionDate ? new Date(body.admissionDate) : null;
   const gender = typeof body.gender === "string" ? body.gender : null;
   const nationality = typeof body.nationality === "string" ? body.nationality.trim() : null;
-  const tempPassword = typeof body.tempPassword === "string" ? body.tempPassword : "changeme123";
+  // La contraseña será el DNI si se proporciona, sino usa el tempPassword o un default
+  const tempPassword = typeof body.tempPassword === "string" ? body.tempPassword : (dni || "changeme123");
 
   if (!firstName || !lastName || !email) {
     return NextResponse.json({ error: "Nombre, apellido y email son requeridos" }, { status: 400 });
@@ -61,6 +65,9 @@ export async function POST(
     email,
     phone,
     address,
+    dni,
+    coverage,
+    plan,
     dateOfBirth,
     admissionDate,
     gender,
@@ -77,6 +84,9 @@ export async function POST(
     lastName: user.lastName,
     phone: user.phone,
     address: user.address,
+    dni: user.dni,
+    coverage: user.coverage,
+    plan: user.plan,
     dateOfBirth: user.dateOfBirth,
     admissionDate: user.admissionDate,
     gender: user.gender,

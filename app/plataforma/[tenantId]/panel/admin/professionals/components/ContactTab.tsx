@@ -22,6 +22,10 @@ export function ContactTab({ formData, handleChange, errors, mode }: ContactTabP
                 isInvalid={!!errors.name}
                 errorMessage={errors.name}
                 isRequired
+                classNames={{
+                    input: "text-slate-800",
+                    inputWrapper: "text-slate-800",
+                }}
             />
             <Input
                 label="Email"
@@ -32,6 +36,10 @@ export function ContactTab({ formData, handleChange, errors, mode }: ContactTabP
                 errorMessage={errors.email}
                 isRequired
                 isDisabled={mode === "edit"}
+                classNames={{
+                    input: "text-slate-800",
+                    inputWrapper: "text-slate-800",
+                }}
             />
             <Input
                 label={mode === "create" ? "Contraseña" : "Nueva Contraseña (opcional)"}
@@ -41,16 +49,28 @@ export function ContactTab({ formData, handleChange, errors, mode }: ContactTabP
                 isInvalid={!!errors.tempPassword}
                 errorMessage={errors.tempPassword}
                 isRequired={mode === "create"}
+                classNames={{
+                    input: "text-slate-800",
+                    inputWrapper: "text-slate-800",
+                }}
             />
             <Input
                 label="Teléfono"
                 value={formData.phone || ""}
                 onValueChange={(value) => handleChange("phone", value)}
+                classNames={{
+                    input: "text-slate-800",
+                    inputWrapper: "text-slate-800",
+                }}
             />
             <Input
                 label="Matrícula"
                 value={formData.licenseNumber || ""}
                 onValueChange={(value) => handleChange("licenseNumber", value)}
+                classNames={{
+                    input: "text-slate-800",
+                    inputWrapper: "text-slate-800",
+                }}
             />
             <div className="">
                 <p className="text-sm font-medium mb-2 text-gray-700">

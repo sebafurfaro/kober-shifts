@@ -181,6 +181,37 @@ export async function POST(
     return NextResponse.json({ error: "Invalid specialty" }, { status: 400 });
   }
 
+  // Check for duplicate appointments (same patient, professional, date and time)
+  // Allow a small tolerance (1 minute) to account for potential timezone rounding issues
+  const duplicateCheckStart = new Date(startAt.getTime() - 60000); // 1 minute before
+  const duplicateCheckEnd = new Date(startAt.getTime() + 60000); // 1 minute after
+  
+  const existingAppointments = await findAppointmentsByDateRange(
+    tenantId,
+    duplicateCheckStart,
+    duplicateCheckEnd,
+    {
+      patientId,
+      professionalId,
+    }
+  );
+
+  // Check if there's an overlapping appointment (excluding cancelled ones)
+  const overlappingAppointment = existingAppointments.find(apt => {
+    if (apt.status === AppointmentStatus.CANCELLED) return false;
+    // Check if the new appointment overlaps with existing one
+    // Overlap occurs if: newStart < existingEnd && newEnd > existingStart
+    const existingStart = apt.startAt instanceof Date ? apt.startAt : new Date(apt.startAt);
+    const existingEnd = apt.endAt instanceof Date ? apt.endAt : new Date(apt.endAt);
+    return startAt < existingEnd && endAt > existingStart;
+  });
+
+  if (overlappingAppointment) {
+    return NextResponse.json({ 
+      error: "Ya existe un turno para este paciente y profesional en el mismo horario" 
+    }, { status: 409 });
+  }
+
   let googleEventId: string | null = null;
 
   // Try to create Google Calendar event if OAuth token exists

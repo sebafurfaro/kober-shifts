@@ -17,7 +17,7 @@ import {
 import { useParams } from "next/navigation";
 import { Toolbar } from "./calendar/Toolbar";
 
-import { fullCalendarDateToLocal, localDateToFullCalendar } from "@/lib/timezone";
+import { fullCalendarDateToLocal, localDateToFullCalendar, serializeBATimeAsUTC } from "@/lib/timezone";
 import { EventDialogTitle } from "./calendar/EventDialogTitle";
 import { EventDialogContent } from "./calendar/EventDialogContent";
 import { EventDialogActions } from "./calendar/EventDialogActions";
@@ -48,9 +48,17 @@ interface CalendarEvent {
     googleEventId?: string | null;
     cancellationReason?: string | null;
     cancelledBy?: string | null;
+    isHoliday?: boolean;
+    professionalHoliday?: boolean; // Key to identify professional holiday events
+    holidayDescription?: string;
+    holidayId?: string;
+    holidayStartDate?: string;
+    holidayEndDate?: string;
   };
   backgroundColor?: string;
   borderColor?: string;
+  display?: string;
+  classNames?: string[];
 }
 
 interface EventDialogData {
@@ -114,6 +122,34 @@ export function Calendar() {
   // Flag to prevent datesSet from triggering during state updates
   const isUpdatingRef = useRef(false);
 
+  // Helper function to check if a date range overlaps with any holiday period for a professional
+  const checkHolidayOverlap = useCallback((startDate: Date, endDate: Date, professionalId: string): { inHoliday: boolean; holiday?: any } => {
+    const professional = professionals.find(p => p.id === professionalId);
+    if (!professional || !professional.holidays || professional.holidays.length === 0) {
+      return { inHoliday: false };
+    }
+
+    const appointmentStart = new Date(startDate);
+    appointmentStart.setHours(0, 0, 0, 0);
+    const appointmentEnd = new Date(endDate);
+    appointmentEnd.setHours(23, 59, 59, 999);
+
+    for (const holiday of professional.holidays) {
+      const holidayStart = new Date(holiday.startDate);
+      holidayStart.setHours(0, 0, 0, 0);
+      const holidayEnd = new Date(holiday.endDate);
+      holidayEnd.setHours(23, 59, 59, 999);
+
+      // Check if appointment overlaps with holiday period
+      // Overlap occurs if: appointmentStart <= holidayEnd && appointmentEnd >= holidayStart
+      if (appointmentStart <= holidayEnd && appointmentEnd >= holidayStart) {
+        return { inHoliday: true, holiday };
+      }
+    }
+
+    return { inHoliday: false };
+  }, [professionals]);
+
   // Set mounted flag to prevent hydration errors
   useEffect(() => {
     setMounted(true);
@@ -170,13 +206,14 @@ export function Calendar() {
       }
       if (professionalsRes?.ok) {
         const data = await professionalsRes.json();
-        // Keep full professional data including specialty information
+        // Optimize: Only store necessary data to avoid WebSocket payload size issues
         const normalizedProfessionals = Array.isArray(data)
           ? data.map((p: any) => ({
             id: p.id,
             name: p.name,
             email: p.email,
-            professional: p.professional || null,
+            // Only store holidays from availabilityConfig, not the entire config
+            holidays: p.professional?.availabilityConfig?.holidays || [],
             specialtyId: p.professional?.specialtyId || null,
             specialty: p.professional?.specialty || null,
             specialtyIds: p.professional?.specialtyIds || (p.professional?.specialtyId ? [p.professional.specialtyId] : []),
@@ -220,10 +257,11 @@ export function Calendar() {
       if (!res.ok) throw new Error("Failed to load events");
       const data = await res.json();
 
-      // Generate holiday events from professionals' availabilityConfig
+      // Generate holiday events from professionals' holidays data
+      // These events are visible to ADMIN users to see who is on vacation
       const holidayEvents: CalendarEvent[] = [];
       professionals.forEach((professional) => {
-        const holidays = professional.professional?.availabilityConfig?.holidays || [];
+        const holidays = professional.holidays || [];
         holidays.forEach((holiday: any) => {
           const startDate = new Date(holiday.startDate);
           startDate.setHours(0, 0, 0, 0);
@@ -232,21 +270,30 @@ export function Calendar() {
 
           // Only include holidays that overlap with the requested date range
           if (endDate >= start && startDate <= end) {
+            const holidayTitle = holiday.description 
+              ? `🏖️ ${professional.name} - ${holiday.description}`
+              : `🏖️ ${professional.name} - Vacaciones`;
+            
             holidayEvents.push({
               id: `holiday-${professional.id}-${holiday.id}`,
-              title: `Vacaciones: ${professional.name}${holiday.description ? ` - ${holiday.description}` : ''}`,
+              title: holidayTitle,
               start: startDate.toISOString(),
               end: endDate.toISOString(),
               extendedProps: {
                 professionalId: professional.id,
                 professionalName: professional.name,
+                professionalEmail: professional.email,
                 isHoliday: true,
+                professionalHoliday: true, // Key to identify professional holiday events
                 holidayDescription: holiday.description,
+                holidayId: holiday.id,
+                holidayStartDate: holiday.startDate,
+                holidayEndDate: holiday.endDate,
               },
               backgroundColor: '#ff9800',
               borderColor: '#ff9800',
-              display: 'background',
-              classNames: ['holiday-event'],
+              display: 'block', // Show as regular events, not just background
+              classNames: ['holiday-event', 'professional-holiday'],
             });
           }
         });
@@ -326,7 +373,6 @@ export function Calendar() {
   function handleEventClick(info: any) {
     const event = info.event;
 
-
     // Convert FullCalendar event to our CalendarEvent format
     const calendarEvent: CalendarEvent = {
       id: event.id,
@@ -338,7 +384,13 @@ export function Calendar() {
       borderColor: event.borderColor,
     };
     setSelectedEvent(calendarEvent);
-    setEventDialogMode("view");
+    
+    // Holiday events are view-only, regular appointments can be edited
+    if (event.extendedProps?.isHoliday || event.extendedProps?.professionalHoliday) {
+      setEventDialogMode("view");
+    } else {
+      setEventDialogMode("view");
+    }
 
     // Convert FullCalendar dates to local dates using centralized timezone utilities
     const startDate = event.start instanceof Date
@@ -426,6 +478,12 @@ export function Calendar() {
       // fullCalendarDateToLocal extracts the displayed BA time directly from UTC methods
       const startDate = fullCalendarDateToLocal(clickedDate);
 
+      const isDayGridView = clickInfo?.view?.type?.startsWith("dayGrid");
+      if (clickInfo?.allDay || isDayGridView) {
+        // Month view clicks default to a specific hour to avoid date shifts
+        startDate.setUTCHours(9, 0, 0, 0);
+      }
+
       // Set default duration (30 minutes)
       // The end date is created from the start date to maintain timezone consistency
       const defaultDurationMinutes = 30;
@@ -468,6 +526,17 @@ export function Calendar() {
 
   function handleEventChange(changeInfo: any) {
     const event = changeInfo.event;
+    
+    // Prevent dragging/resizing holiday events
+    if (event.extendedProps?.isHoliday) {
+      // Revert the change by reloading events
+      if (calendarRef.current) {
+        const calendar = calendarRef.current.getApi();
+        loadEvents(calendar.view.activeStart, calendar.view.activeEnd, true);
+      }
+      return;
+    }
+    
     updateEvent(event.id, {
       startAt: event.start,
       endAt: event.end || event.start,
@@ -628,7 +697,7 @@ export function Calendar() {
       <Card className="p-4 mb-4">
         <CardBody className="p-0">
           {mounted && (
-            <div className="flex-grow min-h-0 [&_.fc]:h-full">
+            <div className="grow min-h-0 [&_.fc]:h-full">
               <FullCalendar
                 ref={calendarRef}
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -653,6 +722,13 @@ export function Calendar() {
                 slotMaxTime="20:00:00"
                 allDaySlot={false}
                 contentHeight="auto"
+                eventAllow={(dropInfo, draggedEvent) => {
+                  // Prevent dragging holiday events
+                  if (draggedEvent && draggedEvent.extendedProps?.isHoliday) {
+                    return false;
+                  }
+                  return true;
+                }}
               />
             </div>
           )}
@@ -666,6 +742,9 @@ export function Calendar() {
           onClose={() => setEventDialogOpen(false)}
           size="md"
           scrollBehavior="inside"
+          classNames={{
+            wrapper: "z-[99999]"
+          }}
         >
           <ModalContent>
             <ModalHeader>
@@ -694,6 +773,7 @@ export function Calendar() {
                 mode={eventDialogMode}
                 selectedEventId={selectedEvent?.id}
                 eventDialogData={eventDialogData}
+                isHolidayEvent={selectedEvent?.extendedProps?.professionalHoliday || selectedEvent?.extendedProps?.isHoliday || false}
                 onEdit={() => setEventDialogMode("edit")}
                 onDelete={async () => {
                   if (!selectedEvent) return;
@@ -769,6 +849,29 @@ export function Calendar() {
                   if (eventDialogData.professionalId) {
                     const selectedProfessional = professionals.find(p => p.id === eventDialogData.professionalId);
                     if (selectedProfessional) {
+                      // Check if the appointment dates overlap with a holiday period
+                      const holidayCheck = checkHolidayOverlap(eventDialogData.start, eventDialogData.end, eventDialogData.professionalId);
+                      
+                      if (holidayCheck.inHoliday && holidayCheck.holiday) {
+                        const holiday = holidayCheck.holiday;
+                        const holidayStart = new Date(holiday.startDate);
+                        const holidayEnd = new Date(holiday.endDate);
+                        const formatDate = (date: Date) => {
+                          return date.toLocaleDateString('es-AR', { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          });
+                        };
+                        const holidayDescription = holiday.description ? ` (${holiday.description})` : '';
+                        setAlertDialog({
+                          open: true,
+                          message: `No se puede crear un turno durante el período vacacional del profesional ${selectedProfessional.name}. Período vacacional: del ${formatDate(holidayStart)} al ${formatDate(holidayEnd)}${holidayDescription}.`,
+                          type: "warning",
+                        });
+                        return;
+                      }
+
                       const availableDays = selectedProfessional.availableDays;
                       const availableHours = selectedProfessional.availableHours;
 
@@ -834,10 +937,13 @@ export function Calendar() {
                     return;
                   }
                   try {
+                    // eventDialogData has BA components stored as UTC components
+                    // We need to serialize them preserving those components (not converting to actual UTC)
+                    // The backend will extract them using utcToMySQLDate
                     const res = await fetch(
                       eventDialogMode === "edit"
-                        ? `/api/appointments/${eventDialogData.id}`
-                        : "/api/appointments",
+                        ? `/api/plataforma/${tenantId}/appointments/${eventDialogData.id}`
+                        : `/api/plataforma/${tenantId}/appointments`,
                       {
                         method: eventDialogMode === "edit" ? "PATCH" : "POST",
                         headers: { "Content-Type": "application/json" },
@@ -847,8 +953,8 @@ export function Calendar() {
                           professionalId: eventDialogData.professionalId,
                           locationId: showLocations ? eventDialogData.locationId : null,
                           specialtyId: showSpecialties ? eventDialogData.specialtyId : null,
-                          startAt: eventDialogData.start.toISOString(),
-                          endAt: eventDialogData.end.toISOString(),
+                          startAt: serializeBATimeAsUTC(eventDialogData.start),
+                          endAt: serializeBATimeAsUTC(eventDialogData.end),
                           notes: eventDialogData.notes || null,
                         }),
                       }

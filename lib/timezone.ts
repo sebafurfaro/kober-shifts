@@ -35,28 +35,33 @@ export function mysqlDateToUTC(mysqlDate: Date): Date {
   const minutes = mysqlDate.getUTCMinutes();
   const seconds = mysqlDate.getUTCSeconds();
   
-  // We have BA time components stored as if they were UTC components
-  // We need to convert these BA time components to actual UTC
+  // We have BA time components. We need to convert them to actual UTC.
   // 
-  // Strategy: Create a Date object that represents this moment in BA timezone,
-  // then use fromZonedTime to convert it to UTC.
-  // 
-  // The challenge: fromZonedTime expects a Date in local time that represents
-  // the time in the specified timezone. But we can't use new Date(year, month, day, ...)
-  // because that depends on browser timezone.
+  // Strategy: Use fromZonedTime which converts a date from a specific timezone to UTC.
+  // The key is to create a Date that represents the BA time moment.
   //
-  // Solution: Use the same iterative approach as localDateToFullCalendar
-  // We create a UTC Date with BA components, check what BA time it represents,
-  // and adjust until it matches.
+  // fromZonedTime(date, timezone) treats the Date as if it represents
+  // a moment in the specified timezone, then converts it to UTC.
+  //
+  // To use it correctly, we create a Date UTC with the BA components,
+  // then use fromZonedTime to convert from BA timezone to UTC.
+  // But wait - that's not how fromZonedTime works.
+  //
+  // Actually, fromZonedTime expects a Date that already represents the correct
+  // moment when interpreted as the source timezone. So we need to create
+  // a Date that, when fromZonedTime treats it as BA time, equals our target.
+  //
+  // The simplest approach: Create a Date UTC, check what BA time it represents,
+  // and adjust iteratively until it matches.
   
-  // Create an initial UTC Date with BA components
+  // Create initial Date UTC with BA components
   let utcDate = new Date(Date.UTC(year, month, day, hours, minutes, seconds));
   
-  // Check what BA time this UTC moment represents
+  // Check what BA time this represents
   let baTime = toZonedTime(utcDate, BUENOS_AIRES_TIMEZONE);
-  
-  // Iteratively adjust until we get the correct BA time
   const targetBA = { year, month, day, hours, minutes, seconds };
+  
+  // Iteratively adjust until BA time matches target
   let attempts = 0;
   const maxAttempts = 10;
   
@@ -76,21 +81,22 @@ export function mysqlDateToUTC(mysqlDate: Date): Date {
         currentBA.day === targetBA.day &&
         currentBA.hours === targetBA.hours &&
         currentBA.minutes === targetBA.minutes) {
-      break;
+      return utcDate;
     }
     
-    // Calculate difference in hours first (most common case)
+    // Calculate adjustment needed
+    // We need to adjust utcDate so that toZonedTime gives us targetBA
     const hourDiff = targetBA.hours - currentBA.hours;
+    const minuteDiff = targetBA.minutes - currentBA.minutes;
     
-    // If dates match, just adjust by hours and minutes
+    // If same day, adjust by hours and minutes
     if (currentBA.year === targetBA.year &&
         currentBA.month === targetBA.month &&
         currentBA.day === targetBA.day) {
-      const minuteDiff = targetBA.minutes - currentBA.minutes;
       const adjustmentMs = hourDiff * 60 * 60 * 1000 + minuteDiff * 60 * 1000;
       utcDate = new Date(utcDate.getTime() + adjustmentMs);
     } else {
-      // Different day/month/year - need more careful adjustment
+      // Different day - adjust by hours first
       const adjustmentMs = hourDiff * 60 * 60 * 1000;
       utcDate = new Date(utcDate.getTime() + adjustmentMs);
     }
@@ -307,4 +313,35 @@ export function parseFromDateTimeLocal(datetimeLocalValue: string): Date {
   // Create a Date UTC with these BA components
   // This ensures consistency with fullCalendarDateToLocal
   return new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
+}
+
+/**
+ * Serializes a Date object with BA time components (stored as UTC components) to ISO string
+ * for sending to the API. 
+ * 
+ * The backend expects a Date object where getUTC* methods return BA time components.
+ * When we create a Date from an ISO string without 'Z', JavaScript interprets it as local time.
+ * But we want the backend to extract UTC components that represent BA time.
+ * 
+ * Solution: Create an ISO string with the BA components, but use 'Z' to indicate UTC.
+ * When the backend does `new Date(isoString)`, it gets a Date in UTC.
+ * Then utcToMySQLDate extracts the UTC components (which are BA time) correctly.
+ * 
+ * @param date - Date object with BA time components stored as UTC components
+ * @returns ISO string that the backend can parse correctly
+ */
+export function serializeBATimeAsUTC(date: Date): string {
+  // Extract the UTC components (which are actually BA time components)
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth();
+  const day = date.getUTCDate();
+  const hours = date.getUTCHours();
+  const minutes = date.getUTCMinutes();
+  const seconds = date.getUTCSeconds();
+  const milliseconds = date.getUTCMilliseconds();
+  
+  // Create a Date UTC with these components and convert to ISO
+  // This ensures the ISO string represents these exact components as UTC
+  const utcDate = new Date(Date.UTC(year, month, day, hours, minutes, seconds, milliseconds));
+  return utcDate.toISOString();
 }

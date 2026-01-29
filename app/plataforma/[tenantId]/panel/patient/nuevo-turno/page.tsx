@@ -405,6 +405,9 @@ export default function NewAppointment() {
                 size="md"
                 scrollBehavior="inside"
                 className="animate-fade-in"
+                classNames={{
+                    wrapper: "z-[99999]"
+                }}
             >
                 <ModalContent>
                     <ModalHeader className="text-xl font-semibold text-gray-800">Confirmar Turno</ModalHeader>

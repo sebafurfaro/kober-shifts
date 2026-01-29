@@ -142,7 +142,8 @@ export function HolidaysTab({ formData, setFormData, onSave, loading }: Holidays
                 errorMessage={errors.startDate}
                 variant="underlined"
                 classNames={{
-                  inputWrapper: "h-11",
+                  inputWrapper: "h-11 [&_input::placeholder]:text-slate-800",
+                  input: "text-slate-800 [&::placeholder]:text-slate-800",
                 }}
               />
               <Input
@@ -156,7 +157,8 @@ export function HolidaysTab({ formData, setFormData, onSave, loading }: Holidays
                 errorMessage={errors.endDate}
                 variant="underlined"
                 classNames={{
-                  inputWrapper: "h-11",
+                  inputWrapper: "h-11 [&_input::placeholder]:text-slate-800",
+                  input: "text-slate-800 [&::placeholder]:text-slate-800",
                 }}
               />
               <Input
@@ -168,7 +170,8 @@ export function HolidaysTab({ formData, setFormData, onSave, loading }: Holidays
                 placeholder="Ej: Vacaciones de verano"
                 variant="underlined"
                 classNames={{
-                  inputWrapper: "h-11",
+                  inputWrapper: "h-11 [&_input::placeholder]:text-slate-800",
+                  input: "text-slate-800 [&::placeholder]:text-slate-800",
                 }}
               />
             </div>

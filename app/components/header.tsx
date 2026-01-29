@@ -1,12 +1,32 @@
+"use client";
+
 import { Button } from "@heroui/react";
 import { Menu, X } from "lucide-react";
 import Logo from "@/app/branding/Logo";
 import Link from "next/link";
+import { useState, useEffect } from "react";
+
+const SCROLL_THRESHOLD = 100;
 
 export const Header = ({ mobileMenuOpen, setMobileMenuOpen, navItems }: { mobileMenuOpen: boolean, setMobileMenuOpen: (open: boolean) => void, navItems: { label: string, href: string }[] }) => {
+    const [scrolled, setScrolled] = useState(false);
+
+    useEffect(() => {
+        const onScroll = () => setScrolled(window.scrollY >= SCROLL_THRESHOLD);
+        onScroll();
+        window.addEventListener("scroll", onScroll, { passive: true });
+        return () => window.removeEventListener("scroll", onScroll);
+    }, []);
+
     return (
-        <header className="rounded-full py-2 px-4 fixed top-8 left-0 right-0 mx-auto max-w-7xl w-full bg-white/50 backdrop-blur-sm z-9990 shadow-lg">
-            <nav className="relative after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-white/10">
+        <header
+            className={`py-2 px-4 fixed left-0 right-0 mx-auto w-full z-9990 transition-all duration-300 ${
+                scrolled
+                    ? "top-0 bg-linear-to-b from-white/20 to-transparent backdrop-blur-md max-w-full shadow-none"
+                    : "top-4 shadow-none bg-white/10 border border-slate-100 rounded-full md:max-w-3xl md:mx-auto"
+            }`}
+        >
+            <nav className="">
                 <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
                     <div className="relative flex h-16 items-center justify-between">
                         <div className="relative inset-y-0 right-0 flex items-center sm:hidden order-2">

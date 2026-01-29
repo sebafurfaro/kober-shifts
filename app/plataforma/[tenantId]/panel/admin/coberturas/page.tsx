@@ -138,6 +138,7 @@ export default function CoveragesPage() {
         }
     };
 
+
     const filteredCoverages = React.useMemo(() => {
         const query = search.toLowerCase().trim();
         if (!query) return coverages;
@@ -169,8 +170,8 @@ export default function CoveragesPage() {
                         size="sm"
                         classNames={{
                             base: "mb-4",
-                            inputWrapper: "h-11 border-2 border-gray-200 bg-white focus-within:ring-0 focus-within:outline-none",
-                            input: "px-4 text-sm text-gray-800 focus:outline-none focus:ring-0",
+                            inputWrapper: "h-11 border-2 border-gray-200 bg-white focus-within:ring-0 focus-within:outline-none text-slate-800",
+                            input: "px-4 text-sm text-slate-800 focus:outline-none focus:ring-0",
                         }}
                     />
 
@@ -202,24 +203,54 @@ export default function CoveragesPage() {
                                             <span className="text-xs text-gray-500 mr-4">
                                                 {coverage.plans.length} planes
                                             </span>
-                                            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                                                <Button
-                                                    isIconOnly
-                                                    size="sm"
-                                                    variant="light"
-                                                    onPress={() => handleEdit(coverage)}
+                                            <div 
+                                                className="flex gap-2" 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    e.preventDefault();
+                                                }}
+                                                onMouseDown={(e) => {
+                                                    e.stopPropagation();
+                                                }}
+                                            >
+                                                <div
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        e.preventDefault();
+                                                        handleEdit(coverage);
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter" || e.key === " ") {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            handleEdit(coverage);
+                                                        }
+                                                    }}
+                                                    className="p-2 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
                                                 >
                                                     <Pencil className="w-4 h-4 text-blue-500" />
-                                                </Button>
-                                                <Button
-                                                    isIconOnly
-                                                    size="sm"
-                                                    variant="light"
-                                                    color="danger"
-                                                    onPress={() => handleDelete(coverage.id, coverage.name)}
+                                                </div>
+                                                <div
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        e.preventDefault();
+                                                        handleDelete(coverage.id, coverage.name);
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter" || e.key === " ") {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            handleDelete(coverage.id, coverage.name);
+                                                        }
+                                                    }}
+                                                    className="p-2 rounded-lg hover:bg-red-50 cursor-pointer transition-colors"
                                                 >
                                                     <Trash2 className="w-4 h-4 text-red-500" />
-                                                </Button>
+                                                </div>
                                             </div>
                                         </div>
                                     }

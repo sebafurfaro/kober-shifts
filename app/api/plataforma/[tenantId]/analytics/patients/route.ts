@@ -24,7 +24,13 @@ export async function GET(
     const page = parseInt(url.searchParams.get("page") || "1", 10);
     const limit = parseInt(url.searchParams.get("limit") || "10", 10);
     const sortBy = url.searchParams.get("sortBy") || "totalAppointments"; // "totalAppointments" or "cancelledAppointments"
-    const offset = (page - 1) * limit;
+    const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 10;
+    const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+    const offset = (safePage - 1) * safeLimit;
+
+    const filterClause = sortBy === "cancelledAppointments"
+      ? "AND COALESCE(a.cancelledAppointments, 0) > 0"
+      : "AND COALESCE(a.totalAppointments, 0) > 0";
 
     // Build the query to get patients with appointment counts
     const baseQuery = `
@@ -39,6 +45,7 @@ export async function GET(
         GROUP BY patientId
       ) a ON u.id = a.patientId
       WHERE u.role = ? AND u.tenantId = ?
+      ${filterClause}
     `;
 
     // Get total count
@@ -53,28 +60,51 @@ export async function GET(
       ? "cancelledAppointments DESC, totalAppointments DESC"
       : "totalAppointments DESC, cancelledAppointments DESC";
 
-    // Get paginated patients
-    const [patientRows] = await mysql.execute(
-      `SELECT 
-        u.id,
-        u.name,
-        u.email,
-        u.phone,
-        u.firstName,
-        u.lastName,
-        COALESCE(a.totalAppointments, 0) as totalAppointments,
-        COALESCE(a.cancelledAppointments, 0) as cancelledAppointments
-      ${baseQuery}
-      ORDER BY ${orderBy}
-      LIMIT ? OFFSET ?`,
-      [tenantId, Role.PATIENT, tenantId, limit, offset]
-    );
+    // Get paginated patients (handle legacy schemas without firstName/lastName)
+    let patientRows: any[] = [];
+    try {
+      const [rows] = await mysql.execute(
+        `SELECT 
+          u.id,
+          u.name,
+          u.email,
+          u.phone,
+          u.firstName,
+          u.lastName,
+          COALESCE(a.totalAppointments, 0) as totalAppointments,
+          COALESCE(a.cancelledAppointments, 0) as cancelledAppointments
+        ${baseQuery}
+        ORDER BY ${orderBy}
+        LIMIT ${safeLimit} OFFSET ${offset}`,
+        [tenantId, Role.PATIENT, tenantId]
+      );
+      patientRows = rows as any[];
+    } catch (error: any) {
+      if (error?.code !== "ER_BAD_FIELD_ERROR") {
+        throw error;
+      }
 
-    const patients = (patientRows as any[]).map((row: any) => ({
+      const [rows] = await mysql.execute(
+        `SELECT 
+          u.id,
+          u.name,
+          u.email,
+          u.phone,
+          COALESCE(a.totalAppointments, 0) as totalAppointments,
+          COALESCE(a.cancelledAppointments, 0) as cancelledAppointments
+        ${baseQuery}
+        ORDER BY ${orderBy}
+        LIMIT ${safeLimit} OFFSET ${offset}`,
+        [tenantId, Role.PATIENT, tenantId]
+      );
+      patientRows = rows as any[];
+    }
+
+    const patients = patientRows.map((row: any) => ({
       id: row.id,
       name: row.name,
-      firstName: row.firstName,
-      lastName: row.lastName,
+      firstName: row.firstName ?? null,
+      lastName: row.lastName ?? null,
       email: row.email,
       phone: row.phone,
       totalAppointments: Number(row.totalAppointments),
@@ -84,10 +114,10 @@ export async function GET(
     return NextResponse.json({
       patients,
       pagination: {
-        page,
-        limit,
+        page: safePage,
+        limit: safeLimit,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / safeLimit),
       },
     });
   } catch (error) {

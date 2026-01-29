@@ -9,10 +9,12 @@ import { WeeklyChart } from "./components/WeeklyChart";
 import { MonthlyChart } from "./components/MonthlyChart";
 import { PatientsTable } from "./components/PatientsTable";
 import type { AnalyticsStats, PatientsResponse } from "./components/types";
+import { useTenantLabels } from "@/lib/use-tenant-labels";
 
 export default function AnalyticsPageClient() {
   const params = useParams();
   const tenantId = params.tenantId as string;
+  const { patientLabel } = useTenantLabels();
 
   const [stats, setStats] = React.useState<AnalyticsStats | null>(null);
   const [patientsData, setPatientsData] = React.useState<PatientsResponse | null>(null);
@@ -80,6 +82,7 @@ export default function AnalyticsPageClient() {
             sortBy={sortBy}
             onPageChange={setCurrentPage}
             onSortChange={setSortBy}
+            patientLabel={patientLabel}
           />
 
           <Card className="mt-6 opacity-50">

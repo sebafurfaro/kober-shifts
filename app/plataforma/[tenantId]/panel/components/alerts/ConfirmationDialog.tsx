@@ -64,6 +64,7 @@ export function ConfirmationDialog({
       isKeyboardDismissDisabled={false}
       classNames={{
         base: "rounded-xl",
+        wrapper: "z-[99999]",
       }}
     >
       <ModalContent>

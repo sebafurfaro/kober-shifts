@@ -188,7 +188,14 @@ export default function PatientPanelPage() {
         </Card>
 
         {/* Cancel Dialog */}
-        <Modal isOpen={cancelDialogOpen} onClose={() => setCancelDialogOpen(false)} size="md">
+        <Modal 
+          isOpen={cancelDialogOpen} 
+          onClose={() => setCancelDialogOpen(false)} 
+          size="md"
+          classNames={{
+            wrapper: "z-[99999]"
+          }}
+        >
           <ModalContent>
             <ModalHeader>Cancelar Turno</ModalHeader>
             <ModalBody>

@@ -89,6 +89,7 @@ export function AlertDialog({
         header: "text-slate-800 border-b-[1px] border-slate-200",
         body: "text-slate-800 border-b-[1px] border-slate-200",
         footer: "text-slate-800",
+        wrapper: "z-[99999]",
       }}
     >
       <ModalContent>

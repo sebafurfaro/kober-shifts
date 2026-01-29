@@ -14,11 +14,22 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const url = new URL(req.url);
-  const patientId = url.searchParams.get("patientId") || (session.role === Role.PATIENT ? session.userId : null);
+  // Validate that session has userId
+  if (!session.userId) {
+    return NextResponse.json({ error: "Invalid session: user ID not found" }, { status: 401 });
+  }
 
+  const url = new URL(req.url);
+  // Get patientId from query params or from session if user is a patient
+  let patientId = url.searchParams.get("patientId");
+  
+  if (!patientId && session.role === Role.PATIENT) {
+    patientId = session.userId;
+  }
+
+  // For ADMIN role, patientId must be provided in query params
   if (!patientId) {
-    return NextResponse.json({ error: "patientId is required" }, { status: 400 });
+    return NextResponse.json({ error: "patient is required" }, { status: 400 });
   }
 
   // Get all appointments for the patient (past and future, excluding cancelled)

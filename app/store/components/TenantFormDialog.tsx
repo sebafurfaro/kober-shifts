@@ -124,7 +124,15 @@ export function TenantFormDialog({
   };
 
   return (
-    <Modal isOpen={open} onClose={onClose} size="md" scrollBehavior="inside">
+    <Modal 
+      isOpen={open} 
+      onClose={onClose} 
+      size="md" 
+      scrollBehavior="inside"
+      classNames={{
+        wrapper: "z-[99999]"
+      }}
+    >
       <ModalContent className="text-slate-800">
         <form onSubmit={handleSubmit}>
           <ModalHeader>Añadir nuevo Tenant</ModalHeader>
@@ -152,6 +160,10 @@ export function TenantFormDialog({
                 isDisabled={loading}
                 autoFocus
                 autoComplete="off"
+                classNames={{
+                  input: "text-slate-800",
+                  inputWrapper: "text-slate-800",
+                }}
               />
 
               <div>
@@ -170,6 +182,10 @@ export function TenantFormDialog({
                   isDisabled={loading}
                   placeholder="ej: mi-tenant"
                   autoComplete="off"
+                  classNames={{
+                    input: "text-slate-800",
+                    inputWrapper: "text-slate-800",
+                  }}
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Solo letras minúsculas, números y guiones

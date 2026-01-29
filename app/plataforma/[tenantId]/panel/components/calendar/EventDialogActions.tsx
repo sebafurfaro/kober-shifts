@@ -15,6 +15,7 @@ interface EventDialogActionsProps {
   mode: "create" | "edit" | "view";
   selectedEventId?: string;
   eventDialogData: EventDialogData | null;
+  isHolidayEvent?: boolean; // Flag to identify holiday events
   onEdit: () => void;
   onDelete: () => Promise<void>;
   onCancel: () => void;
@@ -25,6 +26,7 @@ export function EventDialogActions({
   mode,
   selectedEventId,
   eventDialogData,
+  isHolidayEvent = false,
   onEdit,
   onDelete,
   onCancel,
@@ -32,7 +34,7 @@ export function EventDialogActions({
 }: EventDialogActionsProps) {
   return (
     <>
-      {mode === "view" && (
+      {mode === "view" && !isHolidayEvent && (
         <>
           <Button variant="bordered" onPress={onEdit}>
             Editar

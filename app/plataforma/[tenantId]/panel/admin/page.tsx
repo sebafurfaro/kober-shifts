@@ -5,6 +5,7 @@ import { PanelHeader } from "../components/PanelHeader";
 import { Card, CardBody, Switch, Spinner, Alert, Input, Button } from "@heroui/react";
 import { useParams } from "next/navigation";
 import { AlertDialog } from "../components/alerts/AlertDialog";
+import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
 
 interface NotificationSettings {
   whatsapp: boolean;
@@ -14,11 +15,15 @@ interface NotificationSettings {
 
 interface Settings {
   notifications: NotificationSettings;
+  cancelationLimit?: number;
+  patientLabel?: string;
+  professionalLabel?: string;
 }
 
 export default function AdminPanelPage() {
   const params = useParams();
   const tenantId = params.tenantId as string;
+  const setTranslations = useTenantSettingsStore((state) => state.setTranslations);
   const [userName, setUserName] = React.useState<string>("");
   const [settings, setSettings] = React.useState<Settings>({
     notifications: {
@@ -26,6 +31,9 @@ export default function AdminPanelPage() {
       sms: false,
       email: false,
     },
+    cancelationLimit: 0,
+    patientLabel: "Pacientes",
+    professionalLabel: "Profesionales",
   });
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -56,7 +64,23 @@ export default function AdminPanelPage() {
         });
         if (settingsRes.ok) {
           const data = await settingsRes.json();
-          setSettings(data);
+          const loadedSettings = {
+            notifications: data.notifications || {
+              whatsapp: false,
+              sms: false,
+              email: false,
+            },
+            cancelationLimit: data.cancelationLimit ?? 0,
+            patientLabel: data.patientLabel || "Pacientes",
+            professionalLabel: data.professionalLabel || "Profesionales",
+          };
+          setSettings(loadedSettings);
+          
+          // Update Zustand store with loaded translations
+          setTranslations({
+            patientLabel: loadedSettings.patientLabel,
+            professionalLabel: loadedSettings.professionalLabel,
+          });
         }
       } catch (err) {
         console.error("Error loading data:", err);
@@ -78,6 +102,9 @@ export default function AdminPanelPage() {
         ...settings.notifications,
         [key]: !settings.notifications[key],
       },
+      cancelationLimit: settings.cancelationLimit,
+      patientLabel: settings.patientLabel,
+      professionalLabel: settings.professionalLabel,
     };
     setSettings(newSettings);
     setSaving(true);
@@ -102,6 +129,94 @@ export default function AdminPanelPage() {
         open: true,
         message: "Configuración guardada exitosamente",
       });
+    } catch (err) {
+      console.error("Error saving settings:", err);
+      setError(err instanceof Error ? err.message : "Error al guardar la configuración");
+      // Revert the change on error
+      setSettings(previousSettings);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveCancelationLimit = async () => {
+    // Save previous state for rollback
+    const previousSettings = settings;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/plataforma/${tenantId}/admin/settings`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(settings),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Error al guardar la configuración");
+      }
+
+      setSuccessDialog({
+        open: true,
+        message: "Configuración guardada exitosamente",
+      });
+      
+      // Update Zustand store with new translations if they exist
+      if (settings.patientLabel && settings.professionalLabel) {
+        setTranslations({
+          patientLabel: settings.patientLabel,
+          professionalLabel: settings.professionalLabel,
+        });
+      }
+    } catch (err) {
+      console.error("Error saving settings:", err);
+      setError(err instanceof Error ? err.message : "Error al guardar la configuración");
+      // Revert the change on error
+      setSettings(previousSettings);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveTranslations = async () => {
+    // Save previous state for rollback
+    const previousSettings = settings;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/plataforma/${tenantId}/admin/settings`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(settings),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Error al guardar la configuración");
+      }
+
+      setSuccessDialog({
+        open: true,
+        message: "Configuración guardada exitosamente",
+      });
+      
+      // Update Zustand store with new translations
+      if (settings.patientLabel && settings.professionalLabel) {
+        setTranslations({
+          patientLabel: settings.patientLabel,
+          professionalLabel: settings.professionalLabel,
+        });
+      }
     } catch (err) {
       console.error("Error saving settings:", err);
       setError(err instanceof Error ? err.message : "Error al guardar la configuración");
@@ -190,8 +305,8 @@ export default function AdminPanelPage() {
               Permitir cancelacion de turnos hasta
               <Input
                 type="number"
-                value={settings.cancelationLimit}
-                onChange={(e) => setSettings({ ...settings, cancelationLimit: parseInt(e.target.value) })}
+                value={String(settings.cancelationLimit ?? 0)}
+                onChange={(e) => setSettings({ ...settings, cancelationLimit: parseInt(e.target.value) || 0 })}
                 isDisabled={saving}
                 color="default"
                 variant="bordered"
@@ -206,6 +321,60 @@ export default function AdminPanelPage() {
               >
                 Guardar
               </Button>
+            </div>
+          </CardBody>
+        </Card>
+
+        <Card className="p-6">
+          <CardBody className="p-0">
+            <h3 className="font-bold mb-6 text-gray-800 text-lg">
+              Traducciones
+            </h3>
+            <div className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-gray-700">
+                  ¿Cómo llamarás a los profesionales?
+                </label>
+                <div className="flex gap-2 items-center">
+                  <Input
+                    type="text"
+                    value={settings.professionalLabel || "Profesionales"}
+                    onChange={(e) => setSettings({ ...settings, professionalLabel: e.target.value })}
+                    isDisabled={saving}
+                    color="default"
+                    variant="bordered"
+                    className="flex-1"
+                    placeholder="Profesionales"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-gray-700">
+                  ¿Cómo llamarás a los clientes?
+                </label>
+                <div className="flex gap-2 items-center">
+                  <Input
+                    type="text"
+                    value={settings.patientLabel || "Pacientes"}
+                    onChange={(e) => setSettings({ ...settings, patientLabel: e.target.value })}
+                    isDisabled={saving}
+                    color="default"
+                    variant="bordered"
+                    className="flex-1"
+                    placeholder="Pacientes"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button
+                  className="button button-secondary"
+                  onPress={handleSaveTranslations}
+                  isDisabled={saving}
+                  isLoading={saving}
+                >
+                  Guardar
+                </Button>
+              </div>
             </div>
           </CardBody>
         </Card>

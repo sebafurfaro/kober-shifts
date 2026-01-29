@@ -2,10 +2,14 @@
 
 import * as React from "react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Spinner } from "@heroui/react";
-import { Edit } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import { PatientFormDialog } from "../components/PatientFormDialog";
 import { PanelHeader } from "../../components/PanelHeader";
 import { useParams } from "next/navigation";
+import { ConfirmationDialog } from "../../components/alerts/ConfirmationDialog";
+import { AlertDialog } from "../../components/alerts/AlertDialog";
+import { useTenantLabels } from "@/lib/use-tenant-labels";
+import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
 
 interface Patient {
   id: string;
@@ -15,6 +19,9 @@ interface Patient {
   email: string;
   phone?: string | null;
   address?: string | null;
+  dni?: string | null;
+  coverage?: string | null;
+  plan?: string | null;
   dateOfBirth?: Date | string | null;
   admissionDate?: Date | string | null;
   gender?: string | null;
@@ -25,9 +32,20 @@ export default function AdminPatientsPage() {
   const params = useParams();
   const tenantId = params.tenantId as string;
   const [patients, setPatients] = React.useState<Patient[]>([]);
+  const { patientLabel } = useTenantLabels();
+  const loadTranslations = useTenantSettingsStore((state) => state.loadTranslations);
   const [loading, setLoading] = React.useState(true);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingPatient, setEditingPatient] = React.useState<Patient | null>(null);
+  const [deleteDialog, setDeleteDialog] = React.useState<{
+    open: boolean;
+    patient: Patient | null;
+  }>({ open: false, patient: null });
+  const [alertDialog, setAlertDialog] = React.useState<{
+    open: boolean;
+    message: string;
+    type: "error" | "info" | "success" | "warning";
+  }>({ open: false, message: "", type: "error" });
 
   const loadPatients = React.useCallback(async () => {
     try {
@@ -45,6 +63,13 @@ export default function AdminPatientsPage() {
   React.useEffect(() => {
     loadPatients();
   }, [loadPatients]);
+
+  // Load translations when component mounts
+  React.useEffect(() => {
+    if (tenantId) {
+      loadTranslations(tenantId);
+    }
+  }, [tenantId, loadTranslations]);
 
   const handleCreate = () => {
     setEditingPatient(null);
@@ -70,6 +95,9 @@ export default function AdminPatientsPage() {
     email: string;
     phone: string;
     address: string;
+    dni: string;
+    coverage: string;
+    plan: string;
     dateOfBirth: string;
     admissionDate: string;
     gender: string;
@@ -109,13 +137,45 @@ export default function AdminPatientsPage() {
     }
   };
 
+  const handleDelete = (patient: Patient) => {
+    setDeleteDialog({ open: true, patient });
+  };
+
+  const confirmDelete = async () => {
+    const patientToDelete = deleteDialog.patient;
+    if (!patientToDelete) return;
+
+    // Cerrar el diálogo inmediatamente
+    setDeleteDialog({ open: false, patient: null });
+
+    try {
+      const res = await fetch(`/api/plataforma/${tenantId}/admin/patients/${patientToDelete.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.error || "Error al eliminar paciente");
+      }
+
+      await loadPatients();
+    } catch (error: any) {
+      setAlertDialog({
+        open: true,
+        message: error.message || "Error al eliminar paciente",
+        type: "error",
+      });
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto mt-8">
       <div className="py-8">
         <PanelHeader
-          title="Pacientes"
+          title={patientLabel}
           action={{
-            label: "Agregar Paciente",
+            label: `Agregar ${patientLabel.slice(0, -1)}`, // Remove 's' for singular
             onClick: handleCreate,
           }}
         />
@@ -132,7 +192,7 @@ export default function AdminPatientsPage() {
             <TableBody
               isLoading={loading}
               loadingContent={<Spinner label="Cargando..." />}
-              emptyContent={loading ? null : "No hay pacientes registrados"}
+              emptyContent={loading ? null : `No hay ${patientLabel.toLowerCase()} registrados`}
             >
               {patients.map((patient) => (
                 <TableRow key={patient.id}>
@@ -141,7 +201,7 @@ export default function AdminPatientsPage() {
                   <TableCell>{patient.email}</TableCell>
                   <TableCell>{patient.phone || "-"}</TableCell>
                   <TableCell>
-                    <div className="flex justify-end">
+                    <div className="flex justify-end gap-2">
                       <Button
                         isIconOnly
                         size="sm"
@@ -151,6 +211,16 @@ export default function AdminPatientsPage() {
                         className="text-gray-600 hover:text-gray-900"
                       >
                         <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        color="danger"
+                        onPress={() => handleDelete(patient)}
+                        aria-label="eliminar"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -169,6 +239,28 @@ export default function AdminPatientsPage() {
           onSubmit={handleSubmit}
           mode={editingPatient ? "edit" : "create"}
           initialData={editingPatient || undefined}
+        />
+
+        <ConfirmationDialog
+          open={deleteDialog.open}
+          onClose={() => setDeleteDialog({ open: false, patient: null })}
+          onConfirm={confirmDelete}
+          title={`Eliminar ${patientLabel.slice(0, -1)}`}
+          message={
+            deleteDialog.patient
+              ? `¿Estás seguro de que deseas eliminar al ${patientLabel.slice(0, -1).toLowerCase()} ${deleteDialog.patient.firstName || ""} ${deleteDialog.patient.lastName || ""}? Esta acción no se puede deshacer.`
+              : ""
+          }
+          confirmText="Eliminar"
+          cancelText="Cancelar"
+          type="warning"
+        />
+
+        <AlertDialog
+          open={alertDialog.open}
+          onClose={() => setAlertDialog({ open: false, message: "", type: "error" })}
+          message={alertDialog.message}
+          type={alertDialog.type}
         />
       </div>
     </div>

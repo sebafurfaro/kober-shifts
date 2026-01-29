@@ -13,9 +13,11 @@ import {
   CardBody,
   Spinner,
 } from "@heroui/react";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { LocationFormDialog } from "../components/LocationFormDialog";
 import { PanelHeader } from "../../components/PanelHeader";
+import { ConfirmationDialog } from "../../components/alerts/ConfirmationDialog";
+import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { useParams } from "next/navigation";
 
 interface Location {
@@ -33,6 +35,15 @@ export default function AdminLocationsPage() {
   const [loading, setLoading] = React.useState(true);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingLocation, setEditingLocation] = React.useState<Location | null>(null);
+  const [deleteDialog, setDeleteDialog] = React.useState<{ open: boolean; location: Location | null }>({
+    open: false,
+    location: null,
+  });
+  const [alertDialog, setAlertDialog] = React.useState<{ open: boolean; message: string; type: "error" | "success" }>({
+    open: false,
+    message: "",
+    type: "error",
+  });
 
   const loadLocations = React.useCallback(async () => {
     try {
@@ -61,7 +72,42 @@ export default function AdminLocationsPage() {
     setDialogOpen(true);
   };
 
-  const handleSubmit = async (data: { name: string; address: string; phone: string }) => {
+  const handleDelete = (location: Location) => {
+    setDeleteDialog({ open: true, location });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteDialog.location) return;
+
+    try {
+      const res = await fetch(`/api/plataforma/${tenantId}/admin/locations/${deleteDialog.location.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.error || "Error al eliminar sede");
+      }
+      await loadLocations();
+      setDeleteDialog({ open: false, location: null });
+      setAlertDialog({ open: true, message: "Sede eliminada correctamente", type: "success" });
+    } catch (error: any) {
+      setAlertDialog({ open: true, message: error?.message || "Error al eliminar sede", type: "error" });
+    }
+  };
+
+  const handleSubmit = async (data: {
+    name: string;
+    address: string;
+    street: string;
+    streetNumber: string;
+    floor: string;
+    apartment: string;
+    postalCode: string;
+    country: string;
+    province: string;
+    neighborhood: string;
+    phone: string;
+  }) => {
     try {
       if (editingLocation) {
         // Update
@@ -71,6 +117,14 @@ export default function AdminLocationsPage() {
           body: JSON.stringify({
             name: data.name,
             address: data.address,
+            street: data.street || null,
+            streetNumber: data.streetNumber || null,
+            floor: data.floor || null,
+            apartment: data.apartment || null,
+            postalCode: data.postalCode || null,
+            country: data.country || null,
+            province: data.province || null,
+            neighborhood: data.neighborhood || null,
             phone: data.phone || null,
           }),
         });
@@ -86,6 +140,14 @@ export default function AdminLocationsPage() {
           body: JSON.stringify({
             name: data.name,
             address: data.address,
+            street: data.street || null,
+            streetNumber: data.streetNumber || null,
+            floor: data.floor || null,
+            apartment: data.apartment || null,
+            postalCode: data.postalCode || null,
+            country: data.country || null,
+            province: data.province || null,
+            neighborhood: data.neighborhood || null,
             phone: data.phone || null,
           }),
         });
@@ -139,7 +201,7 @@ export default function AdminLocationsPage() {
                       {location.appointmentCount ?? 0}
                     </TableCell>
                     <TableCell>
-                      <div className="flex justify-end">
+                      <div className="flex justify-end gap-2">
                         <Button
                           isIconOnly
                           size="sm"
@@ -148,6 +210,16 @@ export default function AdminLocationsPage() {
                           aria-label="editar"
                         >
                           <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          isIconOnly
+                          size="sm"
+                          variant="light"
+                          color="danger"
+                          onPress={() => handleDelete(location)}
+                          aria-label="eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -167,6 +239,28 @@ export default function AdminLocationsPage() {
           onSubmit={handleSubmit}
           mode={editingLocation ? "edit" : "create"}
           initialData={editingLocation || undefined}
+        />
+
+        <ConfirmationDialog
+          open={deleteDialog.open}
+          onClose={() => setDeleteDialog({ open: false, location: null })}
+          onConfirm={confirmDelete}
+          title="Eliminar Sede"
+          message={
+            deleteDialog.location
+              ? `¿Estás seguro de que deseas eliminar la sede "${deleteDialog.location.name}"? Esta acción no se puede deshacer.`
+              : ""
+          }
+          confirmText="Eliminar"
+          cancelText="Cancelar"
+          type="warning"
+        />
+
+        <AlertDialog
+          open={alertDialog.open}
+          onClose={() => setAlertDialog({ open: false, message: "", type: "error" })}
+          message={alertDialog.message}
+          type={alertDialog.type}
         />
       </div>
     </div>

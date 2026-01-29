@@ -56,6 +56,10 @@ export default function LoginPage() {
                 autoComplete="email"
                 variant="underlined"
                 isRequired
+                classNames={{
+                  input: "text-slate-800",
+                  inputWrapper: "text-slate-800",
+                }}
               />
               <Input
                 label="Contraseña"
@@ -65,6 +69,10 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 variant="underlined"
                 isRequired
+                classNames={{
+                  input: "text-slate-800",
+                  inputWrapper: "text-slate-800",
+                }}
               />
               {error ? (
                 <p className="text-sm text-danger">{error}</p>

@@ -162,7 +162,15 @@ export function UserFormDialog({
 
 
   return (
-    <Modal isOpen={open} onClose={onClose} size="md" scrollBehavior="inside">
+    <Modal 
+      isOpen={open} 
+      onClose={onClose} 
+      size="md" 
+      scrollBehavior="inside"
+      classNames={{
+        wrapper: "z-[99999]"
+      }}
+    >
       <ModalContent>
         <form onSubmit={handleSubmit}>
           <ModalHeader>
@@ -193,6 +201,10 @@ export function UserFormDialog({
                 isRequired
                 isDisabled={loading}
                 autoComplete="off"
+                classNames={{
+                  input: "text-slate-800",
+                  inputWrapper: "text-slate-800",
+                }}
               />
 
               <Input
@@ -211,6 +223,10 @@ export function UserFormDialog({
                 isRequired
                 isDisabled={loading || mode === "edit"}
                 autoComplete="off"
+                classNames={{
+                  input: "text-slate-800",
+                  inputWrapper: "text-slate-800",
+                }}
               />
 
               {userType === "professional" && (
@@ -231,9 +247,13 @@ export function UserFormDialog({
                     errorMessage={errors.specialtyIds}
                     isRequired
                     isDisabled={loading}
+                    classNames={{
+                      value: "text-slate-800",
+                      popoverContent: "text-slate-800",
+                    }}
                   >
                     {specialties.map((specialty) => (
-                      <SelectItem key={specialty.id} value={specialty.id}>
+                      <SelectItem key={specialty.id} value={specialty.id} className="text-slate-800">
                         {specialty.name}
                       </SelectItem>
                     ))}
@@ -317,6 +337,10 @@ export function UserFormDialog({
                         }}
                         isDisabled={loading}
                         className="flex-1"
+                        classNames={{
+                          input: "text-slate-800",
+                          inputWrapper: "text-slate-800",
+                        }}
                       />
                       <Input
                         label="Hora Fin"
@@ -333,6 +357,10 @@ export function UserFormDialog({
                         }}
                         isDisabled={loading}
                         className="flex-1"
+                        classNames={{
+                          input: "text-slate-800",
+                          inputWrapper: "text-slate-800",
+                        }}
                       />
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
@@ -361,6 +389,10 @@ export function UserFormDialog({
                     isRequired={mode === "create"}
                     isDisabled={loading}
                     autoComplete="new-password"
+                    classNames={{
+                      input: "text-slate-800",
+                      inputWrapper: "text-slate-800",
+                    }}
                   />
                 </>
               )}

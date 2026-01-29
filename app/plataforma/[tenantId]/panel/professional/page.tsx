@@ -188,7 +188,14 @@ export default function ProfessionalPanelPage() {
         {renderTable(upcomingAppointments, "Próximos Turnos")}
 
         {/* Cancel Dialog */}
-        <Modal isOpen={cancelDialogOpen} onClose={() => setCancelDialogOpen(false)} size="md">
+        <Modal 
+          isOpen={cancelDialogOpen} 
+          onClose={() => setCancelDialogOpen(false)} 
+          size="md"
+          classNames={{
+            wrapper: "z-[99999]"
+          }}
+        >
           <ModalContent>
             <ModalHeader>Cancelar Turno</ModalHeader>
             <ModalBody>

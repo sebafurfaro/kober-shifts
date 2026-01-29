@@ -24,6 +24,7 @@ interface PatientsTableProps {
   sortBy: "totalAppointments" | "cancelledAppointments";
   onPageChange: (page: number) => void;
   onSortChange: (sortBy: "totalAppointments" | "cancelledAppointments") => void;
+  patientLabel: string;
 }
 
 export function PatientsTable({
@@ -33,6 +34,7 @@ export function PatientsTable({
   sortBy,
   onPageChange,
   onSortChange,
+  patientLabel,
 }: PatientsTableProps) {
   const handleSortChange = React.useCallback(
     (keys: unknown) => {
@@ -48,7 +50,7 @@ export function PatientsTable({
       <CardBody className="p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-800">
-            Pacientes
+            {patientLabel}
           </h3>
           <Select
             label="Ordenar por"
@@ -63,7 +65,7 @@ export function PatientsTable({
           </Select>
         </div>
 
-        <Table aria-label="Tabla de pacientes">
+        <Table aria-label={`Tabla de ${patientLabel.toLowerCase()}`}>
           <TableHeader>
             <TableColumn>Nombre</TableColumn>
             <TableColumn>Email</TableColumn>
@@ -78,7 +80,9 @@ export function PatientsTable({
           <TableBody
             isLoading={loading}
             loadingContent={<Spinner label="Cargando..." />}
-            emptyContent={loading ? null : "No hay pacientes registrados"}
+            emptyContent={
+              loading ? null : `No hay ${patientLabel.toLowerCase()} registrados`
+            }
           >
             {(patientsData?.patients || []).map((patient) => (
               <TableRow key={patient.id}>

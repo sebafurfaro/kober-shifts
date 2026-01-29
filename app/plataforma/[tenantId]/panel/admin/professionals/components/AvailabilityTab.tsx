@@ -161,6 +161,10 @@ export function AvailabilityTab({ availabilityConfig, setFormData, onSave, loadi
                                     updateSlot(day.value, slot.id, { startTime: value })
                                   }
                                   className="flex-1"
+                                  classNames={{
+                                    input: "text-slate-800",
+                                    inputWrapper: "text-slate-800",
+                                  }}
                                 />
                                 <Input
                                   label="Fin"
@@ -171,6 +175,10 @@ export function AvailabilityTab({ availabilityConfig, setFormData, onSave, loadi
                                     updateSlot(day.value, slot.id, { endTime: value })
                                   }
                                   className="flex-1"
+                                  classNames={{
+                                    input: "text-slate-800",
+                                    inputWrapper: "text-slate-800",
+                                  }}
                                 />
                               </div>
                             </div>
@@ -184,6 +192,10 @@ export function AvailabilityTab({ availabilityConfig, setFormData, onSave, loadi
                                 updateSlot(day.value, slot.id, { fromDate: value })
                               }
                               className="w-full"
+                              classNames={{
+                                input: "text-slate-800",
+                                inputWrapper: "text-slate-800",
+                              }}
                             />
                           </div>
 
@@ -204,10 +216,15 @@ export function AvailabilityTab({ availabilityConfig, setFormData, onSave, loadi
                                   });
                                 }}
                                 className="w-full"
+                                classNames={{
+                                  trigger: "h-10 min-h-10",
+                                  value: "text-slate-800",
+                                  popoverContent: "text-slate-800",
+                                }}
                               >
-                                <SelectItem key="weekly">Semanal</SelectItem>
-                                <SelectItem key="biweekly">Quincenal</SelectItem>
-                                <SelectItem key="monthly">Mensual</SelectItem>
+                                <SelectItem key="weekly" className="text-slate-800">Semanal</SelectItem>
+                                <SelectItem key="biweekly" className="text-slate-800">Quincenal</SelectItem>
+                                <SelectItem key="monthly" className="text-slate-800">Mensual</SelectItem>
                               </Select>
                             </div>
                             {/* Grupo 4: toDate */}
@@ -220,6 +237,10 @@ export function AvailabilityTab({ availabilityConfig, setFormData, onSave, loadi
                                 updateSlot(day.value, slot.id, { toDate: value || null })
                               }
                               className="w-full"
+                              classNames={{
+                                input: "text-slate-800",
+                                inputWrapper: "text-slate-800",
+                              }}
                             />
                           </div>
                         </div>

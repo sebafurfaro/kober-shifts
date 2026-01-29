@@ -7,6 +7,8 @@ import { PanelHeader } from "../../components/PanelHeader";
 import { useRouter, useParams } from "next/navigation";
 import { ConfirmationDialog } from "../../components/alerts/ConfirmationDialog";
 import { AlertDialog } from "../../components/alerts/AlertDialog";
+import { useTenantLabels } from "@/lib/use-tenant-labels";
+import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
 
 interface Professional {
   id: string;
@@ -31,6 +33,8 @@ export default function AdminProfessionalsPage() {
   const params = useParams();
   const tenantId = params.tenantId as string;
   const [professionals, setProfessionals] = React.useState<Professional[]>([]);
+  const { professionalLabel } = useTenantLabels();
+  const loadTranslations = useTenantSettingsStore((state) => state.loadTranslations);
   const [loading, setLoading] = React.useState(true);
   const [deleteDialog, setDeleteDialog] = React.useState<{
     open: boolean;
@@ -58,6 +62,13 @@ export default function AdminProfessionalsPage() {
   React.useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Load translations when component mounts
+  React.useEffect(() => {
+    if (tenantId) {
+      loadTranslations(tenantId);
+    }
+  }, [tenantId, loadTranslations]);
 
   const handleCreate = () => {
     router.push(`/plataforma/${tenantId}/panel/admin/professionals/add-new`);
@@ -103,7 +114,7 @@ export default function AdminProfessionalsPage() {
     <div className="max-w-7xl mx-auto mt-8">
       <div className="py-8">
         <PanelHeader
-          title="Profesionales"
+          title={professionalLabel}
           action={{
             label: "Crear Perfil",
             color: "primary",
@@ -123,7 +134,7 @@ export default function AdminProfessionalsPage() {
             <TableBody
               isLoading={loading}
               loadingContent={<Spinner label="Cargando..." />}
-              emptyContent={loading ? null : "No hay profesionales registrados"}
+              emptyContent={loading ? null : `No hay ${professionalLabel.toLowerCase()} registrados`}
             >
               {professionals.map((professional) => {
                 const color = professional.color || professional.professional?.color || "#2196f3";
@@ -209,10 +220,10 @@ export default function AdminProfessionalsPage() {
         open={deleteDialog.open}
         onClose={() => setDeleteDialog({ open: false, professional: null })}
         onConfirm={confirmDelete}
-        title="Eliminar Profesional"
+        title={`Eliminar ${professionalLabel.slice(0, -1)}`}
         message={
           deleteDialog.professional
-            ? `¿Estás seguro de que deseas eliminar al profesional ${deleteDialog.professional.name}? Esta acción no se puede deshacer.`
+            ? `¿Estás seguro de que deseas eliminar al ${professionalLabel.slice(0, -1).toLowerCase()} ${deleteDialog.professional.name}? Esta acción no se puede deshacer.`
             : ""
         }
         confirmText="Eliminar"
