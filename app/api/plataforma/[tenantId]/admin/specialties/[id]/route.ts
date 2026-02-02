@@ -9,7 +9,7 @@ export async function GET(
   const { id, tenantId } = await params;
   const session = await getSession();
   if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const specialty = await findSpecialtyById(id, tenantId);
   if (!specialty) return NextResponse.json({ error: "Specialty not found" }, { status: 404 });
@@ -24,7 +24,7 @@ export async function PUT(
   const { id, tenantId } = await params;
   const session = await getSession();
   if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
 
@@ -52,7 +52,7 @@ export async function DELETE(
   const { id, tenantId } = await params;
   const session = await getSession();
   if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const specialty = await findSpecialtyById(id, tenantId);
   if (!specialty) return NextResponse.json({ error: "Specialty not found" }, { status: 404 });

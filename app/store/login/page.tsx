@@ -1,16 +1,38 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Button, Input, Card, CardBody } from "@heroui/react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useMemo } from "react";
+import { Button, Input, Card, CardBody, Divider } from "@heroui/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Logo from "../../branding/Logo";
+import { GoogleIcon } from "../../branding/GoogleIcon";
+
+const ERROR_MESSAGES: Record<string, string> = {
+  access_denied: "Tu correo no tiene acceso al store. Solo se permiten cuentas autorizadas.",
+  no_code: "No se recibió el código de autorización.",
+  no_id_token: "Google no devolvió los datos esperados.",
+  no_email: "No se pudo obtener el correo de la cuenta.",
+  auth_failed: "Error al iniciar sesión con Google. Intentá de nuevo.",
+  config: "Error de configuración. Revisá la consola.",
+};
+
+const REDIRECT_URI_HELP_URL = "/api/store/auth/google/redirect-uri";
 
 export default function StoreLoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const urlError = useMemo(() => {
+    const err = searchParams.get("error");
+    return err ? ERROR_MESSAGES[err] ?? "Error al iniciar sesión" : null;
+  }, [searchParams]);
+
+  useEffect(() => {
+    setError(urlError);
+  }, [urlError]);
 
   // Check if already logged in
   useEffect(() => {
@@ -58,19 +80,31 @@ export default function StoreLoginPage() {
       <div className="max-w-md w-full px-4">
         <Card className="p-6">
           <CardBody>
+            <div className="w-full flex flex-col gap-2 justify-center items-center mb-4">
+              <Logo width={80} height={85} />
+              <h2 className="text-2xl font-bold text-center text-black">NODO <span className="bg-linear-to-r from-[#1A237E] via-[#1497B5] to-[#26A69A] bg-clip-text text-transparent">App</span> </h2>
+            </div>
+            <p className="text-sm text-gray-500 text-center mb-4">Acceso restringido</p>
+
+            <Button
+              type="button"
+              onPress={() => (window.location.href = "/api/store/auth/google")}
+              className="w-full mb-4"
+              variant="bordered"
+              startContent={<GoogleIcon width={20} height={20} />}
+            >
+              Ingresar con Google
+            </Button>
+
+            <Divider className="my-2" />
+
             <form onSubmit={onSubmit} className="space-y-4">
-              <div className="w-full flex flex-col gap-2 justify-center items-center">
-                <Logo width={80} height={85} />
-                <h2 className="text-2xl font-bold text-center text-black">NODO <span className="bg-gradient-to-r from-[#1A237E] via-[#1497B5] to-[#26A69A] bg-clip-text text-transparent">App</span> </h2>
-              </div>
-              <p className="text-sm text-gray-500 text-center">Acceso restringido</p>
               <Input
                 label="Email"
                 type="email"
                 value={email}
                 onValueChange={setEmail}
                 autoComplete="email"
-                isRequired
               />
               <Input
                 label="Contraseña"
@@ -78,13 +112,21 @@ export default function StoreLoginPage() {
                 value={password}
                 onValueChange={setPassword}
                 autoComplete="current-password"
-                isRequired
               />
-              {error ? (
-                <p className="text-sm text-danger text-center">{error}</p>
+              {(error ?? urlError) ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-danger text-center">{error ?? urlError}</p>
+                  <p className="text-xs text-center text-gray-500">
+                    Si ves <strong>redirect_uri_mismatch</strong> en Google,{" "}
+                    <a href={REDIRECT_URI_HELP_URL} target="_blank" rel="noopener noreferrer" className="underline text-primary">
+                      abrí este enlace
+                    </a>{" "}
+                    para copiar la URI exacta que debés agregar en Google Cloud Console.
+                  </p>
+                </div>
               ) : null}
               <Button type="submit" isDisabled={loading} isLoading={loading} className="w-full button button-secondary">
-                {loading ? "Iniciando sesión..." : "Entrar"}
+                {loading ? "Iniciando sesión..." : "Entrar con email"}
               </Button>
             </form>
           </CardBody>

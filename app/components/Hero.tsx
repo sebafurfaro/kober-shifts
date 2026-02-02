@@ -18,9 +18,9 @@ export const Hero = () => {
             <div className="max-w-xl w-full mr-auto">
               <p className="text-base font-medium text-slate-900">En NODO App, creemos que la agenda es el corazon del negocio, no una funcion premium. Por eso, todos los planes incluyen sin restricciones las herramientas fundamentales para organizarte y crecer. </p>
             </div>
-            <div className="max-w-md w-full mr-auto grid grid-cols-2 gap-8">
-              <Button variant="solid" color="primary">Free Trial</Button>
-              <Button variant="bordered" color="primary" startContent={<CircleArrowRight />}>Ver Demo</Button>
+            <div className="max-w-md w-full mr-auto gap-8">
+              
+              <Button variant="solid" color="primary" startContent={<CircleArrowRight />}>Ver Demo</Button>
             </div>
           </div>
           <div className="col-span-1">

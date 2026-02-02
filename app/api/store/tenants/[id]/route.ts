@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getStoreSession } from "@/lib/store-session";
 import { deleteTenant, findTenantById } from "@/lib/db";
 
-const ALLOWED_EMAIL = "seba.furfaro@gmail.com";
+const ALLOWED_EMAILS = ["seba.furfaro@gmail.com", "caourisaldana@gmail.com"].map((e) => e.toLowerCase());
 
 async function validateStoreAccess() {
   const session = await getStoreSession();
@@ -10,7 +10,7 @@ async function validateStoreAccess() {
     return { error: "Unauthorized", status: 401 };
   }
 
-  if (session.email.toLowerCase() !== ALLOWED_EMAIL.toLowerCase()) {
+  if (!ALLOWED_EMAILS.includes(session.email.toLowerCase())) {
     return { error: "Forbidden", status: 403 };
   }
 

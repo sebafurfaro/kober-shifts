@@ -7,6 +7,7 @@ import { Features } from "./components/Features";
 import { Dashboard } from "./components/Dashboard";
 import { Business } from "./components/Business";
 import { Plans } from "./components/Plans";
+import  PackCalculator from "./components/PackCalculator";
 
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
@@ -32,6 +33,7 @@ export default function Home() {
       <Dashboard />
       <Business />
       <Plans />
+      <PackCalculator />
     </div>
   );
 }

@@ -35,6 +35,8 @@ export function PanelLayoutShell({
   const [isMobile, setIsMobile] = React.useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false);
   const [calendarEnabled, setCalendarEnabled] = React.useState(true);
+  const [showSpecialties, setShowSpecialties] = React.useState(true);
+  const [showCoverage, setShowCoverage] = React.useState(true);
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [asideWidth, setAsideWidth] = React.useState(DRAWER_WIDTH);
   const { patientLabel, professionalLabel } = useTenantLabels();
@@ -47,7 +49,7 @@ export function PanelLayoutShell({
 
   React.useEffect(() => {
     if (!mounted) return;
-    
+
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -57,7 +59,7 @@ export function PanelLayoutShell({
   }, [mounted]);
 
   React.useEffect(() => {
-    async function loadCalendarFeature() {
+    async function loadFeatures() {
       try {
         const res = await fetch(`/api/plataforma/${currentTenantId}/features`, {
           credentials: "include",
@@ -65,14 +67,20 @@ export function PanelLayoutShell({
         if (res.ok) {
           const features = await res.json();
           setCalendarEnabled(features.calendar ?? true);
+          setShowSpecialties(features.show_specialties ?? true);
+          setShowCoverage(features.show_coverage ?? true);
         } else {
           setCalendarEnabled(true);
+          setShowSpecialties(true);
+          setShowCoverage(true);
         }
       } catch (error) {
         setCalendarEnabled(true);
+        setShowSpecialties(true);
+        setShowCoverage(true);
       }
     }
-    loadCalendarFeature();
+    loadFeatures();
   }, [currentTenantId]);
 
   // Load translations when component mounts
@@ -81,45 +89,48 @@ export function PanelLayoutShell({
       loadTranslations(currentTenantId);
     }
   }, [mounted, currentTenantId, loadTranslations]);
-  const configSections = { showLocations: true, showSpecialties: true };
+  const base = `/plataforma/${currentTenantId}/panel`;
+
+  const gestionItems = [
+    {
+      label: "Especialidades",
+      href: `${base}/admin/specialties`,
+      icon: <FolderTree className="w-5 h-5" />,
+      show: showSpecialties,
+    },
+    {
+      label: "Sedes",
+      href: `${base}/admin/locations`,
+      icon: <MapPin className="w-5 h-5" />,
+      show: true,
+    },
+    {
+      label: "Coberturas",
+      href: `${base}/admin/coberturas`,
+      icon: <FileText className="w-5 h-5" />,
+      show: showCoverage,
+    },
+  ].filter((item) => item.show !== false);
+
+  const colaboradoresItems = [
+    {
+      label: professionalLabel,
+      href: `${base}/admin/professionals`,
+      icon: <Hospital className="w-5 h-5" />,
+      show: true,
+    },
+  ];
+
+  const pacientesItem = {
+    label: patientLabel,
+    href: `${base}/admin/patients`,
+    icon: <BookUser className="w-5 h-5" />,
+  };
 
   async function logout() {
     await fetch(`/api/plataforma/${currentTenantId}/auth/logout`, { method: "POST" });
     window.location.href = `/plataforma/${currentTenantId}/login`;
   }
-
-  const adminItems = [
-    {
-      label: "Sedes",
-      href: `/plataforma/${currentTenantId}/panel/admin/locations`,
-      icon: <MapPin className="w-5 h-5" />,
-      show: configSections?.showLocations ?? false,
-    },
-    {
-      label: "Especialidades",
-      href: `/plataforma/${currentTenantId}/panel/admin/specialties`,
-      icon: <FolderTree className="w-5 h-5" />,
-      show: configSections?.showSpecialties ?? true,
-    },
-    {
-      label: professionalLabel,
-      href: `/plataforma/${currentTenantId}/panel/admin/professionals`,
-      icon: <Hospital className="w-5 h-5" />,
-      show: true,
-    },
-    {
-      label: patientLabel,
-      href: `/plataforma/${currentTenantId}/panel/admin/patients`,
-      icon: <BookUser className="w-5 h-5" />,
-      show: true,
-    },
-    {
-      label: "Coberturas",
-      href: `/plataforma/${currentTenantId}/panel/admin/coberturas`,
-      icon: <FileText className="w-5 h-5" />,
-      show: true,
-    },
-  ].filter(item => item.show);
 
   return (
     <div className="flex min-h-screen">
@@ -147,7 +158,9 @@ export function PanelLayoutShell({
         mobileDrawerOpen={mobileDrawerOpen}
         setMobileDrawerOpen={setMobileDrawerOpen}
         calendarEnabled={calendarEnabled}
-        adminItems={adminItems}
+        gestionItems={gestionItems}
+        colaboradoresItems={colaboradoresItems}
+        pacientesItem={pacientesItem}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
         onWidthChange={setAsideWidth}

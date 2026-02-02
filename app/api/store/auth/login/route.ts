@@ -3,7 +3,11 @@ import { findUserByEmailAnyTenant } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth";
 import { createStoreSessionCookieValue, getStoreSessionCookieOptions, STORE_SESSION_COOKIE } from "@/lib/store-session";
 
-const ALLOWED_EMAIL = "seba.furfaro@gmail.com";
+const ALLOWED_EMAILS = ["seba.furfaro@gmail.com", "caourisaldana@gmail.com"].map((e) => e.toLowerCase());
+
+function isEmailAllowed(email: string): boolean {
+  return ALLOWED_EMAILS.includes(email.trim().toLowerCase());
+}
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -14,8 +18,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Email y contraseña son requeridos" }, { status: 400 });
   }
 
-  // Only allow the specific email
-  if (email !== ALLOWED_EMAIL.toLowerCase()) {
+  if (!isEmailAllowed(email)) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 

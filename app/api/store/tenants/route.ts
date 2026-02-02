@@ -4,7 +4,7 @@ import { findAllTenants, createTenant } from "@/lib/db";
 import { mongoClientPromise } from "@/lib/mongo";
 import { randomUUID } from "crypto";
 
-const ALLOWED_EMAIL = "seba.furfaro@gmail.com";
+const ALLOWED_EMAILS = ["seba.furfaro@gmail.com", "caourisaldana@gmail.com"].map((e) => e.toLowerCase());
 
 async function validateStoreAccess() {
   const session = await getStoreSession();
@@ -12,7 +12,7 @@ async function validateStoreAccess() {
     return { error: "Unauthorized", status: 401 };
   }
 
-  if (session.email.toLowerCase() !== ALLOWED_EMAIL.toLowerCase()) {
+  if (!ALLOWED_EMAILS.includes(session.email.toLowerCase())) {
     return { error: "Forbidden", status: 403 };
   }
 
@@ -39,9 +39,14 @@ export async function POST(req: Request) {
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const logoUrl = typeof body.logoUrl === "string" ? body.logoUrl.trim() : null;
   const features = body.features as {
-    calendar?: boolean;
-    emailNotifications?: boolean;
-    whatsappNotifications?: boolean;
+    show_specialties?: boolean;
+    show_coverage?: boolean;
+    show_mercado_pago?: boolean;
+    payment_enabled?: boolean;
+  } | undefined;
+  const limits = body.limits as {
+    maxUsers?: number;
+    whatsappRemindersLimit?: number;
   } | undefined;
 
   if (!name) return NextResponse.json({ error: "Invalid input: name is required" }, { status: 400 });
@@ -53,32 +58,35 @@ export async function POST(req: Request) {
 
   try {
     const created = await createTenant({ id, name, logoUrl });
-    
-    // Save feature flags to MongoDB
-    if (features) {
-      try {
-        const client = await mongoClientPromise;
-        const db = client.db();
-        const collection = db.collection("tenant_features");
 
-        const featureFlags = {
-          calendar: features.calendar ?? true,
-          emailNotifications: features.emailNotifications ?? false,
-          whatsappNotifications: features.whatsappNotifications ?? false,
-        };
+    const client = await mongoClientPromise;
+    const db = client.db("kober_shifts");
+    const collection = db.collection("tenant_features");
 
-        await collection.insertOne({
-          tenantId: id,
-          features: featureFlags,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-      } catch (mongoError) {
-        console.error("Error saving feature flags:", mongoError);
-        // Don't fail the tenant creation if feature flags fail
-      }
+    const featureFlags = {
+      show_specialties: features?.show_specialties ?? true,
+      show_coverage: features?.show_coverage ?? true,
+      show_mercado_pago: features?.show_mercado_pago ?? true,
+      payment_enabled: features?.payment_enabled ?? true,
+    };
+
+    const limitsData = {
+      maxUsers: typeof limits?.maxUsers === "number" && limits.maxUsers >= 0 ? limits.maxUsers : 1,
+      whatsappRemindersLimit: typeof limits?.whatsappRemindersLimit === "number" && limits.whatsappRemindersLimit >= 0 ? limits.whatsappRemindersLimit : 0,
+    };
+
+    try {
+      await collection.insertOne({
+        tenantId: id,
+        features: featureFlags,
+        limits: limitsData,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    } catch (mongoError) {
+      console.error("Error saving tenant config:", mongoError);
     }
-    
+
     return NextResponse.json(created);
   } catch (error: any) {
     if (error.message?.includes('Duplicate') || error.code === 'ER_DUP_ENTRY') {

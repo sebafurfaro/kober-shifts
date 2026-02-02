@@ -1,5 +1,6 @@
 import mysql from './mysql';
-import type { User, Specialty, Location, ProfessionalProfile, GoogleOAuthToken, Appointment, Role, AppointmentStatus, MedicalCoverage, MedicalPlan, MedicalCoverageWithPlans, Tenant } from './types';
+import type { User, Specialty, Service, Location, ProfessionalProfile, GoogleOAuthToken, Appointment, Role, AppointmentStatus, MedicalCoverage, MedicalPlan, MedicalCoverageWithPlans, Tenant } from './types';
+import { isSupportAdminEmail } from './constants';
 
 // Helper para convertir filas de MySQL a objetos tipados
 function rowToUser(row: any): User {
@@ -32,6 +33,21 @@ function rowToSpecialty(row: any): Specialty {
     id: row.id,
     tenantId: row.tenantId,
     name: row.name,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function rowToService(row: any): Service {
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    name: row.name,
+    description: row.description ?? null,
+    durationMinutes: Number(row.durationMinutes ?? 0),
+    marginMinutes: Number(row.marginMinutes ?? 0),
+    price: Number(row.price ?? 0),
+    seniaPercent: Number(row.seniaPercent ?? 0),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -333,8 +349,18 @@ export async function updateUser(
     values.push(data.passwordHash);
   }
   if (data.role !== undefined) {
-    updates.push('role = ?');
-    values.push(data.role);
+    // Solo seba.furfaro@gmail.com puede tener rol ADMIN (soporte).
+    if (data.role === "ADMIN") {
+      const existingUser = await findUserById(id, tenantId);
+      if (existingUser && isSupportAdminEmail(existingUser.email)) {
+        updates.push("role = ?");
+        values.push(data.role);
+      }
+      // Si no es support admin, no actualizar role (no agregar a updates)
+    } else {
+      updates.push("role = ?");
+      values.push(data.role);
+    }
   }
   if (data.googleId !== undefined) {
     updates.push('googleId = ?');
@@ -394,6 +420,17 @@ export async function findUsersByRole(role: Role, tenantId: string): Promise<Use
 export async function findAllUsers(): Promise<User[]> {
   const [rows] = await mysql.execute('SELECT * FROM users ORDER BY createdAt DESC');
   return (rows as any[]).map(rowToUser);
+}
+
+/** Cuenta profesionales del tenant que cuentan para el límite (excluye al usuario de soporte seba.furfaro@gmail.com). */
+export async function countProfessionals(tenantId: string): Promise<number> {
+  const { SUPPORT_ADMIN_EMAIL } = await import("./constants");
+  const [rows] = await mysql.execute(
+    "SELECT COUNT(*) as count FROM users WHERE role = 'PROFESSIONAL' AND tenantId = ? AND (email IS NULL OR LOWER(TRIM(email)) != ?)",
+    [tenantId, SUPPORT_ADMIN_EMAIL.toLowerCase()]
+  );
+  const result = rows as { count: number }[];
+  return result.length > 0 ? Number(result[0].count) : 0;
 }
 
 export async function findUsersWithProfessionalProfile(tenantId: string): Promise<(User & { professional: (ProfessionalProfile & { specialty: Specialty | null; specialties: Specialty[] }) | null })[]> {
@@ -554,6 +591,96 @@ export async function createSpecialty(data: { id: string; tenantId: string; name
   const specialty = await findSpecialtyById(data.id, data.tenantId);
   if (!specialty) throw new Error('Failed to create specialty');
   return specialty;
+}
+
+// Service operations
+export async function findAllServices(tenantId: string): Promise<Service[]> {
+  const [rows] = await mysql.execute(
+    'SELECT * FROM services WHERE tenantId = ? ORDER BY name ASC',
+    [tenantId]
+  );
+  return (rows as any[]).map(rowToService);
+}
+
+export async function findServiceById(id: string, tenantId: string): Promise<Service | null> {
+  const [rows] = await mysql.execute('SELECT * FROM services WHERE id = ? AND tenantId = ?', [id, tenantId]);
+  const result = rows as any[];
+  return result.length > 0 ? rowToService(result[0]) : null;
+}
+
+export async function createService(data: {
+  id: string;
+  tenantId: string;
+  name: string;
+  description?: string | null;
+  durationMinutes: number;
+  marginMinutes: number;
+  price: number;
+  seniaPercent: number;
+}): Promise<Service> {
+  await mysql.execute(
+    'INSERT INTO services (id, tenantId, name, description, durationMinutes, marginMinutes, price, seniaPercent) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [
+      data.id,
+      data.tenantId,
+      data.name,
+      data.description ?? null,
+      data.durationMinutes,
+      data.marginMinutes,
+      data.price,
+      data.seniaPercent,
+    ]
+  );
+  const service = await findServiceById(data.id, data.tenantId);
+  if (!service) throw new Error('Failed to create service');
+  return service;
+}
+
+export async function updateService(
+  id: string,
+  tenantId: string,
+  data: Partial<Pick<Service, 'name' | 'description' | 'durationMinutes' | 'marginMinutes' | 'price' | 'seniaPercent'>>
+): Promise<Service> {
+  const updates: string[] = [];
+  const values: any[] = [];
+  if (data.name !== undefined) {
+    updates.push('name = ?');
+    values.push(data.name);
+  }
+  if (data.description !== undefined) {
+    updates.push('description = ?');
+    values.push(data.description);
+  }
+  if (data.durationMinutes !== undefined) {
+    updates.push('durationMinutes = ?');
+    values.push(data.durationMinutes);
+  }
+  if (data.marginMinutes !== undefined) {
+    updates.push('marginMinutes = ?');
+    values.push(data.marginMinutes);
+  }
+  if (data.price !== undefined) {
+    updates.push('price = ?');
+    values.push(data.price);
+  }
+  if (data.seniaPercent !== undefined) {
+    updates.push('seniaPercent = ?');
+    values.push(data.seniaPercent);
+  }
+  if (updates.length === 0) {
+    const service = await findServiceById(id, tenantId);
+    if (!service) throw new Error('Service not found');
+    return service;
+  }
+  values.push(id, tenantId);
+  await mysql.execute(`UPDATE services SET ${updates.join(', ')} WHERE id = ? AND tenantId = ?`, values);
+  const service = await findServiceById(id, tenantId);
+  if (!service) throw new Error('Failed to update service');
+  return service;
+}
+
+export async function deleteService(id: string, tenantId: string): Promise<void> {
+  await mysql.execute('DELETE FROM services WHERE id = ? AND tenantId = ?', [id, tenantId]);
 }
 
 // Location operations
@@ -1259,6 +1386,11 @@ export async function updateAppointment(data: {
 
 export async function deleteAppointment(id: string, tenantId: string): Promise<void> {
   await mysql.execute('DELETE FROM appointments WHERE id = ? AND tenantId = ?', [id, tenantId]);
+}
+
+/** Delete all appointments for a professional (required before deleting the user due to FK RESTRICT). */
+export async function deleteAppointmentsByProfessional(professionalId: string, tenantId: string): Promise<void> {
+  await mysql.execute('DELETE FROM appointments WHERE professionalId = ? AND tenantId = ?', [professionalId, tenantId]);
 }
 
 

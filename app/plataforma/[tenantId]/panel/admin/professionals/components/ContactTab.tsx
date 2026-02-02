@@ -42,18 +42,34 @@ export function ContactTab({ formData, handleChange, errors, mode }: ContactTabP
                 }}
             />
             <Input
-                label={mode === "create" ? "Contraseña" : "Nueva Contraseña (opcional)"}
-                type="password"
-                value={formData.tempPassword}
-                onValueChange={(value) => handleChange("tempPassword", value)}
-                isInvalid={!!errors.tempPassword}
-                errorMessage={errors.tempPassword}
+                label="DNI"
+                value={formData.dni ?? ""}
+                onValueChange={(value) => handleChange("dni", value)}
+                isInvalid={!!errors.dni}
+                errorMessage={errors.dni}
                 isRequired={mode === "create"}
+                description={mode === "create" ? "Será la clave temporal para el primer acceso. El profesional ingresa con email y DNI." : undefined}
+                isDisabled={mode === "edit"}
                 classNames={{
                     input: "text-slate-800",
                     inputWrapper: "text-slate-800",
                 }}
             />
+            {mode === "edit" && (
+                <Input
+                    label="Nueva Contraseña (opcional)"
+                    type="password"
+                    value={formData.tempPassword ?? ""}
+                    onValueChange={(value) => handleChange("tempPassword", value)}
+                    isInvalid={!!errors.tempPassword}
+                    errorMessage={errors.tempPassword}
+                    description="Dejar en blanco para mantener la contraseña actual"
+                    classNames={{
+                        input: "text-slate-800",
+                        inputWrapper: "text-slate-800",
+                    }}
+                />
+            )}
             <Input
                 label="Teléfono"
                 value={formData.phone || ""}

@@ -59,6 +59,19 @@ export interface Specialty {
   updatedAt: Date;
 }
 
+export interface Service {
+  id: string;
+  tenantId: string;
+  name: string;
+  description: string | null;
+  durationMinutes: number;
+  marginMinutes: number;
+  price: number;
+  seniaPercent: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Location {
   id: string;
   tenantId: string;

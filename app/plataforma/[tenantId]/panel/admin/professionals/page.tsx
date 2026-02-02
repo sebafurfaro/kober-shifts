@@ -33,6 +33,8 @@ export default function AdminProfessionalsPage() {
   const params = useParams();
   const tenantId = params.tenantId as string;
   const [professionals, setProfessionals] = React.useState<Professional[]>([]);
+  const [maxUsers, setMaxUsers] = React.useState<number | null>(null);
+  const [showSpecialties, setShowSpecialties] = React.useState(true);
   const { professionalLabel } = useTenantLabels();
   const loadTranslations = useTenantSettingsStore((state) => state.loadTranslations);
   const [loading, setLoading] = React.useState(true);
@@ -63,6 +65,23 @@ export default function AdminProfessionalsPage() {
     loadData();
   }, [loadData]);
 
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/plataforma/${tenantId}/features`, { credentials: "include" });
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          setMaxUsers(typeof data.maxUsers === "number" ? data.maxUsers : null);
+          setShowSpecialties(data.show_specialties ?? true);
+        }
+      } catch {
+        if (!cancelled) setMaxUsers(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [tenantId]);
+
   // Load translations when component mounts
   React.useEffect(() => {
     if (tenantId) {
@@ -70,7 +89,10 @@ export default function AdminProfessionalsPage() {
     }
   }, [tenantId, loadTranslations]);
 
+  const atUserLimit = maxUsers !== null && professionals.length >= maxUsers;
+
   const handleCreate = () => {
+    if (atUserLimit) return;
     router.push(`/plataforma/${tenantId}/panel/admin/professionals/add-new`);
   };
 
@@ -115,21 +137,30 @@ export default function AdminProfessionalsPage() {
       <div className="py-8">
         <PanelHeader
           title={professionalLabel}
-          action={{
-            label: "Crear Perfil",
-            color: "primary",
-            onClick: handleCreate,
-          }}
+          subtitle={atUserLimit ? `Límite de ${maxUsers} usuario(s) alcanzado. No se pueden agregar más.` : undefined}
+          action={
+            atUserLimit
+              ? undefined
+              : {
+                  label: "Crear Perfil",
+                  color: "primary",
+                  onClick: handleCreate,
+                }
+          }
         />
 
         <Card className="card">
           <Table aria-label="Tabla de profesionales">
             <TableHeader>
-              <TableColumn className="rounded-tl-lg rounded-bl-lg text-slate-800 text-base">Color</TableColumn>
-              <TableColumn className="text-slate-800 text-base">Nombre</TableColumn>
-              <TableColumn className="text-slate-800 text-base">Email</TableColumn>
-              <TableColumn className="text-slate-800 text-base">Especialidades</TableColumn>
-              <TableColumn className="text-right rounded-tr-lg rounded-br-lg text-slate-800 text-base">Acciones</TableColumn>
+              {[
+                <TableColumn key="color" className="rounded-tl-lg rounded-bl-lg text-slate-800 text-base">Color</TableColumn>,
+                <TableColumn key="name" className="text-slate-800 text-base">Nombre</TableColumn>,
+                <TableColumn key="email" className="text-slate-800 text-base">Email</TableColumn>,
+                ...(showSpecialties
+                  ? [<TableColumn key="specialties" className="text-slate-800 text-base">Especialidades</TableColumn>]
+                  : []),
+                <TableColumn key="actions" className="text-right rounded-tr-lg rounded-br-lg text-slate-800 text-base">Acciones</TableColumn>,
+              ]}
             </TableHeader>
             <TableBody
               isLoading={loading}
@@ -146,6 +177,32 @@ export default function AdminProfessionalsPage() {
                   .toUpperCase()
                   .slice(0, 2);
 
+                const actionCell = (
+                  <TableCell key="actions">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        onPress={() => handleEdit(professional)}
+                        title="Editar"
+                        className="text-gray-600 hover:text-gray-900"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        color="danger"
+                        onPress={() => handleDelete(professional)}
+                        title="Eliminar"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                );
                 return (
                   <TableRow key={professional.id}>
                     <TableCell>
@@ -165,49 +222,30 @@ export default function AdminProfessionalsPage() {
                         {professional.email}
                       </p>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-2">
-                        {professional.professional?.specialties && professional.professional.specialties.length > 0 ? (
-                          professional.professional.specialties.map((specialty) => (
-                            <Chip
-                              key={specialty.id}
-                              variant="flat"
-                              color="secondary"
-                              size="sm"
-                              className="text-xs"
-                            >
-                              {specialty.name}
-                            </Chip>
-                          ))
-                        ) : (
-                          <span className="text-xs text-gray-500">Sin especialidad</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          isIconOnly
-                          size="sm"
-                          variant="light"
-                          onPress={() => handleEdit(professional)}
-                          title="Editar"
-                          className="text-gray-600 hover:text-gray-900"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          isIconOnly
-                          size="sm"
-                          variant="light"
-                          color="danger"
-                          onPress={() => handleDelete(professional)}
-                          title="Eliminar"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    {...(showSpecialties
+                      ? [
+                          <TableCell key="specialties">
+                            <div className="flex flex-wrap gap-2">
+                              {professional.professional?.specialties && professional.professional.specialties.length > 0 ? (
+                                professional.professional.specialties.map((specialty) => (
+                                  <Chip
+                                    key={specialty.id}
+                                    variant="flat"
+                                    color="secondary"
+                                    size="sm"
+                                    className="text-xs"
+                                  >
+                                    {specialty.name}
+                                  </Chip>
+                                ))
+                              ) : (
+                                <span className="text-xs text-gray-500">Sin especialidad</span>
+                              )}
+                            </div>
+                          </TableCell>,
+                        ]
+                      : [])}
+                    {actionCell}
                   </TableRow>
                 );
               })}

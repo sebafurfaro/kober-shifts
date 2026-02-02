@@ -8,9 +8,11 @@ import {
   CalendarDays,
   Settings,
   BarChart3,
-  PiggyBank,
+  CircleDollarSign,
   Menu,
   ChevronLeft,
+  LayoutGrid,
+  BookOpen,
 } from "lucide-react";
 import Logo from "@/app/branding/Logo";
 import { Dispatch, SetStateAction } from "react";
@@ -42,7 +44,16 @@ function NavItem({ href, label, icon, isCollapsed }: NavItemProps) {
   );
 }
 
-interface AdminItem {
+function SectionTitle({ label, isCollapsed }: { label: string; isCollapsed: boolean }) {
+  if (isCollapsed) return null;
+  return (
+    <p className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
+      {label}
+    </p>
+  );
+}
+
+interface NavItemConfig {
   label: string;
   href: string;
   icon: React.ReactNode;
@@ -56,7 +67,9 @@ interface AsideProps {
   mobileDrawerOpen: boolean;
   setMobileDrawerOpen: Dispatch<SetStateAction<boolean>>;
   calendarEnabled: boolean;
-  adminItems: AdminItem[];
+  gestionItems: NavItemConfig[];
+  colaboradoresItems: NavItemConfig[];
+  pacientesItem: NavItemConfig;
   isCollapsed: boolean;
   setIsCollapsed: Dispatch<SetStateAction<boolean>>;
   onWidthChange: (width: number) => void;
@@ -69,7 +82,9 @@ export function Aside({
   mobileDrawerOpen,
   setMobileDrawerOpen,
   calendarEnabled,
-  adminItems,
+  gestionItems,
+  colaboradoresItems,
+  pacientesItem,
   isCollapsed,
   setIsCollapsed,
   onWidthChange,
@@ -77,20 +92,12 @@ export function Aside({
   const [isHovered, setIsHovered] = React.useState(false);
   const [isManuallyToggled, setIsManuallyToggled] = React.useState(false);
 
-  // Calcular el ancho actual
   const currentWidth = React.useMemo(() => {
-    if (isMobile) {
-      return mobileDrawerOpen ? DRAWER_WIDTH : 0;
-    }
-    // Si está colapsado y no está siendo hover, usar ancho colapsado
-    // Si fue toggled manualmente, respetar el estado colapsado
-    if (isCollapsed && !isHovered) {
-      return DRAWER_COLLAPSED_WIDTH;
-    }
+    if (isMobile) return mobileDrawerOpen ? DRAWER_WIDTH : 0;
+    if (isCollapsed && !isHovered) return DRAWER_COLLAPSED_WIDTH;
     return DRAWER_WIDTH;
   }, [isMobile, mobileDrawerOpen, isCollapsed, isHovered]);
 
-  // Notificar cambios de ancho
   React.useEffect(() => {
     onWidthChange(currentWidth);
   }, [currentWidth, onWidthChange]);
@@ -98,29 +105,20 @@ export function Aside({
   const handleToggle = () => {
     const newCollapsedState = !isCollapsed;
     setIsCollapsed(newCollapsedState);
-    // Si el usuario colapsa manualmente, marcar como toggled manualmente
-    // Si el usuario expande manualmente, permitir hover de nuevo
     setIsManuallyToggled(newCollapsedState);
   };
 
   const handleMouseEnter = () => {
-    // Solo expandir con hover si está colapsado y NO fue toggled manualmente
-    if (isCollapsed && !isManuallyToggled) {
-      setIsHovered(true);
-    }
+    if (isCollapsed && !isManuallyToggled) setIsHovered(true);
   };
 
   const handleMouseLeave = () => {
-    // Solo colapsar si fue expandido por hover
-    if (isCollapsed && !isManuallyToggled) {
-      setIsHovered(false);
-    }
+    if (isCollapsed && !isManuallyToggled) setIsHovered(false);
   };
 
-  // El aside está efectivamente colapsado si:
-  // - isCollapsed es true Y
-  // - No está siendo hover (independientemente de si fue toggled manualmente)
   const effectiveIsCollapsed = isCollapsed && !isHovered;
+  const canManage = role === "ADMIN" || role === "PROFESSIONAL";
+  const base = `/plataforma/${currentTenantId}/panel`;
 
   return (
     <aside
@@ -137,20 +135,18 @@ export function Aside({
     >
       <div className="overflow-y-auto h-full py-4">
         {/* Logo and Toggle */}
-        <div className={`flex mb-4 pb-4 border-b border-slate-200 ${
-          effectiveIsCollapsed ? "flex-col items-center px-2 gap-2" : "items-center justify-between px-4"
-        }`}>
+        <div
+          className={`flex mb-4 pb-4 border-b border-slate-200 ${
+            effectiveIsCollapsed ? "flex-col items-center px-2 gap-2" : "items-center justify-between px-4"
+          }`}
+        >
           {!effectiveIsCollapsed && (
             <div className="flex items-center gap-2">
               <Logo width={32} height={32} />
-              <span className="text-lg font-bold text-[#0e5287]">
-                NODO App
-              </span>
+              <span className="text-lg font-bold text-[#0e5287]">NODO App</span>
             </div>
           )}
-          {effectiveIsCollapsed && (
-            <Logo width={32} height={32} />
-          )}
+          {effectiveIsCollapsed && <Logo width={32} height={32} />}
           {!isMobile && (
             <button
               onClick={handleToggle}
@@ -175,64 +171,92 @@ export function Aside({
           )}
         </div>
 
-        <nav className="space-y-2 px-2">
-          {role !== "PATIENT" && calendarEnabled && (
-            <NavItem
-              href={`/plataforma/${currentTenantId}/panel`}
-              label="Calendario"
-              icon={<Calendar className="w-5 h-5" />}
-              isCollapsed={effectiveIsCollapsed}
-            />
-          )}
-
-          {(role === "ADMIN" || role === "PROFESSIONAL") && (
-            <NavItem
-              href={`/plataforma/${currentTenantId}/panel/analytics`}
-              label="Analíticas"
-              icon={<BarChart3 className="w-5 h-5" />}
-              isCollapsed={effectiveIsCollapsed}
-            />
-          )}
-
-          {!effectiveIsCollapsed && <div className="border-t border-slate-200 my-2" />}
-
-          {(role === "PATIENT" || role === "ADMIN") && (
-            <NavItem
-              href={`/plataforma/${currentTenantId}/panel/patient`}
-              label="Mis turnos"
-              icon={<CalendarDays className="w-5 h-5" />}
-              isCollapsed={effectiveIsCollapsed}
-            />
-          )}
-          {(role === "PROFESSIONAL" || role === "ADMIN") && (
-            <NavItem
-              href={`/plataforma/${currentTenantId}/panel/professional`}
-              label="Profesional"
-              icon={<User className="w-5 h-5" />}
-              isCollapsed={effectiveIsCollapsed}
-            />
-          )}
-          {role === "ADMIN" && (
+        <nav className="space-y-1 px-2">
+          {/* Métricas */}
+          {role !== "PATIENT" && (
             <>
+              <SectionTitle label="Métricas" isCollapsed={effectiveIsCollapsed} />
               <NavItem
-                href={`/plataforma/${currentTenantId}/panel/admin`}
-                label="Admin"
-                icon={<Settings className="w-5 h-5" />}
-                isCollapsed={effectiveIsCollapsed}
-              />
-              <NavItem
-                href={`/plataforma/${currentTenantId}/panel/admin/payments`}
-                label="Datos financieros"
-                icon={<PiggyBank className="w-5 h-5" />}
+                href={`${base}/analytics`}
+                label="Analíticas"
+                icon={<BarChart3 className="w-5 h-5" />}
                 isCollapsed={effectiveIsCollapsed}
               />
             </>
           )}
 
-          {role === "ADMIN" && (
+          {/* Recursos: Calendario, Profesionales, Servicios */}
+          {(role !== "PATIENT" && calendarEnabled) || canManage ? (
+            <SectionTitle label="Recursos" isCollapsed={effectiveIsCollapsed} />
+          ) : null}
+          {role !== "PATIENT" && calendarEnabled && (
+            <NavItem
+              href={base}
+              label="Calendario"
+              icon={<Calendar className="w-5 h-5" />}
+              isCollapsed={effectiveIsCollapsed}
+            />
+          )}
+          {(role === "PROFESSIONAL" || role === "ADMIN") && (
+            <NavItem
+              href={`${base}/professional`}
+              label="Profesionales"
+              icon={<User className="w-5 h-5" />}
+              isCollapsed={effectiveIsCollapsed}
+            />
+          )}
+          {canManage && (
+            <NavItem
+              href={`${base}/admin/servicios`}
+              label="Servicios"
+              icon={<LayoutGrid className="w-5 h-5" />}
+              isCollapsed={effectiveIsCollapsed}
+            />
+          )}
+          {canManage && (
+            <NavItem
+              href={pacientesItem.href}
+              label={pacientesItem.label}
+              icon={pacientesItem.icon}
+              isCollapsed={effectiveIsCollapsed}
+            />
+          )}
+
+          {/* Gestión */}
+          {canManage && (
             <>
-              {!effectiveIsCollapsed && <div className="border-t border-slate-200 my-2" />}
-              {adminItems.map((item) => (
+              <SectionTitle label="Gestión" isCollapsed={effectiveIsCollapsed} />
+              <NavItem
+                href={`${base}/admin`}
+                label="Admin"
+                icon={<Settings className="w-5 h-5" />}
+                isCollapsed={effectiveIsCollapsed}
+              />
+              <NavItem
+                href={`${base}/admin/payments`}
+                label="Pagos"
+                icon={<CircleDollarSign className="w-5 h-5" />}
+                isCollapsed={effectiveIsCollapsed}
+              />
+              {gestionItems
+                .filter((item) => item.show !== false)
+                .map((item) => (
+                  <NavItem
+                    key={item.href}
+                    href={item.href}
+                    label={item.label}
+                    icon={item.icon}
+                    isCollapsed={effectiveIsCollapsed}
+                  />
+                ))}
+            </>
+          )}
+
+          {/* Colaboradores */}
+          {canManage && colaboradoresItems.length > 0 && (
+            <>
+              <SectionTitle label="Colaboradores" isCollapsed={effectiveIsCollapsed} />
+              {colaboradoresItems.map((item) => (
                 <NavItem
                   key={item.href}
                   href={item.href}
@@ -243,17 +267,28 @@ export function Aside({
               ))}
             </>
           )}
-          {role === "PROFESSIONAL" && (
+
+          {/* Mis turnos (solo rol PATIENT) */}
+          {role === "PATIENT" && (
             <>
               {!effectiveIsCollapsed && <div className="border-t border-slate-200 my-2" />}
               <NavItem
-                href={`/plataforma/${currentTenantId}/panel/professional/patients`}
-                label="Pacientes"
-                icon={<User className="w-5 h-5" />}
+                href={`${base}/patient`}
+                label="Mis turnos"
+                icon={<CalendarDays className="w-5 h-5" />}
                 isCollapsed={effectiveIsCollapsed}
               />
             </>
           )}
+
+          {/* Ayuda */}
+          <SectionTitle label="Ayuda" isCollapsed={effectiveIsCollapsed} />
+          <NavItem
+            href={`${base}/documentacion`}
+            label="Documentación"
+            icon={<BookOpen className="w-5 h-5" />}
+            isCollapsed={effectiveIsCollapsed}
+          />
         </nav>
       </div>
     </aside>

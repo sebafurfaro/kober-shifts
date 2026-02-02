@@ -43,6 +43,7 @@ export interface SelectedCoverage {
 export interface ProfessionalFormData {
     name: string;
     email: string;
+    dni?: string;
     phone: string;
     licenseNumber: string;
     tempPassword?: string;

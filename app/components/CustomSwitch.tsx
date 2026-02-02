@@ -1,7 +1,7 @@
 export const CustomSwitch = ({ isSelected, setIsSelected }: { isSelected: boolean, setIsSelected: (selected: boolean) => void }) => {
     return (
         <div
-            className="relative inline-flex items-center rounded-lg border border-gray-700 bg-gray-800/50 p-1 cursor-pointer"
+            className="relative inline-flex items-center rounded-full bg-accent-third/10 p-1 cursor-pointer"
             role="button"
             tabIndex={0}
             onClick={() => setIsSelected(!isSelected)}
@@ -14,7 +14,7 @@ export const CustomSwitch = ({ isSelected, setIsSelected }: { isSelected: boolea
         >
             <div className="relative flex">
                 <span
-                    className={`px-4 py-2 text-sm font-medium transition-colors duration-200 z-10 cursor-pointer ${!isSelected ? 'text-white' : 'text-gray-400'
+                    className={`px-4 py-2 text-sm font-medium transition-colors duration-200 z-10 cursor-pointer ${!isSelected ? 'text-white' : 'text-primary'
                         }`}
                     onClick={(e) => {
                         e.stopPropagation();
@@ -24,7 +24,7 @@ export const CustomSwitch = ({ isSelected, setIsSelected }: { isSelected: boolea
                     Mensual
                 </span>
                 <span
-                    className={`px-4 py-2 text-sm font-medium transition-colors duration-200 z-10 cursor-pointer ${isSelected ? 'text-white' : 'text-gray-400'
+                    className={`px-5 py-2 text-sm font-medium transition-colors duration-200 z-10 cursor-pointer ${isSelected ? 'text-white' : 'text-primary'
                         }`}
                     onClick={(e) => {
                         e.stopPropagation();
@@ -34,9 +34,9 @@ export const CustomSwitch = ({ isSelected, setIsSelected }: { isSelected: boolea
                     Anual
                 </span>
                 <div
-                    className={`absolute top-1 bottom-1 rounded-md transition-all duration-200 ${isSelected
-                        ? 'left-1/2 right-1 bg-[#9333ea]'
-                        : 'left-1 right-1/2 bg-[#9333ea]'
+                    className={`absolute top-1 bottom-1 rounded-full transition-all duration-200 ${isSelected
+                        ? 'left-1/2 right-1 bg-accent'
+                        : 'left-1 right-1/2 bg-accent'
                         }`}
                     style={{
                         width: 'calc(50% - 4px)'

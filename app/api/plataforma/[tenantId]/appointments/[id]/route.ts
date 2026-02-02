@@ -18,7 +18,7 @@ export async function PATCH(
   if (!appointment) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Check permissions
-  if (session.role !== "ADMIN" && appointment.patientId !== session.userId && appointment.professionalId !== session.userId) {
+  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL" && appointment.patientId !== session.userId && appointment.professionalId !== session.userId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -71,7 +71,7 @@ export async function GET(
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Check permissions
-  if (session.role !== "ADMIN" && data.appointment.patientId !== session.userId && data.appointment.professionalId !== session.userId) {
+  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL" && data.appointment.patientId !== session.userId && data.appointment.professionalId !== session.userId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -85,7 +85,7 @@ export async function DELETE(
   const { id, tenantId } = await params;
   const session = await getSession();
   if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== Role.ADMIN) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.role !== Role.ADMIN && session.role !== Role.PROFESSIONAL) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const appointment = await findAppointmentById(id, tenantId);
   if (!appointment) return NextResponse.json({ error: "Not found" }, { status: 404 });

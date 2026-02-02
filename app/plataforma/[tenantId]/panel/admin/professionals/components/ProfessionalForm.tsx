@@ -22,6 +22,10 @@ interface ProfessionalFormProps {
     loading?: boolean;
     mode: "create" | "edit";
     specialties: Specialty[];
+    /** Si false, no se muestra el tab Especialidades (feature flag show_specialties). */
+    showSpecialties?: boolean;
+    /** Si false, no se muestra el tab Coberturas (feature flag show_coverage). */
+    showCoverage?: boolean;
 }
 
 export function ProfessionalForm({
@@ -30,6 +34,8 @@ export function ProfessionalForm({
     loading = false,
     mode,
     specialties,
+    showSpecialties = true,
+    showCoverage = true,
 }: ProfessionalFormProps) {
     const [selectedTab, setSelectedTab] = React.useState<string>("contacto");
 
@@ -39,6 +45,7 @@ export function ProfessionalForm({
     const [formData, setFormData] = React.useState<ProfessionalFormData>({
         name: initialData?.name || "",
         email: initialData?.email || "",
+        dni: initialData?.dni ?? "",
         phone: initialData?.phone || "",
         licenseNumber: initialData?.licenseNumber || "",
         tempPassword: "",
@@ -63,10 +70,10 @@ export function ProfessionalForm({
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             newErrors.email = "El formato del email no es válido";
         }
-        if (mode === "create" && !formData.tempPassword) {
-            newErrors.tempPassword = "La contraseña es requerida";
+        if (mode === "create" && !formData.dni?.trim()) {
+            newErrors.dni = "El DNI es requerido (será la clave temporal para el primer acceso)";
         }
-        if (formData.specialtyIds.length === 0) {
+        if (showSpecialties && formData.specialtyIds.length === 0) {
             newErrors.specialtyIds = "Selecciona al menos una especialidad";
         }
         setErrors(newErrors);
@@ -76,7 +83,14 @@ export function ProfessionalForm({
     const handleSubmit = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (validate()) {
-            onSubmit(formData);
+            let dataToSubmit = formData;
+            if (!showSpecialties && formData.specialtyIds.length === 0 && specialties.length > 0) {
+                dataToSubmit = { ...formData, specialtyIds: [specialties[0].id] };
+            }
+            if (mode === "create" && dataToSubmit.dni?.trim()) {
+                dataToSubmit = { ...dataToSubmit, tempPassword: dataToSubmit.dni.trim() };
+            }
+            onSubmit(dataToSubmit);
         } else {
             setSelectedTab("contacto"); // Go back to first tab if there are core errors
         }
@@ -110,25 +124,29 @@ export function ProfessionalForm({
                         </CardBody>
                     </Card>
                 </Tab>
-                <Tab key="especialidades" title="Especialidades">
-                    <Card>
-                        <CardBody>
-                            <SpecialtiesTab
-                                formData={formData}
-                                handleChange={handleChange}
-                                errors={errors}
-                                specialties={specialties}
-                            />
-                        </CardBody>
-                    </Card>
-                </Tab>
-                <Tab key="coberturas" title="Coberturas">
-                    <Card>
-                        <CardBody>
-                            <CoveragesTab formData={formData} setFormData={setFormData} />
-                        </CardBody>
-                    </Card>
-                </Tab>
+                {showSpecialties && (
+                    <Tab key="especialidades" title="Especialidades">
+                        <Card>
+                            <CardBody>
+                                <SpecialtiesTab
+                                    formData={formData}
+                                    handleChange={handleChange}
+                                    errors={errors}
+                                    specialties={specialties}
+                                />
+                            </CardBody>
+                        </Card>
+                    </Tab>
+                )}
+                {showCoverage && (
+                    <Tab key="coberturas" title="Coberturas">
+                        <Card>
+                            <CardBody>
+                                <CoveragesTab formData={formData} setFormData={setFormData} />
+                            </CardBody>
+                        </Card>
+                    </Tab>
+                )}
                 <Tab key="disponibilidad" title="Disponibilidad">
                     <Card>
                         <CardBody>

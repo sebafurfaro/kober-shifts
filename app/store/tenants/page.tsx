@@ -13,18 +13,22 @@ import {
   TableCell,
   Chip,
   Spinner,
-  Switch,
 } from "@heroui/react";
-import { Trash2, Plus, LogOut } from "lucide-react";
+import { Trash2, Settings } from "lucide-react";
 import { ConfirmationDialog } from "../../plataforma/[tenantId]/panel/components/alerts/ConfirmationDialog";
 import { AlertDialog } from "../../plataforma/[tenantId]/panel/components/alerts/AlertDialog";
 import { TenantFormDialog } from "../components/TenantFormDialog";
-import { useRouter } from "next/navigation";
+import {
+  TenantConfigDialog,
+  TenantFeatureFlags,
+  TenantLimits,
+  TenantTranslations,
+} from "../components/TenantConfigDialog";
+import { useRouter, useSearchParams } from "next/navigation";
 
-interface TenantFeatures {
-  calendar: boolean;
-  emailNotifications: boolean;
-  whatsappNotifications: boolean;
+interface TenantConfig {
+  features: TenantFeatureFlags;
+  limits: TenantLimits;
 }
 
 interface Tenant {
@@ -34,7 +38,7 @@ interface Tenant {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  features?: TenantFeatures;
+  config?: TenantConfig;
 }
 
 export default function StoreTenantsPage() {
@@ -56,6 +60,10 @@ export default function StoreTenantsPage() {
     message: string;
     type: "error" | "info" | "success" | "warning";
   }>({ open: false, message: "", type: "error" });
+  const [configDialog, setConfigDialog] = React.useState<{
+    open: boolean;
+    tenant: Tenant | null;
+  }>({ open: false, tenant: null });
 
   const loadTenants = React.useCallback(async () => {
     try {
@@ -71,26 +79,25 @@ export default function StoreTenantsPage() {
       }
       const data = await res.json();
       const tenantsList = Array.isArray(data) ? data : [];
-      
-      // Load features for each tenant
-      const tenantsWithFeatures = await Promise.all(
+
+      const tenantsWithConfig = await Promise.all(
         tenantsList.map(async (tenant: Tenant) => {
           try {
-            const featuresRes = await fetch(`/api/store/tenants/${tenant.id}/features`, {
+            const configRes = await fetch(`/api/store/tenants/${tenant.id}/features`, {
               credentials: "include",
             });
-            if (featuresRes.ok) {
-              const features = await featuresRes.json();
-              return { ...tenant, features };
+            if (configRes.ok) {
+              const config = await configRes.json();
+              return { ...tenant, config };
             }
           } catch (error) {
-            console.error(`Error loading features for tenant ${tenant.id}:`, error);
+            console.error(`Error loading config for tenant ${tenant.id}:`, error);
           }
           return tenant;
         })
       );
-      
-      setTenants(tenantsWithFeatures);
+
+      setTenants(tenantsWithConfig);
     } catch (error) {
       console.error("Error loading tenants:", error);
     } finally {
@@ -101,6 +108,13 @@ export default function StoreTenantsPage() {
   React.useEffect(() => {
     loadTenants();
   }, [loadTenants]);
+
+  const searchParams = useSearchParams();
+  React.useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setDialogOpen(true);
+    }
+  }, [searchParams]);
 
   const handleCreate = () => {
     setDialogOpen(true);
@@ -131,12 +145,24 @@ export default function StoreTenantsPage() {
     });
   };
 
-  const handleSubmit = async (data: { name: string; id?: string; logoUrl?: string }) => {
+  const handleSubmit = async (data: {
+    name: string;
+    id?: string;
+    logoUrl?: string;
+    features?: { show_specialties: boolean; show_coverage: boolean; show_mercado_pago: boolean; payment_enabled: boolean };
+    limits?: { maxUsers: number; whatsappRemindersLimit: number };
+  }) => {
     try {
       const res = await fetch(`/api/store/tenants`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          name: data.name,
+          id: data.id,
+          logoUrl: data.logoUrl,
+          features: data.features,
+          limits: data.limits,
+        }),
       });
       if (!res.ok) {
         const error = await res.json().catch(() => ({}));
@@ -149,102 +175,55 @@ export default function StoreTenantsPage() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/store/auth/logout", { method: "POST" });
-      router.push("/store/login");
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
-      router.push("/store/login");
-    }
-  };
-
-  const handleFeatureToggle = async (
+  const handleSaveConfig = async (
     tenantId: string,
-    featureKey: keyof TenantFeatures,
-    value: boolean
+    data: { features: TenantFeatureFlags; limits: TenantLimits; translations: TenantTranslations }
   ) => {
-    try {
-      const currentFeatures = tenants.find((t) => t.id === tenantId)?.features || {
-        calendar: true,
-        emailNotifications: false,
-        whatsappNotifications: false,
-      };
-
-      const updatedFeatures = {
-        ...currentFeatures,
-        [featureKey]: value,
-      };
-
-      const res = await fetch(`/api/store/tenants/${tenantId}/features`, {
+    const [featuresRes, settingsRes] = await Promise.all([
+      fetch(`/api/store/tenants/${tenantId}/features`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ features: updatedFeatures }),
-      });
-
-      if (!res.ok) {
-        throw new Error("Error al actualizar feature flag");
-      }
-
-      // Update local state
-      setTenants((prev) =>
-        prev.map((tenant) =>
-          tenant.id === tenantId
-            ? { ...tenant, features: updatedFeatures }
-            : tenant
-        )
-      );
-    } catch (error: any) {
-      setAlertDialog({
-        open: true,
-        message: error.message || "Error al actualizar feature flag",
-        type: "error",
-      });
+        body: JSON.stringify({ features: data.features, limits: data.limits }),
+      }),
+      fetch(`/api/store/tenants/${tenantId}/settings`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          patientLabel: data.translations.patientLabel,
+          professionalLabel: data.translations.professionalLabel,
+        }),
+      }),
+    ]);
+    if (!featuresRes.ok) {
+      const err = await featuresRes.json().catch(() => ({}));
+      const msg = err.detail ? `${err.error}: ${err.detail}` : (err.error || "Error al guardar configuración");
+      throw new Error(msg);
     }
+    if (!settingsRes.ok) {
+      const err = await settingsRes.json().catch(() => ({}));
+      const msg = err.error || "Error al guardar traducciones";
+      throw new Error(msg);
+    }
+    setTenants((prev) =>
+      prev.map((t) =>
+        t.id === tenantId ? { ...t, config: { features: data.features, limits: data.limits } } : t
+      )
+    );
   };
 
   return (
-    <div className="w-full mx-auto mt-8 px-4 py-8 min-h-screen bg-nodo space-y-4">
-      <Card className="max-w-5xl card mx-auto !shadow-lg">
-        <CardBody>
-          <div className="flex justify-between items-center text-slate-800">
-            <div>
-              <h2 className="text-xl font-semibold">Gestión de Tenants</h2>
-              <p className="text-sm text-gray-500">Administra los tenants de la plataforma</p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                color="primary"
-                onPress={handleCreate}
-                isIconOnly
-                title="Agregar tenant"
-              >
-                <Plus className="w-5 h-5" />
-              </Button>
-              <Button
-                color="danger"
-                onPress={handleLogout}
-                isIconOnly
-                title="Cerrar sesión"
-              >
-                <LogOut className="w-5 h-5" />
-              </Button>
-            </div>
-          </div>
-        </CardBody>
-      </Card>
-
-      <Card className="max-w-5xl mx-auto !shadow-lg card">
+    <div className="w-full mx-auto px-4 py-8 space-y-4">
+      <Card className="max-w-5xl mx-auto shadow-lg card">
         <CardBody>
           <Table aria-label="Tabla de tenants" classNames={{base: "text-slate-800"}}>
             <TableHeader>
               <TableColumn>ID</TableColumn>
               <TableColumn>Nombre</TableColumn>
               <TableColumn>Estado</TableColumn>
-              <TableColumn>Calendario</TableColumn>
-              <TableColumn>Email</TableColumn>
-              <TableColumn>WhatsApp</TableColumn>
+              <TableColumn>Max usuarios</TableColumn>
+              <TableColumn>Recordatorios WhatsApp</TableColumn>
               <TableColumn>Fecha de Creación</TableColumn>
               <TableColumn align="end">Acciones</TableColumn>
             </TableHeader>
@@ -254,11 +233,21 @@ export default function StoreTenantsPage() {
               emptyContent={tenants.length === 0 ? "No hay tenants registrados" : undefined}
             >
               {tenants.map((tenant) => {
-                const features = tenant.features || {
-                  calendar: true,
-                  emailNotifications: false,
-                  whatsappNotifications: false,
+                const config = tenant.config || {
+                  features: {
+                    show_specialties: true,
+                    show_coverage: true,
+                    show_mercado_pago: true,
+                    payment_enabled: true,
+                  },
+                  limits: { maxUsers: 1, whatsappRemindersLimit: 0 },
                 };
+                const feats = config.features as { payment_enabled?: boolean; disabled_payment?: boolean };
+                const paymentEnabled =
+                  feats.payment_enabled ??
+                  (typeof feats.disabled_payment === "boolean" ? !feats.disabled_payment : true);
+                const statusLabel = paymentEnabled === false ? "Suspendido" : tenant.isActive ? "Activo" : "Inactivo";
+                const statusColor = paymentEnabled === false ? "warning" : tenant.isActive ? "success" : "default";
 
                 return (
                   <TableRow key={tenant.id}>
@@ -268,47 +257,31 @@ export default function StoreTenantsPage() {
                     <TableCell>{tenant.name}</TableCell>
                     <TableCell>
                       <Chip
-                        color={tenant.isActive ? "success" : "default"}
+                        color={statusColor}
                         size="sm"
                       >
-                        {tenant.isActive ? "Activo" : "Inactivo"}
+                        {statusLabel}
                       </Chip>
                     </TableCell>
-                    <TableCell>
-                      <Switch
-                        size="sm"
-                        isSelected={features.calendar}
-                        onValueChange={(value) =>
-                          handleFeatureToggle(tenant.id, "calendar", value)
-                        }
-                        aria-label="Calendario"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        size="sm"
-                        isSelected={features.emailNotifications}
-                        onValueChange={(value) =>
-                          handleFeatureToggle(tenant.id, "emailNotifications", value)
-                        }
-                        aria-label="Notificaciones por Email"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        size="sm"
-                        isSelected={features.whatsappNotifications}
-                        onValueChange={(value) =>
-                          handleFeatureToggle(tenant.id, "whatsappNotifications", value)
-                        }
-                        aria-label="Notificaciones por WhatsApp"
-                      />
-                    </TableCell>
+                    <TableCell>{config.limits.maxUsers}</TableCell>
+                    <TableCell>{config.limits.whatsappRemindersLimit}</TableCell>
                     <TableCell>
                       {new Date(tenant.createdAt).toLocaleDateString("es-AR")}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-end">
+                        <Button
+                          size="sm"
+                          variant="flat"
+                          onPress={() =>
+                            setConfigDialog({ open: true, tenant })
+                          }
+                          isIconOnly
+                          aria-label="Configurar"
+                          title="Configurar límites y feature flags"
+                        >
+                          <Settings className="w-4 h-4" />
+                        </Button>
                         <Button
                           size="sm"
                           onPress={() => handleDelete(tenant)}
@@ -330,9 +303,38 @@ export default function StoreTenantsPage() {
 
         <TenantFormDialog
           open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
+          onClose={() => {
+            setDialogOpen(false);
+            router.replace("/store/tenants");
+          }}
           onSubmit={handleSubmit}
         />
+
+        {configDialog.tenant && (
+          <TenantConfigDialog
+            open={configDialog.open}
+            onClose={() => setConfigDialog({ open: false, tenant: null })}
+            tenantId={configDialog.tenant.id}
+            tenantName={configDialog.tenant.name}
+            initialFeatures={
+              configDialog.tenant.config?.features ?? {
+                show_specialties: true,
+                show_coverage: true,
+                show_mercado_pago: true,
+                payment_enabled: true,
+              }
+            }
+            initialLimits={
+              configDialog.tenant.config?.limits ?? {
+                maxUsers: 1,
+                whatsappRemindersLimit: 0,
+              }
+            }
+            onSave={(data) =>
+              handleSaveConfig(configDialog.tenant!.id, data)
+            }
+          />
+        )}
 
         <ConfirmationDialog
           open={confirmationDialog.open}

@@ -16,8 +16,46 @@ export default function ProfessionalAddPage() {
     const [loading, setLoading] = React.useState(true);
     const [submitting, setSubmitting] = React.useState(false);
     const [submitError, setSubmitError] = React.useState<string | null>(null);
+    const [limitReached, setLimitReached] = React.useState(false);
+    const [showSpecialties, setShowSpecialties] = React.useState(true);
+    const [showCoverage, setShowCoverage] = React.useState(true);
 
     React.useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const [featuresRes, professionalsRes] = await Promise.all([
+                    fetch(`/api/plataforma/${tenantId}/features`, { credentials: "include" }),
+                    fetch(`/api/plataforma/${tenantId}/admin/professionals`, { credentials: "include" }),
+                ]);
+                if (cancelled) return;
+                if (featuresRes.ok && professionalsRes.ok) {
+                    const features = await featuresRes.json();
+                    const professionals = await professionalsRes.json();
+                    const maxUsers = typeof features.maxUsers === "number" ? features.maxUsers : 1;
+                    const list = Array.isArray(professionals) ? professionals : [];
+                    if (list.length >= maxUsers) {
+                        setLimitReached(true);
+                        return;
+                    }
+                    setShowSpecialties(features.show_specialties ?? true);
+                    setShowCoverage(features.show_coverage ?? true);
+                }
+            } catch {
+                if (!cancelled) setLimitReached(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [tenantId]);
+
+    React.useEffect(() => {
+        if (limitReached) {
+            router.replace(`/plataforma/${tenantId}/panel/admin/professionals`);
+        }
+    }, [limitReached, router, tenantId]);
+
+    React.useEffect(() => {
+        if (limitReached) return;
         async function loadSpecialties() {
             try {
                 const res = await fetch(`/api/plataforma/${tenantId}/admin/specialties`);
@@ -31,7 +69,7 @@ export default function ProfessionalAddPage() {
             }
         }
         loadSpecialties();
-    }, []);
+    }, [tenantId, limitReached]);
 
     const handleSubmit = async (formData: any) => {
         setSubmitting(true);
@@ -96,6 +134,8 @@ export default function ProfessionalAddPage() {
                     specialties={specialties}
                     onSubmit={handleSubmit}
                     loading={submitting}
+                    showSpecialties={showSpecialties}
+                    showCoverage={showCoverage}
                 />
             </div>
         </div>

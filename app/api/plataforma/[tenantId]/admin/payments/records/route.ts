@@ -12,7 +12,7 @@ export async function GET(
   if (!session || session.tenantId !== tenantId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (session.role !== Role.ADMIN) {
+  if (session.role !== Role.ADMIN && session.role !== Role.PROFESSIONAL) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

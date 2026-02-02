@@ -12,7 +12,7 @@ export async function POST(
     const { tenantId } = await params;
     const session = await getSession();
     if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     try {
         // Read the JSON file

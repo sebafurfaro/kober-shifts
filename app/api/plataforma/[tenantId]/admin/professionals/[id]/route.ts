@@ -7,6 +7,7 @@ import {
   updateProfessionalProfile,
   findUserByEmail,
   deleteUser,
+  deleteAppointmentsByProfessional,
 } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
 import mysql from "@/lib/mysql";
@@ -18,7 +19,7 @@ export async function GET(
   const { id, tenantId } = await params;
   const session = await getSession();
   if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const user = await findUserById(id, tenantId);
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -42,6 +43,7 @@ export async function GET(
     id: user.id,
     email: user.email,
     name: user.name,
+    dni: user.dni ?? undefined,
     specialtyId: profile.specialtyId,
     specialtyIds: specialtyIds.length > 0 ? specialtyIds : [profile.specialtyId],
     color: profile.color,
@@ -61,7 +63,7 @@ export async function PUT(
   const { id, tenantId } = await params;
   const session = await getSession();
   if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
 
@@ -183,11 +185,13 @@ export async function DELETE(
   const { id, tenantId } = await params;
   const session = await getSession();
   if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const user = await findUserById(id, tenantId);
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
+  // Delete appointments first (FK professionalId REFERENCES users ON DELETE RESTRICT)
+  await deleteAppointmentsByProfessional(id, tenantId);
   await deleteUser(id, tenantId);
   return NextResponse.json({ success: true });
 }

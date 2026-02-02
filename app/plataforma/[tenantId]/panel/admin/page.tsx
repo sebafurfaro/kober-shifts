@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { PanelHeader } from "../components/PanelHeader";
-import { Card, CardBody, Switch, Spinner, Alert, Input, Button } from "@heroui/react";
+import { Card, CardBody, Switch, Spinner, Alert, Button, Select, SelectItem, Textarea } from "@heroui/react";
 import { useParams } from "next/navigation";
 import { AlertDialog } from "../components/alerts/AlertDialog";
 import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
@@ -13,11 +13,20 @@ interface NotificationSettings {
   email: boolean;
 }
 
+type WhatsappReminderOption = "48" | "24" | "48_and_24";
+
 interface Settings {
   notifications: NotificationSettings;
   cancelationLimit?: number;
   patientLabel?: string;
   professionalLabel?: string;
+  cancellationPolicy?: string;
+  whatsappReminderOption?: WhatsappReminderOption;
+}
+
+function getDefaultCancellationPolicy(cancelationLimit: number): string {
+  const hours = cancelationLimit === 1 ? "24hs" : "48hs";
+  return `Los turnos pueden ser cancelados con una anticipación de ${hours}, transcurrido ese tiempo no se podrá cancelar. En caso de no poder asistir, se te cobrará el monto de la seña pactada en caso que existiese.`;
 }
 
 export default function AdminPanelPage() {
@@ -31,9 +40,11 @@ export default function AdminPanelPage() {
       sms: false,
       email: false,
     },
-    cancelationLimit: 0,
+    cancelationLimit: 2,
     patientLabel: "Pacientes",
     professionalLabel: "Profesionales",
+    cancellationPolicy: "",
+    whatsappReminderOption: "48",
   });
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -70,13 +81,19 @@ export default function AdminPanelPage() {
               sms: false,
               email: false,
             },
-            cancelationLimit: data.cancelationLimit ?? 0,
+            cancelationLimit: data.cancelationLimit === 1 ? 1 : 2,
             patientLabel: data.patientLabel || "Pacientes",
             professionalLabel: data.professionalLabel || "Profesionales",
+            cancellationPolicy:
+              typeof data.cancellationPolicy === "string" && data.cancellationPolicy.trim() !== ""
+                ? data.cancellationPolicy
+                : getDefaultCancellationPolicy(data.cancelationLimit === 1 ? 1 : 2),
+            whatsappReminderOption:
+              data.whatsappReminderOption === "24" || data.whatsappReminderOption === "48_and_24"
+                ? data.whatsappReminderOption
+                : "48",
           };
           setSettings(loadedSettings);
-          
-          // Update Zustand store with loaded translations
           setTranslations({
             patientLabel: loadedSettings.patientLabel,
             professionalLabel: loadedSettings.professionalLabel,
@@ -98,13 +115,11 @@ export default function AdminPanelPage() {
 
     // Optimistically update UI
     const newSettings: Settings = {
+      ...settings,
       notifications: {
         ...settings.notifications,
         [key]: !settings.notifications[key],
       },
-      cancelationLimit: settings.cancelationLimit,
-      patientLabel: settings.patientLabel,
-      professionalLabel: settings.professionalLabel,
     };
     setSettings(newSettings);
     setSaving(true);
@@ -165,14 +180,6 @@ export default function AdminPanelPage() {
         open: true,
         message: "Configuración guardada exitosamente",
       });
-      
-      // Update Zustand store with new translations if they exist
-      if (settings.patientLabel && settings.professionalLabel) {
-        setTranslations({
-          patientLabel: settings.patientLabel,
-          professionalLabel: settings.professionalLabel,
-        });
-      }
     } catch (err) {
       console.error("Error saving settings:", err);
       setError(err instanceof Error ? err.message : "Error al guardar la configuración");
@@ -183,65 +190,56 @@ export default function AdminPanelPage() {
     }
   };
 
-  const handleSaveTranslations = async () => {
-    // Save previous state for rollback
+  const handleSaveWhatsappReminder = async () => {
     const previousSettings = settings;
-
     setSaving(true);
     setError(null);
-
     try {
       const res = await fetch(`/api/plataforma/${tenantId}/admin/settings`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(settings),
       });
-
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || "Error al guardar la configuración");
       }
-
-      setSuccessDialog({
-        open: true,
-        message: "Configuración guardada exitosamente",
-      });
-      
-      // Update Zustand store with new translations
-      if (settings.patientLabel && settings.professionalLabel) {
-        setTranslations({
-          patientLabel: settings.patientLabel,
-          professionalLabel: settings.professionalLabel,
-        });
-      }
+      setSuccessDialog({ open: true, message: "Configuración guardada exitosamente" });
     } catch (err) {
-      console.error("Error saving settings:", err);
       setError(err instanceof Error ? err.message : "Error al guardar la configuración");
-      // Revert the change on error
       setSettings(previousSettings);
     } finally {
       setSaving(false);
     }
   };
 
-  const notifications = [
-    {
-      key: "whatsapp" as const,
-      title: "Notificaciones por WhatsApp",
-    },
-    {
-      key: "sms" as const,
-      title: "Notificaciones por SMS",
-    },
-    {
-      key: "email" as const,
-      title: "Notificaciones por email",
-    },
-  ];
-
+  const handleSaveCancellationPolicy = async () => {
+    const previousSettings = settings;
+    const policyToSave =
+      settings.cancellationPolicy?.trim() ||
+      getDefaultCancellationPolicy(settings.cancelationLimit === 1 ? 1 : 2);
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/plataforma/${tenantId}/admin/settings`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ ...settings, cancellationPolicy: policyToSave }),
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Error al guardar la configuración");
+      }
+      setSuccessDialog({ open: true, message: "Configuración guardada exitosamente" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al guardar la configuración");
+      setSettings(previousSettings);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -272,48 +270,28 @@ export default function AdminPanelPage() {
         <Card className="p-6">
           <CardBody className="p-0">
             <h3 className="font-bold mb-6 text-gray-800 text-lg">
-              Notificaciones
-            </h3>
-            <div className="mt-4 space-y-4">
-              {notifications.map((notif) => (
-                <div
-                  key={notif.key}
-                  className="flex items-center justify-between py-3 px-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors duration-150 rounded-md"
-                >
-                  <p className="font-medium text-gray-700 flex-1">
-                    {notif.title}
-                  </p>
-                  <div className="flex justify-end">
-                    <Switch
-                      isSelected={settings.notifications[notif.key]}
-                      onValueChange={() => handleToggle(notif.key)}
-                      isDisabled={saving}
-                      color="primary"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardBody>
-        </Card>
-        <Card className="p-6">
-          <CardBody className="p-0">
-            <h3 className="font-bold mb-6 text-gray-800 text-lg">
               Configuración general de turnos
             </h3>
-            <div className="flex gap-2 items-center text-slate-800">
-              Permitir cancelacion de turnos hasta
-              <Input
-                type="number"
-                value={String(settings.cancelationLimit ?? 0)}
-                onChange={(e) => setSettings({ ...settings, cancelationLimit: parseInt(e.target.value) || 0 })}
+            <div className="flex gap-2 items-center flex-wrap text-slate-800">
+              Permitir cancelación de turnos hasta
+              <Select
+                selectedKeys={new Set([String(settings.cancelationLimit === 1 ? 1 : 2)])}
+                onSelectionChange={(keys) => {
+                  const value = Array.from(keys)[0];
+                  setSettings({ ...settings, cancelationLimit: value === "1" ? 1 : 2 });
+                }}
                 isDisabled={saving}
-                color="default"
                 variant="bordered"
-                className="w-24"
-              />
-              dias antes del turno
-              <Button
+                className="w-32"
+                aria-label="Antelación para cancelar"
+              >
+                <SelectItem key="2" className="text-slate-800">48hs</SelectItem>
+                <SelectItem key="1" className="text-slate-800">24hs</SelectItem>
+              </Select>
+              
+            </div>
+            <div className="flex justify-end mt-4">
+            <Button
                 className="button button-secondary"
                 onPress={() => handleSaveCancelationLimit()}
                 isDisabled={saving}
@@ -328,53 +306,68 @@ export default function AdminPanelPage() {
         <Card className="p-6">
           <CardBody className="p-0">
             <h3 className="font-bold mb-6 text-gray-800 text-lg">
-              Traducciones
+              Política de cancelación de turnos y penalización
             </h3>
-            <div className="space-y-4">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-gray-700">
-                  ¿Cómo llamarás a los profesionales?
-                </label>
-                <div className="flex gap-2 items-center">
-                  <Input
-                    type="text"
-                    value={settings.professionalLabel || "Profesionales"}
-                    onChange={(e) => setSettings({ ...settings, professionalLabel: e.target.value })}
-                    isDisabled={saving}
-                    color="default"
-                    variant="bordered"
-                    className="flex-1"
-                    placeholder="Profesionales"
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-gray-700">
-                  ¿Cómo llamarás a los clientes?
-                </label>
-                <div className="flex gap-2 items-center">
-                  <Input
-                    type="text"
-                    value={settings.patientLabel || "Pacientes"}
-                    onChange={(e) => setSettings({ ...settings, patientLabel: e.target.value })}
-                    isDisabled={saving}
-                    color="default"
-                    variant="bordered"
-                    className="flex-1"
-                    placeholder="Pacientes"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end pt-2">
-                <Button
-                  className="button button-secondary"
-                  onPress={handleSaveTranslations}
-                  isDisabled={saving}
-                  isLoading={saving}
-                >
-                  Guardar
-                </Button>
-              </div>
+            <Textarea
+              label="Texto de la política"
+              value={
+                settings.cancellationPolicy !== undefined && settings.cancellationPolicy !== ""
+                  ? settings.cancellationPolicy
+                  : getDefaultCancellationPolicy(settings.cancelationLimit === 1 ? 1 : 2)
+              }
+              onValueChange={(value) => setSettings({ ...settings, cancellationPolicy: value })}
+              isDisabled={saving}
+              variant="bordered"
+              minRows={4}
+              classNames={{ input: "text-slate-800", inputWrapper: "text-slate-800" }}
+            />
+            <div className="flex justify-end mt-4">
+              <Button
+                className="button button-secondary"
+                onPress={handleSaveCancellationPolicy}
+                isDisabled={saving}
+                isLoading={saving}
+              >
+                Guardar
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
+
+        <Card className="p-6">
+          <CardBody className="p-0">
+            <h3 className="font-bold mb-6 text-gray-800 text-lg">
+              Plazo de recordatorio por WhatsApp
+            </h3>
+            <Select
+              selectedKeys={new Set([settings.whatsappReminderOption ?? "48"])}
+              onSelectionChange={(keys) => {
+                const value = Array.from(keys)[0] as WhatsappReminderOption;
+                if (value === "48" || value === "24" || value === "48_and_24") {
+                  setSettings({ ...settings, whatsappReminderOption: value });
+                }
+              }}
+              isDisabled={saving}
+              variant="bordered"
+              className="max-w-xs"
+              aria-label="Plazo de recordatorio WhatsApp"
+            >
+              <SelectItem key="48" className="text-slate-800">48hs</SelectItem>
+              <SelectItem key="24" className="text-slate-800">24hs</SelectItem>
+              <SelectItem key="48_and_24" className="text-slate-800">48hs y 24hs</SelectItem>
+            </Select>
+            <p className="text-sm text-gray-600 mt-4">
+              Recordá que la opción de 48hs o 24hs, cuenta como un recordatorio. La opción dual de 48hs y 24hs, cuentan como dos recordatorios. Los mismos se descontarán de tu paquete contratado.
+            </p>
+            <div className="flex justify-end mt-4">
+              <Button
+                className="button button-secondary"
+                onPress={handleSaveWhatsappReminder}
+                isDisabled={saving}
+                isLoading={saving}
+              >
+                Guardar
+              </Button>
             </div>
           </CardBody>
         </Card>

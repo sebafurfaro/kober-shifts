@@ -14,15 +14,24 @@ import {
   Divider,
 } from "@heroui/react";
 
+export interface TenantFormFeatures {
+  show_specialties: boolean;
+  show_coverage: boolean;
+  show_mercado_pago: boolean;
+  payment_enabled: boolean;
+}
+
+export interface TenantFormLimits {
+  maxUsers: number;
+  whatsappRemindersLimit: number;
+}
+
 interface TenantFormData {
   name: string;
   id?: string;
   logoUrl?: string;
-  features?: {
-    calendar: boolean;
-    emailNotifications: boolean;
-    whatsappNotifications: boolean;
-  };
+  features?: TenantFormFeatures;
+  limits?: TenantFormLimits;
 }
 
 interface TenantFormDialogProps {
@@ -43,16 +52,20 @@ export function TenantFormDialog({
     id: "",
     logoUrl: "",
     features: {
-      calendar: true,
-      emailNotifications: false,
-      whatsappNotifications: false,
+      show_specialties: true,
+      show_coverage: true,
+      show_mercado_pago: true,
+      payment_enabled: true,
+    },
+    limits: {
+      maxUsers: 1,
+      whatsappRemindersLimit: 0,
     },
   });
 
   const [errors, setErrors] = React.useState<Partial<Record<keyof TenantFormData, string>>>({});
   const [submitError, setSubmitError] = React.useState<string | null>(null);
 
-  // Reset form when dialog opens/closes
   React.useEffect(() => {
     if (open) {
       setFormData({
@@ -60,9 +73,14 @@ export function TenantFormDialog({
         id: "",
         logoUrl: "",
         features: {
-          calendar: true,
-          emailNotifications: false,
-          whatsappNotifications: false,
+          show_specialties: true,
+          show_coverage: true,
+          show_mercado_pago: true,
+          payment_enabled: true,
+        },
+        limits: {
+          maxUsers: 1,
+          whatsappRemindersLimit: 0,
         },
       });
       setErrors({});
@@ -85,6 +103,19 @@ export function TenantFormDialog({
       newErrors.logoUrl = "Debe ser una URL válida (http:// o https://)";
     }
 
+    const maxUsers = formData.limits?.maxUsers ?? 1;
+    const whatsapp = formData.limits?.whatsappRemindersLimit ?? 0;
+    if (
+      typeof maxUsers !== "number" ||
+      maxUsers < 0 ||
+      !Number.isInteger(maxUsers) ||
+      typeof whatsapp !== "number" ||
+      whatsapp < 0 ||
+      !Number.isInteger(whatsapp)
+    ) {
+      newErrors.limits = "Los límites deben ser números enteros ≥ 0";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -103,6 +134,7 @@ export function TenantFormDialog({
         id: formData.id?.trim() || undefined,
         logoUrl: formData.logoUrl?.trim() || undefined,
         features: formData.features,
+        limits: formData.limits,
       };
 
       await onSubmit(submitData);
@@ -194,59 +226,109 @@ export function TenantFormDialog({
 
               <Divider className="my-2" />
 
-              <div className="space-y-3 flex flex-col gap-2">
-                <h3 className="text-sm font-semibold text-gray-700">Feature Flags</h3>
-                
-                <Switch
-                  isSelected={formData.features?.calendar ?? true}
-                  onValueChange={(value) => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      features: {
-                        ...prev.features!,
-                        calendar: value,
-                      },
-                    }));
-                  }}
-                  isDisabled={loading}
-                  classNames={{label: "text-slate-800"}}
-                >
-                  Calendario
-                </Switch>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Límites por tenant</h3>
+                {errors.limits && (
+                  <p className="text-sm text-danger mb-2">{errors.limits}</p>
+                )}
+                <div className="flex flex-col gap-3">
+                  <Input
+                    type="number"
+                    label="Cantidad máxima de usuarios/profesionales"
+                    value={String(formData.limits?.maxUsers ?? 1)}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        limits: {
+                          ...prev.limits!,
+                          maxUsers: parseInt(value, 10) || 0,
+                        },
+                      }))
+                    }
+                    min={0}
+                    step={1}
+                    isDisabled={loading}
+                    classNames={{ input: "text-slate-800", inputWrapper: "text-slate-800" }}
+                  />
+                  <Input
+                    type="number"
+                    label="Recordatorios WhatsApp disponibles"
+                    value={String(formData.limits?.whatsappRemindersLimit ?? 0)}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        limits: {
+                          ...prev.limits!,
+                          whatsappRemindersLimit: parseInt(value, 10) || 0,
+                        },
+                      }))
+                    }
+                    min={0}
+                    step={1}
+                    isDisabled={loading}
+                    classNames={{ input: "text-slate-800", inputWrapper: "text-slate-800" }}
+                  />
+                </div>
+              </div>
 
-                <Switch
-                  isSelected={formData.features?.emailNotifications ?? false}
-                  onValueChange={(value) => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      features: {
-                        ...prev.features!,
-                        emailNotifications: value,
-                      },
-                    }));
-                  }}
-                  isDisabled={loading}
-                  classNames={{label: "text-slate-800"}}
-                >
-                  Notificaciones por Email
-                </Switch>
+              <Divider className="my-2" />
 
-                <Switch
-                  isSelected={formData.features?.whatsappNotifications ?? false}
-                  onValueChange={(value) => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      features: {
-                        ...prev.features!,
-                        whatsappNotifications: value,
-                      },
-                    }));
-                  }}
-                  isDisabled={loading}
-                  classNames={{label: "text-slate-800"}}
-                >
-                  Notificaciones por WhatsApp
-                </Switch>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Feature flags</h3>
+                <div className="space-y-3 flex flex-col gap-2">
+                  <Switch
+                    isSelected={formData.features?.show_specialties ?? true}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        features: { ...prev.features!, show_specialties: value },
+                      }))
+                    }
+                    isDisabled={loading}
+                    classNames={{ label: "text-slate-800" }}
+                  >
+                    Mostrar especialidades
+                  </Switch>
+                  <Switch
+                    isSelected={formData.features?.show_coverage ?? true}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        features: { ...prev.features!, show_coverage: value },
+                      }))
+                    }
+                    isDisabled={loading}
+                    classNames={{ label: "text-slate-800" }}
+                  >
+                    Mostrar coberturas
+                  </Switch>
+                  <Switch
+                    isSelected={formData.features?.show_mercado_pago ?? true}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        features: { ...prev.features!, show_mercado_pago: value },
+                      }))
+                    }
+                    isDisabled={loading}
+                    classNames={{ label: "text-slate-800" }}
+                  >
+                    Mostrar Mercado Pago
+                  </Switch>
+                  <Switch
+                    isSelected={formData.features?.payment_enabled ?? true}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        features: { ...prev.features!, payment_enabled: value },
+                      }))
+                    }
+                    isDisabled={loading}
+                    classNames={{ label: "text-slate-800" }}
+                  >
+                    Habilitar tenant
+                  </Switch>
+                </div>
               </div>
             </div>
           </ModalBody>

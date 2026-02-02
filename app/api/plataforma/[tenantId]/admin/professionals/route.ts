@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { findUsersWithProfessionalProfile, findUserByEmail, createUser, createProfessionalProfile } from "@/lib/db";
+import { findUsersWithProfessionalProfile, findUserByEmail, createUser, createProfessionalProfile, countProfessionals } from "@/lib/db";
+import { getTenantFeatureFlagsAndLimits } from "@/lib/tenant-features";
 import { hashPassword } from "@/lib/auth";
 import { Role } from "@/lib/types";
 import { randomUUID } from "crypto";
@@ -12,7 +13,7 @@ export async function GET(
   const { tenantId } = await params;
   const session = await getSession();
   if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const items = await findUsersWithProfessionalProfile(tenantId);
   return NextResponse.json(items);
@@ -25,15 +26,16 @@ export async function POST(
   const { tenantId } = await params;
   const session = await getSession();
   if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const dni = typeof body.dni === "string" ? body.dni.trim() : null;
   const specialtyId = typeof body.specialtyId === "string" ? body.specialtyId : "";
   const specialtyIds = Array.isArray(body.specialtyIds) ? body.specialtyIds.filter((id): id is string => typeof id === "string") : (specialtyId ? [specialtyId] : []);
   const color = typeof body.color === "string" ? body.color.trim() : "#2196f3";
-  const tempPassword = typeof body.tempPassword === "string" ? body.tempPassword : "changeme123";
+  const tempPassword = typeof body.tempPassword === "string" ? body.tempPassword : (dni || "changeme123");
   const licenseNumber = typeof body.licenseNumber === "string" ? body.licenseNumber.trim() : null;
   const medicalCoverages = Array.isArray(body.medicalCoverages) ? body.medicalCoverages : null;
   // Handle availabilityConfig - include it if present, even if empty/null
@@ -53,6 +55,15 @@ export async function POST(
 
   if (!name || !email || specialtyIds.length === 0) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
+  const limits = await getTenantFeatureFlagsAndLimits(tenantId);
+  const currentCount = await countProfessionals(tenantId);
+  if (currentCount >= limits.maxUsers) {
+    return NextResponse.json(
+      { error: `Límite de ${limits.maxUsers} usuario(s)/profesional(es) alcanzado. No se pueden agregar más.` },
+      { status: 403 }
+    );
+  }
+
   const exists = await findUserByEmail(email, tenantId);
   if (exists) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
 
@@ -62,6 +73,7 @@ export async function POST(
     tenantId,
     name,
     email,
+    dni: dni ?? undefined,
     role: Role.PROFESSIONAL,
     passwordHash: hashPassword(tempPassword),
   });

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getStoreSession } from "@/lib/store-session";
-import { mongoClientPromise } from "@/lib/mongo";
+import { getMongoClientPromise } from "@/lib/mongo";
 
-const ALLOWED_EMAIL = "seba.furfaro@gmail.com";
+const ALLOWED_EMAILS = ["seba.furfaro@gmail.com", "caourisaldana@gmail.com"].map((e) => e.toLowerCase());
 
 async function validateStoreAccess() {
   const session = await getStoreSession();
@@ -10,12 +10,24 @@ async function validateStoreAccess() {
     return { error: "Unauthorized", status: 401 };
   }
 
-  if (session.email.toLowerCase() !== ALLOWED_EMAIL.toLowerCase()) {
+  if (!ALLOWED_EMAILS.includes(session.email.toLowerCase())) {
     return { error: "Forbidden", status: 403 };
   }
 
   return { session };
 }
+
+const DEFAULT_FEATURES = {
+  show_specialties: true,
+  show_coverage: true,
+  show_mercado_pago: true,
+  payment_enabled: true,
+};
+
+const DEFAULT_LIMITS = {
+  maxUsers: 1,
+  whatsappRemindersLimit: 0,
+};
 
 /**
  * GET /api/store/tenants/[id]/features
@@ -33,27 +45,43 @@ export async function GET(
   const { id: tenantId } = await params;
 
   try {
-    const client = await mongoClientPromise;
-    const db = client.db();
+    const client = await getMongoClientPromise();
+    const db = client.db("kober_shifts");
     const collection = db.collection("tenant_features");
 
-    const features = await collection.findOne({ tenantId });
+    const doc = await collection.findOne({ tenantId });
 
-    // Return default features if none exist
-    const defaultFeatures = {
-      calendar: true,
-      emailNotifications: false,
-      whatsappNotifications: false,
+    const rawFeatures = doc?.features && typeof doc.features === "object" ? doc.features : {};
+    const paymentEnabled =
+      (rawFeatures as { payment_enabled?: boolean }).payment_enabled ??
+      (typeof (rawFeatures as { disabled_payment?: boolean }).disabled_payment === "boolean"
+        ? !(rawFeatures as { disabled_payment: boolean }).disabled_payment
+        : true);
+    const features = {
+      ...DEFAULT_FEATURES,
+      ...rawFeatures,
+      payment_enabled: paymentEnabled,
     };
+    const limits = doc?.limits && typeof doc.limits === "object"
+      ? { ...DEFAULT_LIMITS, ...doc.limits }
+      : DEFAULT_LIMITS;
 
-    return NextResponse.json(features?.features || defaultFeatures);
-  } catch (error: any) {
+    return NextResponse.json({ features, limits });
+  } catch (error: unknown) {
     console.error("Error fetching feature flags:", error);
     return NextResponse.json(
-      { error: "Failed to fetch feature flags" },
-      { status: 500 }
+      {
+        features: DEFAULT_FEATURES,
+        limits: DEFAULT_LIMITS,
+      },
+      { status: 200 }
     );
   }
+}
+
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  return String(err);
 }
 
 /**
@@ -64,50 +92,101 @@ export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const validation = await validateStoreAccess();
-  if (validation.error) {
-    return NextResponse.json({ error: validation.error }, { status: validation.status });
-  }
-
-  const { id: tenantId } = await params;
-
   try {
-    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-    const features = body.features as {
-      calendar?: boolean;
-      emailNotifications?: boolean;
-      whatsappNotifications?: boolean;
-    } | undefined;
-
-    if (!features) {
-      return NextResponse.json(
-        { error: "Invalid features format" },
-        { status: 400 }
-      );
+    const validation = await validateStoreAccess();
+    if (validation.error) {
+      return NextResponse.json({ error: validation.error }, { status: validation.status });
     }
 
-    const client = await mongoClientPromise;
-    const db = client.db();
-    const collection = db.collection("tenant_features");
+    const { id: tenantId } = await params;
+    if (!tenantId || typeof tenantId !== "string") {
+      return NextResponse.json({ error: "Invalid tenant id" }, { status: 400 });
+    }
 
-    const featureFlags = {
-      calendar: features.calendar ?? true,
-      emailNotifications: features.emailNotifications ?? false,
-      whatsappNotifications: features.whatsappNotifications ?? false,
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const features = body.features as {
+      show_specialties?: boolean;
+      show_coverage?: boolean;
+      show_mercado_pago?: boolean;
+      payment_enabled?: boolean;
+    } | undefined;
+    const limits = body.limits as {
+      maxUsers?: number;
+      whatsappRemindersLimit?: number;
+    } | undefined;
+
+    const isConnectionError = (err: unknown) => {
+      const msg = getErrorMessage(err);
+      return /ECONNREFUSED|MongoServerSelectionError|connection/i.test(msg);
     };
 
-    await collection.updateOne(
-      { tenantId },
-      { $set: { tenantId, features: featureFlags, updatedAt: new Date() } },
-      { upsert: true }
-    );
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const client = await getMongoClientPromise();
+        const db = client.db("kober_shifts");
+        const collection = db.collection("tenant_features");
 
-    return NextResponse.json({ success: true, features: featureFlags });
-  } catch (error: any) {
-    console.error("Error updating feature flags:", error);
-    return NextResponse.json(
-      { error: "Failed to update feature flags" },
-      { status: 500 }
-    );
+        const doc = await collection.findOne({ tenantId });
+
+        const docRaw = doc?.features && typeof doc.features === "object" ? doc.features : {};
+        const docPaymentEnabled =
+          (docRaw as { payment_enabled?: boolean }).payment_enabled ??
+          (typeof (docRaw as { disabled_payment?: boolean }).disabled_payment === "boolean"
+            ? !(docRaw as { disabled_payment: boolean }).disabled_payment
+            : true);
+        const featureFlags = {
+          show_specialties: features?.show_specialties ?? doc?.features?.show_specialties ?? true,
+          show_coverage: features?.show_coverage ?? doc?.features?.show_coverage ?? true,
+          show_mercado_pago: features?.show_mercado_pago ?? doc?.features?.show_mercado_pago ?? true,
+          payment_enabled: features?.payment_enabled ?? docPaymentEnabled ?? true,
+        };
+
+        const limitsData = {
+          maxUsers: typeof limits?.maxUsers === "number" ? limits.maxUsers : (doc?.limits?.maxUsers ?? 1),
+          whatsappRemindersLimit: typeof limits?.whatsappRemindersLimit === "number" ? limits.whatsappRemindersLimit : (doc?.limits?.whatsappRemindersLimit ?? 0),
+        };
+
+        await collection.updateOne(
+          { tenantId },
+          { $set: { tenantId, features: featureFlags, limits: limitsData, updatedAt: new Date() } },
+          { upsert: true }
+        );
+
+        return NextResponse.json({ success: true, features: featureFlags, limits: limitsData });
+      } catch (error: unknown) {
+        lastError = error;
+        console.error(`Error updating feature flags (attempt ${attempt}):`, error);
+        if (attempt === 2 || !isConnectionError(error)) {
+          const message = getErrorMessage(error);
+          const payload: { error: string; detail?: string } = {
+            error: "Failed to update feature flags",
+          };
+          if (process.env.NODE_ENV !== "production") {
+            payload.detail = message;
+          }
+          return NextResponse.json(payload, { status: 500 });
+        }
+        await new Promise((r) => setTimeout(r, 800));
+      }
+    }
+
+    const message = getErrorMessage(lastError);
+    const payload: { error: string; detail?: string } = {
+      error: "Failed to update feature flags",
+    };
+    if (process.env.NODE_ENV !== "production") {
+      payload.detail = message;
+    }
+    return NextResponse.json(payload, { status: 500 });
+  } catch (err: unknown) {
+    console.error("PUT /api/store/tenants/[id]/features unexpected error:", err);
+    const payload: { error: string; detail?: string } = {
+      error: "Failed to update feature flags",
+    };
+    if (process.env.NODE_ENV !== "production") {
+      payload.detail = err instanceof Error ? err.message : String(err);
+    }
+    return NextResponse.json(payload, { status: 500 });
   }
 }

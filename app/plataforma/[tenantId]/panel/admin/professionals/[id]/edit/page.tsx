@@ -19,19 +19,27 @@ export default function ProfessionalEditPage() {
     const [loading, setLoading] = React.useState(true);
     const [submitting, setSubmitting] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
+    const [showSpecialties, setShowSpecialties] = React.useState(true);
+    const [showCoverage, setShowCoverage] = React.useState(true);
 
     React.useEffect(() => {
         async function loadData() {
             try {
-                const [specRes, proRes] = await Promise.all([
-                    fetch(`/api/plataforma/${tenantId}/admin/specialties`),
-                    fetch(`/api/plataforma/${tenantId}/admin/professionals/${id}`)
+                const [specRes, proRes, featuresRes] = await Promise.all([
+                    fetch(`/api/plataforma/${tenantId}/admin/specialties`, { credentials: "include" }),
+                    fetch(`/api/plataforma/${tenantId}/admin/professionals/${id}`, { credentials: "include" }),
+                    fetch(`/api/plataforma/${tenantId}/features`, { credentials: "include" }),
                 ]);
 
                 if (!specRes.ok || !proRes.ok) throw new Error("Error al cargar datos");
 
                 const specs = await specRes.json();
                 const pro = await proRes.json();
+                if (featuresRes.ok) {
+                    const features = await featuresRes.json();
+                    setShowSpecialties(features.show_specialties ?? true);
+                    setShowCoverage(features.show_coverage ?? true);
+                }
 
                 setSpecialties(specs);
                 setInitialData({
@@ -47,7 +55,7 @@ export default function ProfessionalEditPage() {
             }
         }
         loadData();
-    }, [id]);
+    }, [id, tenantId]);
 
     const handleSubmit = async (formData: any) => {
         setSubmitting(true);
@@ -107,6 +115,8 @@ export default function ProfessionalEditPage() {
                     initialData={initialData}
                     onSubmit={handleSubmit}
                     loading={submitting}
+                    showSpecialties={showSpecialties}
+                    showCoverage={showCoverage}
                 />
             </div>
         </div>
