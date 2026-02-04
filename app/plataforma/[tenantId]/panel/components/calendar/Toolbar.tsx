@@ -6,6 +6,7 @@ import {
 } from "@heroui/react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { PlusIcon } from "lucide-react";
 
 type ViewType = "dayGridMonth" | "timeGridWeek" | "timeGridDay";
 
@@ -102,9 +103,9 @@ export function Toolbar({
                 <Button
                     color="primary"
                     onPress={onCreateEvent}
-                    className="font-bold tracking-wide rounded-lg"
+                    className="font-bold rounded-full w-10 h-10 flex items-center justify-center p-2"
                 >
-                    Crear Turno
+                    <PlusIcon className="w-4 h-4" />
                 </Button>
 
                 <Select

@@ -4,7 +4,7 @@ import { findAppointmentsByDateRange, findUserById, findLocationById, findSpecia
 import { createAppointmentEvent } from "@/lib/googleCalendar";
 import { AppointmentStatus, Role } from "@/lib/types";
 import { randomUUID } from "crypto";
-import { mysqlDateToUTC, utcToMySQLDate } from "@/lib/timezone";
+import { utcToMySQLDate } from "@/lib/timezone";
 import { toZonedTime } from "date-fns-tz";
 
 export async function GET(
@@ -63,7 +63,8 @@ export async function GET(
       apt.status === "CONFIRMED" ? "#4caf50" :
         apt.status === "CANCELLED" ? "#f44336" :
           apt.status === "ATTENDED" ? "#2196f3" :
-            "#ff9800"; // REQUESTED
+            apt.status === "PENDING_DEPOSIT" ? "#e65100" :
+              "#ff9800"; // REQUESTED
 
     // Always prioritize professional color over status color if it exists
     const backgroundColor = hasValidColor ? professionalColor.trim() : statusColor;
@@ -72,10 +73,11 @@ export async function GET(
     const startDate = apt.startAt instanceof Date ? apt.startAt : new Date(apt.startAt);
     const endDate = apt.endAt instanceof Date ? apt.endAt : new Date(apt.endAt);
 
-    // We need to convert the naive MySQL date (interpreted as UTC) to the actual UTC timestamp
-    // that corresponds to that local time in Buenos Aires.
-    const startISO = mysqlDateToUTC(startDate).toISOString();
-    const endISO = mysqlDateToUTC(endDate).toISOString();
+    // FullCalendar con timeZone nombrado SIN plugin usa "UTC-coercion": muestra la hora UTC
+    // del ISO. En MySQL guardamos hora BA "naive"; mysql2 la devuelve como UTC (mismo número).
+    // Enviamos ese ISO directo para que el calendario muestre 9:45 cuando el turno es 9:45 BA.
+    const startISO = startDate.toISOString();
+    const endISO = endDate.toISOString();
 
     return {
       id: apt.id,

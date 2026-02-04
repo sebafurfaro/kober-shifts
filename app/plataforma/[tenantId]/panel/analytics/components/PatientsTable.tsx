@@ -25,6 +25,8 @@ interface PatientsTableProps {
   onPageChange: (page: number) => void;
   onSortChange: (sortBy: "totalAppointments" | "cancelledAppointments") => void;
   patientLabel: string;
+  /** Si true, muestra título "Clientes destacados (Top 10)" y oculta paginación y orden. */
+  top10Only?: boolean;
 }
 
 export function PatientsTable({
@@ -35,6 +37,7 @@ export function PatientsTable({
   onPageChange,
   onSortChange,
   patientLabel,
+  top10Only = false,
 }: PatientsTableProps) {
   const handleSortChange = React.useCallback(
     (keys: unknown) => {
@@ -49,9 +52,17 @@ export function PatientsTable({
     <Card className="mb-8">
       <CardBody className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">
-            {patientLabel}
-          </h3>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800">
+              {top10Only ? "Clientes destacados (Top 10)" : patientLabel}
+            </h3>
+            {top10Only && (
+              <p className="text-sm text-gray-500 mt-0.5">
+                Clientes que más registraron turnos
+              </p>
+            )}
+          </div>
+          {!top10Only && (
           <Select
             label="Ordenar por"
             selectedKeys={[sortBy]}
@@ -63,6 +74,7 @@ export function PatientsTable({
             <SelectItem key="totalAppointments" className="text-gray-800">Turnos Totales</SelectItem>
             <SelectItem key="cancelledAppointments" className="text-gray-800">Turnos Cancelados</SelectItem>
           </Select>
+          )}
         </div>
 
         <Table aria-label={`Tabla de ${patientLabel.toLowerCase()}`}>
@@ -104,7 +116,7 @@ export function PatientsTable({
           </TableBody>
         </Table>
 
-        {patientsData && patientsData.pagination.totalPages > 1 && (
+        {!top10Only && patientsData && patientsData.pagination.totalPages > 1 && (
           <div className="flex justify-center mt-4">
             <Pagination
               total={patientsData.pagination.totalPages}

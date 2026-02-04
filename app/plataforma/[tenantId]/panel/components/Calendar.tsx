@@ -621,6 +621,7 @@ export function Calendar() {
 
   const statusColors: Record<string, string> = {
     REQUESTED: "#ff9800",
+    PENDING_DEPOSIT: "#e65100",
     CONFIRMED: "#4caf50",
     CANCELLED: "#f44336",
     ATTENDED: "#2196f3",
@@ -628,6 +629,7 @@ export function Calendar() {
 
   const statusLabels: Record<string, string> = {
     REQUESTED: "Solicitado",
+    PENDING_DEPOSIT: "Pendiente de seña",
     CONFIRMED: "Confirmado",
     CANCELLED: "Cancelado",
     ATTENDED: "Atendido",

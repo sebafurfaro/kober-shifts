@@ -4,6 +4,7 @@ import {
   findProfessionalProfileByUserId,
   findAppointmentsByDateRange,
   findGoogleOAuthTokenByUserId,
+  findUsersWithRoleIn,
 } from "@/lib/db";
 import { getCalendarClient } from "@/lib/googleOAuth";
 import { AppointmentStatus } from "@/lib/types";
@@ -57,7 +58,12 @@ export async function GET(
 
   // Get professional profile
   const profile = await findProfessionalProfileByUserId(professionalId, tenantId);
+  // Si no hay perfil o está inactivo: si es el único usuario ADMIN o PROFESSIONAL del tenant, devolver slots vacíos (paciente puede elegirlo pero sin disponibilidad hasta que configure)
   if (!profile || !profile.isActive) {
+    const adminOrProfessional = await findUsersWithRoleIn(["ADMIN", "PROFESSIONAL"], tenantId);
+    if (adminOrProfessional.length === 1 && adminOrProfessional[0].id === professionalId) {
+      return NextResponse.json([]);
+    }
     return NextResponse.json(
       { error: "Professional not found or inactive" },
       { status: 404 }
@@ -156,13 +162,14 @@ export async function GET(
     rawAvailabilityConfig: JSON.stringify(profile.availabilityConfig),
   });
 
-  // Generate available slots
+  // Generate available slots (now = hora actual: para hoy no se muestran slots previos a esta hora)
   const slots = generateAvailableSlots(
     profile,
     startDate,
     endDate,
     existingAppointments,
-    googleEvents
+    googleEvents,
+    now
   );
 
   console.log("Generated slots count:", slots.length);
@@ -206,12 +213,22 @@ function isDateInHoliday(date: Date, holidays: Array<{ startDate: string; endDat
   return false;
 }
 
+/** True si la fecha del slot es el mismo día (local) que now. */
+function isSameCalendarDay(slotTime: Date, now: Date): boolean {
+  return (
+    slotTime.getFullYear() === now.getFullYear() &&
+    slotTime.getMonth() === now.getMonth() &&
+    slotTime.getDate() === now.getDate()
+  );
+}
+
 function generateAvailableSlots(
   profile: any,
   startDate: Date,
   endDate: Date,
   existingAppointments: any[],
-  googleEvents: Array<{ start: Date; end: Date }>
+  googleEvents: Array<{ start: Date; end: Date }>,
+  now: Date
 ): Array<{ date: string; time: string; datetime: string }> {
   const slots: Array<{ date: string; time: string; datetime: string }> = [];
   const appointmentDuration = 45; // minutes
@@ -413,7 +430,11 @@ function generateAvailableSlots(
                 );
               });
 
-              if (!isBusy && slotEnd <= endTime) {
+              // Para la fecha actual no mostrar slots que empiecen antes de la hora de ingreso
+              const isToday = isSameCalendarDay(slotTime, now);
+              const slotAlreadyPassed = isToday && slotTime.getTime() < now.getTime();
+
+              if (!isBusy && slotEnd <= endTime && !slotAlreadyPassed) {
                 // Format date in local timezone to avoid day shift
                 // Use currentDate directly (it's already in local timezone from the loop)
                 const year = currentDate.getFullYear();
@@ -509,7 +530,11 @@ function generateAvailableSlots(
             );
           });
 
-          if (!isBusy && slotEnd <= endTime) {
+          // Para la fecha actual no mostrar slots que empiecen antes de la hora de ingreso
+          const isTodayLegacy = isSameCalendarDay(slotTime, now);
+          const slotAlreadyPassedLegacy = isTodayLegacy && slotTime.getTime() < now.getTime();
+
+          if (!isBusy && slotEnd <= endTime && !slotAlreadyPassedLegacy) {
             const dateStr = currentDate.toISOString().split("T")[0];
             const timeStr = `${String(slotTime.getHours()).padStart(2, "0")}:${String(slotTime.getMinutes()).padStart(2, "0")}`;
             slots.push({

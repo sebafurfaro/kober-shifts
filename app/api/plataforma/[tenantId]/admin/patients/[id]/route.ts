@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { findUserById, updateUser, findUserByEmail } from "@/lib/db";
+import { findUserById, updateUser, deleteUser, deleteAppointmentsByPatient } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
 import { Role, Gender } from "@/lib/types";
 import type { User } from "@/lib/types";
@@ -12,12 +12,16 @@ export async function GET(
   const { id, tenantId } = await params;
   const session = await getSession();
   if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const canAccess =
+    session.role === Role.ADMIN ||
+    session.role === Role.PROFESSIONAL ||
+    (session.role === Role.PATIENT && session.userId === id);
+  if (!canAccess) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const user = await findUserById(id, tenantId);
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  if (session.role === Role.PATIENT && user.role !== Role.PATIENT)
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   return NextResponse.json(user);
 }
@@ -29,16 +33,18 @@ export async function PUT(
   const { id, tenantId } = await params;
   const session = await getSession();
   if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const canEdit =
+    session.role === Role.ADMIN ||
+    session.role === Role.PROFESSIONAL ||
+    (session.role === Role.PATIENT && session.userId === id);
+  if (!canEdit) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
 
   const user = await findUserById(id, tenantId);
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
   if (user.role !== Role.PATIENT) {
-    return NextResponse.json({ error: "User is not a patient" }, { status: 400 });
+    return NextResponse.json({ error: "El usuario no es un paciente" }, { status: 400 });
   }
 
   const firstName = typeof body.firstName === "string" ? body.firstName.trim() : "";
@@ -109,5 +115,32 @@ export async function PUT(
     gender: updatedUser.gender,
     nationality: updatedUser.nationality,
   });
+}
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string; tenantId: string }> }
+) {
+  const { id, tenantId } = await params;
+  const session = await getSession();
+  if (!session || session.tenantId !== tenantId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.role !== Role.ADMIN && session.role !== Role.PROFESSIONAL)
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const user = await findUserById(id, tenantId);
+  if (!user) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+  if (user.role !== Role.PATIENT)
+    return NextResponse.json({ error: "El usuario no es un paciente" }, { status: 400 });
+
+  try {
+    await deleteAppointmentsByPatient(id, tenantId);
+    await deleteUser(id, tenantId);
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    console.error("Error deleting patient:", error);
+    const message = error instanceof Error ? error.message : "Error al eliminar";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 

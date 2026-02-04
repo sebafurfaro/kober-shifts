@@ -3,8 +3,13 @@ import { mongoClientPromise } from "@/lib/mongo";
 import mysql from "@/lib/mysql";
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import crypto from "crypto";
+import { getMercadoPagoAccountByTenant } from "@/lib/mercadopago-accounts";
+import { findAppointmentById, updateAppointmentStatus } from "@/lib/db";
+import { AppointmentStatus } from "@/lib/types";
 
-async function getTenantAccessToken(tenantId: string) {
+async function getTenantAccessToken(tenantId: string): Promise<string | null> {
+  const account = await getMercadoPagoAccountByTenant(tenantId);
+  if (account?.accessToken) return account.accessToken;
   const client = await mongoClientPromise;
   const db = client.db();
   const collection = db.collection("tenant_payments");
@@ -12,12 +17,16 @@ async function getTenantAccessToken(tenantId: string) {
   return settings?.settings?.mercadoPago?.accessToken || null;
 }
 
-async function getTenantWebhookSecret(tenantId: string) {
+async function getWebhookSecret(_tenantId: string): Promise<string | null> {
+  const fromEnv = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim();
+  if (fromEnv) return fromEnv;
   const client = await mongoClientPromise;
   const db = client.db();
   const collection = db.collection("tenant_payments");
-  const settings = await collection.findOne({ tenantId });
-  return settings?.settings?.mercadoPago?.webhookSecret || null;
+  const settings = await collection.findOne({ tenantId: _tenantId });
+  const fromTenant = settings?.settings?.mercadoPago?.webhookSecret;
+  if (fromTenant && typeof fromTenant === "string" && fromTenant.trim()) return fromTenant.trim();
+  return null;
 }
 
 async function ensurePaymentsTable() {
@@ -98,9 +107,9 @@ export async function POST(
       return NextResponse.json({ error: "Mercado Pago not configured" }, { status: 400 });
     }
 
-    const webhookSecret = await getTenantWebhookSecret(tenantId);
+    const webhookSecret = await getWebhookSecret(tenantId);
     if (!webhookSecret) {
-      return NextResponse.json({ error: "Webhook secret not configured" }, { status: 400 });
+      return NextResponse.json({ error: "Webhook secret not configured (MERCADOPAGO_WEBHOOK_SECRET)" }, { status: 400 });
     }
 
     const signatureHeader = req.headers.get("x-signature");
@@ -165,6 +174,21 @@ export async function POST(
           appointmentId,
         ]
       );
+    }
+
+    if (
+      paymentData.status === "approved" &&
+      appointmentId &&
+      typeof appointmentId === "string"
+    ) {
+      const appointment = await findAppointmentById(appointmentId, tenantId);
+      if (
+        appointment &&
+        (appointment.status === AppointmentStatus.PENDING_DEPOSIT ||
+          appointment.status === AppointmentStatus.REQUESTED)
+      ) {
+        await updateAppointmentStatus(appointmentId, tenantId, AppointmentStatus.CONFIRMED);
+      }
     }
 
     return NextResponse.json({ received: true });

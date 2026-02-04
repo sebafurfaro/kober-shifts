@@ -13,7 +13,9 @@ import {
   ChevronLeft,
   LayoutGrid,
   BookOpen,
+  UserIcon,
 } from "lucide-react";
+import { Alert } from "@heroui/react";
 import Logo from "@/app/branding/Logo";
 import { Dispatch, SetStateAction } from "react";
 
@@ -91,6 +93,22 @@ export function Aside({
 }: AsideProps) {
   const [isHovered, setIsHovered] = React.useState(false);
   const [isManuallyToggled, setIsManuallyToggled] = React.useState(false);
+  const [usage, setUsage] = React.useState<{ used: number; max: number } | null>(null);
+
+  React.useEffect(() => {
+    if (!currentTenantId || role === "PATIENT") return;
+    let cancelled = false;
+    fetch(`/api/plataforma/${currentTenantId}/features`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        const used = typeof data.usedUsers === "number" ? data.usedUsers : 0;
+        const max = typeof data.maxUsers === "number" ? data.maxUsers : 0;
+        setUsage({ used, max });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [currentTenantId, role]);
 
   const currentWidth = React.useMemo(() => {
     if (isMobile) return mobileDrawerOpen ? DRAWER_WIDTH : 0;
@@ -268,7 +286,7 @@ export function Aside({
             </>
           )}
 
-          {/* Mis turnos (solo rol PATIENT) */}
+          {/* Mis turnos y Mis datos (solo rol PATIENT) */}
           {role === "PATIENT" && (
             <>
               {!effectiveIsCollapsed && <div className="border-t border-slate-200 my-2" />}
@@ -278,17 +296,34 @@ export function Aside({
                 icon={<CalendarDays className="w-5 h-5" />}
                 isCollapsed={effectiveIsCollapsed}
               />
+              <NavItem
+                href={`${base}/patient/mis-datos`}
+                label="Mis datos"
+                icon={<User className="w-5 h-5" />}
+                isCollapsed={effectiveIsCollapsed}
+              />
             </>
           )}
 
-          {/* Ayuda */}
-          <SectionTitle label="Ayuda" isCollapsed={effectiveIsCollapsed} />
-          <NavItem
-            href={`${base}/documentacion`}
-            label="Documentación"
-            icon={<BookOpen className="w-5 h-5" />}
-            isCollapsed={effectiveIsCollapsed}
-          />
+          {/* Ayuda (no visible para PATIENT) */}
+          {role !== "PATIENT" && (
+            <>
+              <SectionTitle label="Ayuda" isCollapsed={effectiveIsCollapsed} />
+              <NavItem
+                href={`${base}/documentacion`}
+                label="Documentación"
+                icon={<BookOpen className="w-5 h-5" />}
+                isCollapsed={effectiveIsCollapsed}
+              />
+              {!effectiveIsCollapsed && usage !== null && (
+                <div className="px-4 pt-2 pb-2">
+                  <Alert color="primary" variant="faded" icon={<UserIcon className="w-4 h-4" />} className="text-sm">
+                    Usaste {usage.used}/{usage.max} usuario{usage.max !== 1 ? "s" : ""}.
+                  </Alert>
+                </div>
+              )}
+            </>
+          )}
         </nav>
       </div>
     </aside>

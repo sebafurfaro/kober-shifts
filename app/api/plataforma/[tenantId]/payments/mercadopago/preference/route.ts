@@ -5,6 +5,9 @@ import mysql from "@/lib/mysql";
 import { Role } from "@/lib/types";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { randomUUID } from "crypto";
+import { getMercadoPagoAccountByTenant } from "@/lib/mercadopago-accounts";
+import { findAppointmentById, updateAppointmentStatus } from "@/lib/db";
+import { AppointmentStatus } from "@/lib/types";
 
 type PaymentPurpose = "full" | "deposit";
 
@@ -22,6 +25,15 @@ async function getTenantPaymentsSettings(tenantId: string) {
   const collection = db.collection("tenant_payments");
   const settings = await collection.findOne({ tenantId });
   return settings?.settings || null;
+}
+
+async function getAccessTokenForTenant(tenantId: string): Promise<string | null> {
+  const account = await getMercadoPagoAccountByTenant(tenantId);
+  if (account?.accessToken) return account.accessToken;
+  const settings = await getTenantPaymentsSettings(tenantId);
+  if (settings?.mercadoPago?.accessToken) return settings.mercadoPago.accessToken;
+  const fromEnv = process.env.MERCADOPAGO_ACCESS_TOKEN?.trim();
+  return fromEnv || null;
 }
 
 async function ensurePaymentsTable() {
@@ -54,7 +66,9 @@ export async function POST(
   if (!session || session.tenantId !== tenantId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (session.role !== Role.ADMIN && session.role !== Role.PROFESSIONAL) {
+  const isPatient = session.role === Role.PATIENT;
+  const isAdminOrProfessional = session.role === Role.ADMIN || session.role === Role.PROFESSIONAL;
+  if (!isPatient && !isAdminOrProfessional) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -74,10 +88,17 @@ export async function POST(
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
-    const settings = await getTenantPaymentsSettings(tenantId);
-    const accessToken = settings?.mercadoPago?.accessToken;
+    const accessToken = await getAccessTokenForTenant(tenantId);
     if (!accessToken) {
-      return NextResponse.json({ error: "Mercado Pago not configured" }, { status: 400 });
+      return NextResponse.json({ error: "Mercado Pago no configurado. Vinculá tu cuenta en Pagos." }, { status: 400 });
+    }
+
+    const appointment = await findAppointmentById(appointmentId, tenantId);
+    if (!appointment) {
+      return NextResponse.json({ error: "Turno no encontrado" }, { status: 404 });
+    }
+    if (isPatient && appointment.patientId !== session.userId) {
+      return NextResponse.json({ error: "No podés crear el pago de este turno" }, { status: 403 });
     }
 
     const baseUrl = getBaseUrl(req);
@@ -147,6 +168,10 @@ export async function POST(
         null,
       ]
     );
+
+    if (purpose === "deposit" && appointment.status === AppointmentStatus.REQUESTED) {
+      await updateAppointmentStatus(appointmentId, tenantId, AppointmentStatus.PENDING_DEPOSIT);
+    }
 
     return NextResponse.json({
       preferenceId: preferenceResult.id,

@@ -1,10 +1,10 @@
 "use client";
 
 import { PanelHeader } from "../../components/PanelHeader";
-import { PaymentsForm, PaymentsConfigForm } from "./components";
+import { PaymentsForm } from "./components/PaymentsForm";
 import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
-import { Card, CardBody, CardHeader } from "@heroui/react";
+import { Card, CardBody } from "@heroui/react";
 
 
 export default function AdminPaymentsPage() {
@@ -29,12 +29,7 @@ export default function AdminPaymentsPage() {
             <div className="mt-6">
                 <div className="grid gap-6">
                     <Card>
-                        <CardBody className="p-6">
-                            <PaymentsConfigForm />
-                        </CardBody>
-                    </Card>
-                    <Card>
-                        <CardBody className="p-0">
+                        <CardBody className="p-4">
                             <PaymentsForm />
                         </CardBody>
                     </Card>

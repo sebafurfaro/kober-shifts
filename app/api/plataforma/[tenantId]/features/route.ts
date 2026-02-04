@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { getTenantFeatures, getTenantFeatureFlagsAndLimits } from "@/lib/tenant-features";
+import { countProfessionals } from "@/lib/db";
 
 /**
  * GET /api/plataforma/[tenantId]/features
- * Get tenant feature flags (legacy + store: show_specialties, show_coverage, maxUsers)
+ * Get tenant feature flags (legacy + store: show_specialties, show_coverage, maxUsers, usedUsers)
  */
 export async function GET(
   req: Request,
@@ -18,15 +19,17 @@ export async function GET(
   }
 
   try {
-    const [legacyFeatures, flagsAndLimits] = await Promise.all([
+    const [legacyFeatures, flagsAndLimits, usedUsers] = await Promise.all([
       getTenantFeatures(tenantId),
       getTenantFeatureFlagsAndLimits(tenantId),
+      countProfessionals(tenantId),
     ]);
     return NextResponse.json({
       ...legacyFeatures,
       show_specialties: flagsAndLimits.show_specialties,
       show_coverage: flagsAndLimits.show_coverage,
       maxUsers: flagsAndLimits.maxUsers,
+      usedUsers,
     });
   } catch (error: unknown) {
     console.error("Error fetching tenant features:", error);

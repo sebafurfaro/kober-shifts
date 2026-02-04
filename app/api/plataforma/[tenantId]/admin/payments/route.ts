@@ -42,7 +42,7 @@ export async function GET(
       },
     };
 
-    return NextResponse.json(settings?.settings || defaultSettings);
+    return NextResponse.json(existing?.settings || defaultSettings);
   } catch (error: any) {
     console.error("Error fetching payments settings:", error);
     return NextResponse.json(
@@ -66,6 +66,11 @@ export async function PUT(
   }
 
   try {
+    const client = await mongoClientPromise;
+    const db = client.db();
+    const collection = db.collection("tenant_payments");
+    const existingDoc = await collection.findOne({ tenantId });
+
     const body = (await req.json().catch(() => ({}))) as Record<string, any>;
     const bank = body.bank && typeof body.bank === "object" ? body.bank : null;
     const mercadoPago = body.mercadoPago && typeof body.mercadoPago === "object"
@@ -75,7 +80,7 @@ export async function PUT(
       ? body.paymentConfig
       : null;
 
-    const existingSettings = existing?.settings || {};
+    const existingSettings = existingDoc?.settings || {};
     const existingBank = existingSettings.bank || {};
     const existingMercadoPago = existingSettings.mercadoPago || {};
     const existingPaymentConfig = existingSettings.paymentConfig || {};
@@ -126,9 +131,6 @@ export async function PUT(
       },
     };
 
-    const client = await mongoClientPromise;
-    const db = client.db();
-    const collection = db.collection("tenant_payments");
     await collection.updateOne(
       { tenantId },
       { $set: { tenantId, settings, updatedAt: new Date() } },

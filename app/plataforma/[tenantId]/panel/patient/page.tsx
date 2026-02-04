@@ -121,6 +121,7 @@ export default function PatientPanelPage() {
     }
     const statusMap: Record<string, string> = {
       REQUESTED: "Solicitado",
+      PENDING_DEPOSIT: "Pendiente de seña",
       CONFIRMED: "Confirmado",
       ATTENDED: "Atendido",
     };

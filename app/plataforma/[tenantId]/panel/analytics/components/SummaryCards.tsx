@@ -1,73 +1,74 @@
-import * as React from "react";
-import { Card, CardBody } from "@heroui/react";
-import { BarChart3, Users, Calendar } from "lucide-react";
-import type { AnalyticsStats } from "./types";
+"use client";
 
-interface SummaryCardsProps {
-  stats: AnalyticsStats | null;
+import type { AnalyticsMetrics } from "./types";
+import { RevenueMetricCard } from "./RevenueMetricCard";
+import { AppointmentsMetricCard } from "./AppointmentsMetricCard";
+import { PatientsMetricCard } from "./PatientsMetricCard";
+import { CancellationsMetricCard } from "./CancellationsMetricCard";
+import { WhatsAppRemindersMetricCard } from "./WhatsAppRemindersMetricCard";
+
+export type SummaryBoxKey = "revenue" | "appointments" | "patients" | "cancellations";
+
+export interface SummaryCardsProps {
+  metrics: AnalyticsMetrics | null;
+  /** Por box: 'month' | 'year'. Cada tarjeta tiene su propia selección. */
+  periodByBox: Record<SummaryBoxKey, "month" | "year">;
+  onPeriodChange: (box: SummaryBoxKey, period: "month" | "year") => void;
 }
 
-export function SummaryCards({ stats }: SummaryCardsProps) {
-  const totalAppointmentsLast30Days = React.useMemo(() => {
-    return stats?.daily.reduce((sum, d) => sum + d.count, 0) || 0;
-  }, [stats?.daily]);
+/**
+ * Composición de las 5 tarjetas de métricas del resumen de analytics.
+ * Para usar una métrica suelta en otra vista, importar el componente específico
+ * (RevenueMetricCard, AppointmentsMetricCard, etc.).
+ */
+export function SummaryCards({
+  metrics,
+  periodByBox,
+  onPeriodChange,
+}: SummaryCardsProps) {
+  const rev = metrics?.revenue;
+  const app = metrics?.appointments;
+  const pat = metrics?.patients;
+  const can = metrics?.cancellations;
+  const reminders = metrics?.reminders;
 
-  const averageDaily = React.useMemo(() => {
-    if (!stats?.daily.length) return 0;
-    return Math.round(
-      stats.daily.reduce((sum, d) => sum + d.count, 0) / stats.daily.length
-    );
-  }, [stats?.daily]);
+  const hasReminders = reminders != null;
+  const gridCols = hasReminders ? "lg:grid-cols-5" : "lg:grid-cols-4";
 
   return (
-    <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <Card className="bg-linear-to-r from-[#00C9FF] to-[#0099ff] text-white">
-        <CardBody className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-slate-100/30 backdrop-blur-sm rounded-lg">
-              <Users className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex items-center gap-2 w-full justify-between md:justify-start md:flex-col md:items-start">
-              <p className="text-lg font-semibold">Pacientes Totales</p>
-              <p className="text-2xl font-bold">
-                {stats?.totalPatients || 0}
-              </p>
-            </div>
-          </div>
-        </CardBody>
-      </Card>
-
-      <Card className="bg-linear-to-r from-[#ed8e28] to-[#ffcc5d] text-white">
-        <CardBody className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-slate-100/30 backdrop-blur-sm rounded-lg">
-              <Calendar className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex items-center gap-2 w-full justify-between md:justify-start md:flex-col md:items-start">
-              <p className="text-lg font-semibold">Turnos (Últimos 30 días)</p>
-              <p className="text-2xl font-bold">
-                {totalAppointmentsLast30Days}
-              </p>
-            </div>
-          </div>
-        </CardBody>
-      </Card>
-
-      <Card className="bg-linear-to-r from-green-700 to-green-500 text-white">
-        <CardBody className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-slate-100/30 backdrop-blur-sm rounded-lg">
-              <BarChart3 className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex items-center gap-2 w-full justify-between md:justify-start md:flex-col md:items-start">
-              <p className="text-lg font-semibold">Promedio Diario</p>
-              <p className="text-2xl font-bold">
-                {averageDaily}
-              </p>
-            </div>
-          </div>
-        </CardBody>
-      </Card>
+    <div className="w-full mb-8">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${gridCols}`}>
+        <RevenueMetricCard
+          totalMonth={rev?.totalMonth ?? 0}
+          totalYear={rev?.totalYear ?? 0}
+          period={periodByBox.revenue}
+          onPeriodChange={(p) => onPeriodChange("revenue", p)}
+        />
+        <AppointmentsMetricCard
+          totalMonth={app?.totalMonth ?? 0}
+          totalYear={app?.totalYear ?? 0}
+          period={periodByBox.appointments}
+          onPeriodChange={(p) => onPeriodChange("appointments", p)}
+        />
+        <PatientsMetricCard
+          totalMonth={pat?.totalMonth ?? 0}
+          totalYear={pat?.totalYear ?? 0}
+          period={periodByBox.patients}
+          onPeriodChange={(p) => onPeriodChange("patients", p)}
+        />
+        <CancellationsMetricCard
+          totalMonth={can?.totalMonth ?? 0}
+          totalYear={can?.totalYear ?? 0}
+          period={periodByBox.cancellations}
+          onPeriodChange={(p) => onPeriodChange("cancellations", p)}
+        />
+        {hasReminders && (
+          <WhatsAppRemindersMetricCard
+            used={reminders.used}
+            assigned={reminders.assigned}
+          />
+        )}
+      </div>
     </div>
   );
 }

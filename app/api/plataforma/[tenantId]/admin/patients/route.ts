@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { findUsersByRole, findUserByEmail, createUser, updateUser } from "@/lib/db";
+import { findUserByEmail, createUser } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
 import { Role } from "@/lib/types";
 import { randomUUID } from "crypto";
+import mysql from "@/lib/mysql";
 
 export async function GET(
   req: Request,
@@ -16,8 +17,70 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const patients = await findUsersByRole(Role.PATIENT, tenantId);
-  return NextResponse.json(patients);
+  try {
+    const subquery = `
+      SELECT patientId,
+        COUNT(*) as totalAppointments,
+        SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END) as cancelledAppointments
+      FROM appointments
+      WHERE tenantId = ?
+      GROUP BY patientId
+    `;
+    let rows: any[] = [];
+    try {
+      const [r] = await mysql.execute(
+        `SELECT u.id, u.tenantId, u.email, u.name, u.firstName, u.lastName, u.phone, u.address, u.dni,
+          u.coverage, u.plan, u.dateOfBirth, u.admissionDate, u.gender, u.nationality,
+          COALESCE(a.totalAppointments, 0) as totalAppointments,
+          COALESCE(a.cancelledAppointments, 0) as cancelledAppointments
+         FROM users u
+         LEFT JOIN (${subquery}) a ON u.id = a.patientId
+         WHERE u.role = ? AND u.tenantId = ?`,
+        [tenantId, Role.PATIENT, tenantId]
+      );
+      rows = r as any[];
+    } catch (err: any) {
+      if (err?.code === "ER_BAD_FIELD_ERROR") {
+        const [r] = await mysql.execute(
+          `SELECT u.id, u.tenantId, u.email, u.name, u.phone, u.address, u.dni,
+            u.coverage, u.plan, u.dateOfBirth, u.admissionDate, u.gender, u.nationality,
+            COALESCE(a.totalAppointments, 0) as totalAppointments,
+            COALESCE(a.cancelledAppointments, 0) as cancelledAppointments
+           FROM users u
+           LEFT JOIN (${subquery}) a ON u.id = a.patientId
+           WHERE u.role = ? AND u.tenantId = ?`,
+          [tenantId, Role.PATIENT, tenantId]
+        );
+        rows = r as any[];
+      } else {
+        throw err;
+      }
+    }
+
+    const patients = rows.map((row: any) => ({
+      id: row.id,
+      tenantId: row.tenantId,
+      email: row.email,
+      name: row.name,
+      firstName: row.firstName ?? null,
+      lastName: row.lastName ?? null,
+      phone: row.phone ?? null,
+      address: row.address ?? null,
+      dni: row.dni ?? null,
+      coverage: row.coverage ?? null,
+      plan: row.plan ?? null,
+      dateOfBirth: row.dateOfBirth ?? null,
+      admissionDate: row.admissionDate ?? null,
+      gender: row.gender ?? null,
+      nationality: row.nationality ?? null,
+      totalAppointments: Number(row.totalAppointments ?? 0),
+      cancelledAppointments: Number(row.cancelledAppointments ?? 0),
+    }));
+    return NextResponse.json(patients);
+  } catch (error) {
+    console.error("Error fetching admin patients:", error);
+    return NextResponse.json({ error: "Error al cargar pacientes" }, { status: 500 });
+  }
 }
 
 export async function POST(

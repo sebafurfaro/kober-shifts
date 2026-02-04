@@ -8,6 +8,7 @@ export enum Role {
 
 export enum AppointmentStatus {
   REQUESTED = 'REQUESTED',
+  PENDING_DEPOSIT = 'PENDING_DEPOSIT',
   CONFIRMED = 'CONFIRMED',
   CANCELLED = 'CANCELLED',
   ATTENDED = 'ATTENDED',

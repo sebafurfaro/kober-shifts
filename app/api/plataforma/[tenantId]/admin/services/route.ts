@@ -12,7 +12,8 @@ export async function GET(
   const session = await getSession();
   if (!session || session.tenantId !== tenantId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== Role.ADMIN && session.role !== Role.PROFESSIONAL)
+  // GET: permitir también PATIENT para flujo de nuevo turno (selección de servicio)
+  if (session.role !== Role.ADMIN && session.role !== Role.PROFESSIONAL && session.role !== Role.PATIENT)
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {

@@ -417,6 +417,17 @@ export async function findUsersByRole(role: Role, tenantId: string): Promise<Use
   return (rows as any[]).map(rowToUser);
 }
 
+/** Usuarios del tenant con alguno de los roles indicados (ej. ADMIN, PROFESSIONAL para fallback paciente). */
+export async function findUsersWithRoleIn(roles: Role[], tenantId: string): Promise<User[]> {
+  if (roles.length === 0) return [];
+  const placeholders = roles.map(() => "?").join(",");
+  const [rows] = await mysql.execute(
+    `SELECT * FROM users WHERE role IN (${placeholders}) AND tenantId = ? ORDER BY createdAt ASC`,
+    [...roles, tenantId]
+  );
+  return (rows as any[]).map(rowToUser);
+}
+
 export async function findAllUsers(): Promise<User[]> {
   const [rows] = await mysql.execute('SELECT * FROM users ORDER BY createdAt DESC');
   return (rows as any[]).map(rowToUser);
@@ -1391,6 +1402,11 @@ export async function deleteAppointment(id: string, tenantId: string): Promise<v
 /** Delete all appointments for a professional (required before deleting the user due to FK RESTRICT). */
 export async function deleteAppointmentsByProfessional(professionalId: string, tenantId: string): Promise<void> {
   await mysql.execute('DELETE FROM appointments WHERE professionalId = ? AND tenantId = ?', [professionalId, tenantId]);
+}
+
+/** Delete all appointments for a patient (required before deleting the user due to FK RESTRICT). */
+export async function deleteAppointmentsByPatient(patientId: string, tenantId: string): Promise<void> {
+  await mysql.execute('DELETE FROM appointments WHERE patientId = ? AND tenantId = ?', [patientId, tenantId]);
 }
 
 

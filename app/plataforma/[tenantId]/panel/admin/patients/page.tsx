@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Spinner } from "@heroui/react";
-import { Edit, Trash2 } from "lucide-react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Spinner, Tooltip } from "@heroui/react";
+import { Edit, Trash2, MessageCircle } from "lucide-react";
 import { PatientFormDialog } from "../components/PatientFormDialog";
 import { PanelHeader } from "../../components/PanelHeader";
 import { useParams } from "next/navigation";
@@ -26,6 +26,16 @@ interface Patient {
   admissionDate?: Date | string | null;
   gender?: string | null;
   nationality?: string | null;
+  totalAppointments?: number;
+  cancelledAppointments?: number;
+}
+
+function whatsAppUrl(phone: string | null | undefined): string | null {
+  if (!phone || !phone.trim()) return null;
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 8) return null;
+  const withCountry = digits.startsWith("54") ? digits : digits.startsWith("0") ? "54" + digits.slice(1) : "54" + digits;
+  return `https://wa.me/${withCountry}`;
 }
 
 export default function AdminPatientsPage() {
@@ -34,6 +44,9 @@ export default function AdminPatientsPage() {
   const [patients, setPatients] = React.useState<Patient[]>([]);
   const { patientLabel } = useTenantLabels();
   const loadTranslations = useTenantSettingsStore((state) => state.loadTranslations);
+  const patientLabelSingular = patientLabel.slice(-1) === "s" ? patientLabel.slice(0, -1) : patientLabel;
+  const toTranslatedMessage = (msg: string) =>
+    msg.replace(/\bpaciente\b/gi, (m) => (m[0] === "P" ? patientLabelSingular : patientLabelSingular.toLowerCase()));
   const [loading, setLoading] = React.useState(true);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingPatient, setEditingPatient] = React.useState<Patient | null>(null);
@@ -46,6 +59,8 @@ export default function AdminPatientsPage() {
     message: string;
     type: "error" | "info" | "success" | "warning";
   }>({ open: false, message: "", type: "error" });
+  const [seniasEnabled, setSeniasEnabled] = React.useState(false);
+  const [reservasEnabled, setReservasEnabled] = React.useState(true);
 
   const loadPatients = React.useCallback(async () => {
     try {
@@ -63,6 +78,20 @@ export default function AdminPatientsPage() {
   React.useEffect(() => {
     loadPatients();
   }, [loadPatients]);
+
+  React.useEffect(() => {
+    if (!tenantId) return;
+    fetch(`/api/plataforma/${tenantId}/admin/payments`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.paymentConfig?.mode === "deposit" || data?.paymentConfig?.mode === "full") {
+          setSeniasEnabled(true);
+        } else {
+          setSeniasEnabled(false);
+        }
+      })
+      .catch(() => {});
+  }, [tenantId]);
 
   // Load translations when component mounts
   React.useEffect(() => {
@@ -114,7 +143,7 @@ export default function AdminPatientsPage() {
         });
         if (!res.ok) {
           const error = await res.json().catch(() => ({}));
-          throw new Error(error.error || "Error al actualizar paciente");
+          throw new Error(toTranslatedMessage(error.error || `Error al actualizar ${patientLabelSingular.toLowerCase()}`));
         }
       } else {
         // Create
@@ -125,7 +154,7 @@ export default function AdminPatientsPage() {
         });
         if (!res.ok) {
           const error = await res.json().catch(() => ({}));
-          const errorMessage = error.error || error.message || "Error al crear paciente";
+          const errorMessage = toTranslatedMessage(error.error || error.message || `Error al crear ${patientLabelSingular.toLowerCase()}`);
           console.error("Error creating patient:", error);
           throw new Error(errorMessage);
         }
@@ -184,9 +213,10 @@ export default function AdminPatientsPage() {
           <Table aria-label="Tabla de pacientes">
             <TableHeader>
               <TableColumn>Nombre</TableColumn>
-              <TableColumn>Apellido</TableColumn>
-              <TableColumn>Email</TableColumn>
-              <TableColumn>Teléfono</TableColumn>
+              <TableColumn>Turnos</TableColumn>
+              <TableColumn>Cancelaciones</TableColumn>
+              <TableColumn>Señas</TableColumn>
+              <TableColumn>Reservas</TableColumn>
               <TableColumn align="end">Acciones</TableColumn>
             </TableHeader>
             <TableBody
@@ -194,38 +224,73 @@ export default function AdminPatientsPage() {
               loadingContent={<Spinner label="Cargando..." />}
               emptyContent={loading ? null : `No hay ${patientLabel.toLowerCase()} registrados`}
             >
-              {patients.map((patient) => (
-                <TableRow key={patient.id}>
-                  <TableCell>{patient.firstName || patient.name}</TableCell>
-                  <TableCell>{patient.lastName || ""}</TableCell>
-                  <TableCell>{patient.email}</TableCell>
-                  <TableCell>{patient.phone || "-"}</TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        isIconOnly
-                        size="sm"
-                        variant="light"
-                        onPress={() => handleEdit(patient)}
-                        aria-label="editar"
-                        className="text-gray-600 hover:text-gray-900"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        isIconOnly
-                        size="sm"
-                        variant="light"
-                        color="danger"
-                        onPress={() => handleDelete(patient)}
-                        aria-label="eliminar"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {patients.map((patient) => {
+                const total = patient.totalAppointments ?? 0;
+                const cancelled = patient.cancelledAppointments ?? 0;
+                const scheduled = total - cancelled;
+                const waUrl = whatsAppUrl(patient.phone);
+                return (
+                  <TableRow key={patient.id}>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium">
+                          {(patient.firstName ?? patient.name ?? "").trim()} {(patient.lastName ?? "").trim()}
+                        </span>
+                        <span className="text-sm text-gray-500">{patient.email}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{scheduled}</TableCell>
+                    <TableCell>{cancelled}</TableCell>
+                    <TableCell>{seniasEnabled ? "Habilitada" : "Deshabilitada"}</TableCell>
+                    <TableCell>{reservasEnabled ? "Habilitada" : "Deshabilitada"}</TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Tooltip content="Editar">
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            onPress={() => handleEdit(patient)}
+                            aria-label="editar"
+                            className="text-gray-600 hover:text-gray-900"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        </Tooltip>
+                        <Tooltip content="Eliminar">
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            color="danger"
+                            onPress={() => handleDelete(patient)}
+                            aria-label="eliminar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </Tooltip>
+                        {waUrl ? (
+                          <Tooltip content="WhatsApp">
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="light"
+                              as="a"
+                              href={waUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label="WhatsApp"
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                            </Button>
+                          </Tooltip>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

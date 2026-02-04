@@ -9,6 +9,7 @@ interface AppBarProps {
     userName: string;
     logout: () => void;
     asideWidth: number;
+    tenantId: string;
 }
 
 export default function AppBar({
@@ -17,6 +18,7 @@ export default function AppBar({
     userName,
     logout,
     asideWidth,
+    tenantId,
 }: AppBarProps) {
     return (
         <header 
