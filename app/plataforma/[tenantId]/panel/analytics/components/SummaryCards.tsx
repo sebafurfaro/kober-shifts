@@ -41,14 +41,12 @@ export function SummaryCards({
         <RevenueMetricCard
           totalMonth={rev?.totalMonth ?? 0}
           totalYear={rev?.totalYear ?? 0}
-          period={periodByBox.revenue}
-          onPeriodChange={(p) => onPeriodChange("revenue", p)}
+          byMonth={rev?.byMonth ?? []}
         />
         <AppointmentsMetricCard
           totalMonth={app?.totalMonth ?? 0}
           totalYear={app?.totalYear ?? 0}
-          period={periodByBox.appointments}
-          onPeriodChange={(p) => onPeriodChange("appointments", p)}
+          byMonth={app?.byMonth ?? []}
         />
         <PatientsMetricCard
           totalMonth={pat?.totalMonth ?? 0}
@@ -59,13 +57,12 @@ export function SummaryCards({
         <CancellationsMetricCard
           totalMonth={can?.totalMonth ?? 0}
           totalYear={can?.totalYear ?? 0}
-          period={periodByBox.cancellations}
-          onPeriodChange={(p) => onPeriodChange("cancellations", p)}
+          byMonth={can?.byMonth ?? []}
         />
         {hasReminders && (
           <WhatsAppRemindersMetricCard
-            used={reminders.used}
-            assigned={reminders.assigned}
+            used={reminders?.used ?? 0}
+            assigned={reminders?.assigned ?? 0}
           />
         )}
       </div>

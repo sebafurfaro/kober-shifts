@@ -7,6 +7,7 @@ import type { AnalyticsMetrics } from "./types";
 import { baseChartOptions } from "./chartConfig";
 import type { ApexOptions } from "apexcharts";
 
+
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 const MONTH_NAMES = [
@@ -45,13 +46,12 @@ export function RevenueChart({ metrics }: RevenueChartProps) {
         tickAmount: categories.length,
       },
       yaxis: {
-        ...baseChartOptions.yaxis,
         min: 0,
         max: hasData ? undefined : 1,
         forceNiceScale: true,
         labels: {
-          ...baseChartOptions.yaxis?.labels,
-          formatter: (val: number) => `$${val.toLocaleString("es-AR")}`,
+          style: { fontSize: "12px" },
+          formatter: (val: number) => `$${Number(val).toLocaleString("es-AR")}`,
         },
       },
     };
@@ -72,9 +72,7 @@ export function RevenueChart({ metrics }: RevenueChartProps) {
             height={300}
           />
           {chartData.empty && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/80 text-gray-500 text-sm">
-              No hay datos de ingresos para el período seleccionado
-            </div>
+            ""
           )}
         </div>
       </CardBody>

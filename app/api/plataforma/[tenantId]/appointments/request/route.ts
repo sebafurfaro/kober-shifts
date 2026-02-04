@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findUserById, findLocationById, findSpecialtyById, findProfessionalProfileByUserId, findGoogleOAuthTokenByUserId, createAppointment } from "@/lib/db";
+import { findUserById, findLocationById, findSpecialtyById, findProfessionalProfileByUserId, findGoogleOAuthTokenByUserId, createAppointment, findServiceById } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { createAppointmentEvent } from "@/lib/googleCalendar";
 import { sendMail } from "@/lib/email";
@@ -37,6 +37,7 @@ export async function POST(
   const professionalId = typeof body.professionalId === "string" ? body.professionalId : "";
   const locationId = typeof body.locationId === "string" ? body.locationId : "";
   const specialtyId = typeof body.specialtyId === "string" ? body.specialtyId : "";
+  const serviceId = typeof body.serviceId === "string" ? body.serviceId : null;
 
   // Parse dates from ISO string and convert to MySQL format
   const startAt = typeof body.startAt === "string" ? utcToMySQLDate(new Date(body.startAt)) : null;
@@ -65,6 +66,15 @@ export async function POST(
   ]);
 
   if (!location || !specialty) return NextResponse.json({ error: "Invalid location/specialty" }, { status: 400 });
+
+  // Si el servicio tiene costo, el turno queda pendiente de seña hasta que pague
+  let initialStatus = AppointmentStatus.REQUESTED;
+  if (serviceId) {
+    const service = await findServiceById(serviceId, tenantId);
+    if (service && service.price > 0) {
+      initialStatus = AppointmentStatus.PENDING_DEPOSIT;
+    }
+  }
 
   // Try to create Google Calendar event if OAuth token exists (optional)
   let googleEventId: string | null = null;
@@ -95,10 +105,13 @@ export async function POST(
     professionalId: professional.id,
     locationId: location.id,
     specialtyId: specialty.id,
+    serviceId: serviceId ?? null,
     startAt,
     endAt,
-    status: AppointmentStatus.REQUESTED,
+    status: initialStatus,
     googleEventId,
+    patientFirstName: patient.firstName ?? null,
+    patientLastName: patient.lastName ?? null,
   });
 
   await sendMail({

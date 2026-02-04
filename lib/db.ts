@@ -171,8 +171,11 @@ function rowToAppointment(row: any): Appointment {
     professionalId: row.professionalId,
     locationId: row.locationId,
     specialtyId: row.specialtyId,
+    serviceId: row.serviceId != null ? row.serviceId : null,
     googleEventId: row.googleEventId,
     notes: row.notes,
+    patientFirstName: row.patientFirstName != null ? row.patientFirstName : null,
+    patientLastName: row.patientLastName != null ? row.patientLastName : null,
     cancellationReason: row.cancellationReason || null,
     cancelledBy: row.cancelledBy || null,
     createdAt: row.createdAt,
@@ -428,6 +431,18 @@ export async function findUsersWithRoleIn(roles: Role[], tenantId: string): Prom
   return (rows as any[]).map(rowToUser);
 }
 
+/** Trae usuarios por lista de ids (solo columnas que existan en la tabla). */
+export async function findUsersByIds(tenantId: string, ids: string[]): Promise<User[]> {
+  if (ids.length === 0) return [];
+  const uniq = [...new Set(ids)];
+  const placeholders = uniq.map(() => "?").join(",");
+  const [rows] = await mysql.execute(
+    `SELECT * FROM users WHERE tenantId = ? AND id IN (${placeholders})`,
+    [tenantId, ...uniq]
+  );
+  return (rows as any[]).map(rowToUser);
+}
+
 export async function findAllUsers(): Promise<User[]> {
   const [rows] = await mysql.execute('SELECT * FROM users ORDER BY createdAt DESC');
   return (rows as any[]).map(rowToUser);
@@ -557,6 +572,17 @@ export async function findSpecialtyById(id: string, tenantId: string): Promise<S
   return result.length > 0 ? rowToSpecialty(result[0]) : null;
 }
 
+export async function findSpecialtiesByIds(tenantId: string, ids: string[]): Promise<Specialty[]> {
+  if (ids.length === 0) return [];
+  const uniq = [...new Set(ids)];
+  const placeholders = uniq.map(() => "?").join(",");
+  const [rows] = await mysql.execute(
+    `SELECT * FROM specialties WHERE tenantId = ? AND id IN (${placeholders})`,
+    [tenantId, ...uniq]
+  );
+  return (rows as any[]).map(rowToSpecialty);
+}
+
 export async function deleteSpecialty(id: string, tenantId: string): Promise<void> {
   await mysql.execute('DELETE FROM specialties WHERE id = ? AND tenantId = ?', [id, tenantId]);
 }
@@ -617,6 +643,18 @@ export async function findServiceById(id: string, tenantId: string): Promise<Ser
   const [rows] = await mysql.execute('SELECT * FROM services WHERE id = ? AND tenantId = ?', [id, tenantId]);
   const result = rows as any[];
   return result.length > 0 ? rowToService(result[0]) : null;
+}
+
+export async function findServicesByIds(tenantId: string, ids: string[]): Promise<Service[]> {
+  if (ids.length === 0) return [];
+  const uniq = [...new Set(ids)].filter(Boolean);
+  if (uniq.length === 0) return [];
+  const placeholders = uniq.map(() => "?").join(",");
+  const [rows] = await mysql.execute(
+    `SELECT * FROM services WHERE tenantId = ? AND id IN (${placeholders})`,
+    [tenantId, ...uniq]
+  );
+  return (rows as any[]).map(rowToService);
 }
 
 export async function createService(data: {
@@ -699,6 +737,17 @@ export async function findLocationById(id: string, tenantId: string): Promise<Lo
   const [rows] = await mysql.execute('SELECT * FROM locations WHERE id = ? AND tenantId = ?', [id, tenantId]);
   const result = rows as any[];
   return result.length > 0 ? rowToLocation(result[0]) : null;
+}
+
+export async function findLocationsByIds(tenantId: string, ids: string[]): Promise<Location[]> {
+  if (ids.length === 0) return [];
+  const uniq = [...new Set(ids)];
+  const placeholders = uniq.map(() => "?").join(",");
+  const [rows] = await mysql.execute(
+    `SELECT * FROM locations WHERE tenantId = ? AND id IN (${placeholders})`,
+    [tenantId, ...uniq]
+  );
+  return (rows as any[]).map(rowToLocation);
 }
 
 export async function findAllLocations(tenantId: string): Promise<Location[]> {
@@ -1075,26 +1124,69 @@ export async function createAppointment(data: {
   professionalId: string;
   locationId: string | null;
   specialtyId: string | null;
+  serviceId?: string | null;
   googleEventId?: string | null;
   notes?: string | null;
+  patientFirstName?: string | null;
+  patientLastName?: string | null;
 }): Promise<Appointment> {
-  await mysql.execute(
-    `INSERT INTO appointments (id, tenantId, status, startAt, endAt, patientId, professionalId, locationId, specialtyId, googleEventId, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      data.id,
-      data.tenantId,
-      data.status,
-      data.startAt,
-      data.endAt,
-      data.patientId,
-      data.professionalId,
-      data.locationId || null,
-      data.specialtyId || null,
-      data.googleEventId || null,
-      data.notes || null,
-    ]
-  );
+  const baseParams = [
+    data.id,
+    data.tenantId,
+    data.status,
+    data.startAt,
+    data.endAt,
+    data.patientId,
+    data.professionalId,
+    data.locationId || null,
+    data.specialtyId || null,
+    data.googleEventId || null,
+    data.notes || null,
+  ];
+  try {
+    await mysql.execute(
+      `INSERT INTO appointments (id, tenantId, status, startAt, endAt, patientId, professionalId, locationId, specialtyId, serviceId, googleEventId, notes, patientFirstName, patientLastName)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.id,
+        data.tenantId,
+        data.status,
+        data.startAt,
+        data.endAt,
+        data.patientId,
+        data.professionalId,
+        data.locationId || null,
+        data.specialtyId || null,
+        data.serviceId ?? null,
+        data.googleEventId || null,
+        data.notes || null,
+        data.patientFirstName ?? null,
+        data.patientLastName ?? null,
+      ]
+    );
+  } catch (err: any) {
+    if (err?.code === 'ER_BAD_FIELD_ERROR') {
+      try {
+        await mysql.execute(
+          `INSERT INTO appointments (id, tenantId, status, startAt, endAt, patientId, professionalId, locationId, specialtyId, googleEventId, notes, patientFirstName, patientLastName)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [...baseParams, data.patientFirstName ?? null, data.patientLastName ?? null]
+        );
+      } catch (e2: any) {
+        if (e2?.code === 'ER_BAD_FIELD_ERROR') {
+          await mysql.execute(
+            `INSERT INTO appointments (id, tenantId, status, startAt, endAt, patientId, professionalId, locationId, specialtyId, googleEventId, notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            baseParams
+          );
+        } else {
+          throw e2;
+        }
+      }
+    } else {
+      throw err;
+    }
+  }
   const appointment = await findAppointmentById(data.id, data.tenantId);
   if (!appointment) throw new Error('Failed to create appointment');
   return appointment;
@@ -1322,6 +1414,177 @@ export async function findAppointmentsByDateRange(
       updatedAt: row.s_updatedAt,
     }),
   }));
+}
+
+export type AppointmentWithRelations = Appointment & {
+  patient: User;
+  professional: User & { professional: ProfessionalProfile | null };
+  location: Location;
+  specialty: Specialty;
+};
+
+/** Lista solo filas de appointments con filtros y paginación (sin JOINs). Para reconstruir con datos de users/locations/specialties por separado. */
+export async function listAppointmentsForAdminRaw(
+  tenantId: string,
+  options: {
+    startDate?: Date;
+    endDate?: Date;
+    statuses?: AppointmentStatus[];
+    limit: number;
+    offset: number;
+    orderBy: 'startAt_asc' | 'startAt_desc';
+  }
+): Promise<{ list: Appointment[]; total: number }> {
+  const { startDate, endDate, statuses, limit, offset, orderBy } = options;
+  let whereClause = 'tenantId = ?';
+  const params: any[] = [tenantId];
+  if (startDate != null) {
+    whereClause += ' AND startAt >= ?';
+    params.push(startDate);
+  }
+  if (endDate != null) {
+    whereClause += ' AND startAt <= ?';
+    params.push(endDate);
+  }
+  if (statuses != null && statuses.length > 0) {
+    whereClause += ` AND status IN (${statuses.map(() => '?').join(',')})`;
+    statuses.forEach(s => params.push(s));
+  }
+  const orderClause = orderBy === 'startAt_desc' ? ' ORDER BY startAt DESC' : ' ORDER BY startAt ASC';
+
+  const [countRows] = await mysql.execute(
+    `SELECT COUNT(*) as total FROM appointments WHERE ${whereClause}`,
+    params
+  );
+  const total = Number((countRows as any[])[0]?.total ?? 0);
+
+  const limitNum = Math.min(1000, Math.max(1, Number(limit)));
+  const offsetNum = Math.max(0, Number(offset));
+  const [rows] = await mysql.execute(
+    `SELECT * FROM appointments WHERE ${whereClause}${orderClause} LIMIT ${limitNum} OFFSET ${offsetNum}`,
+    params
+  );
+  const list = (rows as any[]).map(rowToAppointment);
+  return { list, total };
+}
+
+export async function listAppointmentsForAdmin(
+  tenantId: string,
+  options: {
+    startDate?: Date;
+    endDate?: Date;
+    statuses?: AppointmentStatus[];
+    limit: number;
+    offset: number;
+    orderBy: 'startAt_asc' | 'startAt_desc';
+  }
+): Promise<{ list: AppointmentWithRelations[]; total: number }> {
+  const { startDate, endDate, statuses, limit, offset, orderBy } = options;
+  const baseSelect = `
+    SELECT 
+      a.*,
+      p.id as p_id, p.tenantId as p_tenantId, p.email as p_email, p.name as p_name,
+      p.passwordHash as p_passwordHash, p.role as p_role, p.createdAt as p_createdAt, p.updatedAt as p_updatedAt,
+      prof.id as prof_id, prof.tenantId as prof_tenantId, prof.email as prof_email, prof.name as prof_name, prof.passwordHash as prof_passwordHash,
+      prof.role as prof_role, prof.createdAt as prof_createdAt, prof.updatedAt as prof_updatedAt,
+      pp.userId as pp_userId, pp.tenantId as pp_tenantId, pp.specialtyId as pp_specialtyId, pp.isActive as pp_isActive,
+      pp.googleCalendarId as pp_googleCalendarId, pp.color as pp_color,
+      pp.createdAt as pp_createdAt, pp.updatedAt as pp_updatedAt,
+      l.id as l_id, l.tenantId as l_tenantId, l.name as l_name, l.address as l_address, l.phone as l_phone,
+      l.createdAt as l_createdAt, l.updatedAt as l_updatedAt,
+      s.id as s_id, s.tenantId as s_tenantId, s.name as s_name, s.createdAt as s_createdAt, s.updatedAt as s_updatedAt
+    FROM appointments a
+    INNER JOIN users p ON a.patientId = p.id AND a.tenantId = p.tenantId
+    INNER JOIN users prof ON a.professionalId = prof.id AND a.tenantId = prof.tenantId
+    LEFT JOIN professional_profiles pp ON prof.id = pp.userId AND prof.tenantId = pp.tenantId
+    INNER JOIN locations l ON a.locationId = l.id AND a.tenantId = l.tenantId
+    INNER JOIN specialties s ON a.specialtyId = s.id AND a.tenantId = s.tenantId
+    WHERE a.tenantId = ?
+  `;
+  let whereClause = 'a.tenantId = ?';
+  if (startDate != null) {
+    whereClause += ' AND a.startAt >= ?';
+  }
+  if (endDate != null) {
+    whereClause += ' AND a.startAt <= ?';
+  }
+  if (statuses != null && statuses.length > 0) {
+    whereClause += ` AND a.status IN (${statuses.map(() => '?').join(',')})`;
+  }
+
+  const orderClause = orderBy === 'startAt_desc' ? ' ORDER BY a.startAt DESC' : ' ORDER BY a.startAt ASC';
+  const countQuery = `SELECT COUNT(*) as total FROM appointments a WHERE ${whereClause}`;
+  const countParams: any[] = [tenantId];
+  if (startDate != null) countParams.push(startDate);
+  if (endDate != null) countParams.push(endDate);
+  if (statuses != null && statuses.length > 0) statuses.forEach(s => countParams.push(s));
+
+  const [countRows] = await mysql.execute(countQuery, countParams);
+  const total = Number((countRows as any[])[0]?.total ?? 0);
+
+  const listQuery = baseSelect.replace('WHERE a.tenantId = ?', `WHERE ${whereClause}${orderClause} LIMIT ? OFFSET ?`);
+  const listParams: any[] = [tenantId];
+  if (startDate != null) listParams.push(startDate);
+  if (endDate != null) listParams.push(endDate);
+  if (statuses != null && statuses.length > 0) statuses.forEach(s => listParams.push(s));
+  listParams.push(limit, offset);
+
+  const [rows] = await mysql.execute(listQuery, listParams);
+  const result = rows as any[];
+
+  const mapRow = (row: any) => ({
+    ...rowToAppointment(row),
+    patient: rowToUser({
+      id: row.p_id,
+      tenantId: row.p_tenantId,
+      email: row.p_email,
+      name: row.p_name,
+      passwordHash: row.p_passwordHash,
+      role: row.p_role,
+      createdAt: row.p_createdAt,
+      updatedAt: row.p_updatedAt,
+    }),
+    professional: {
+      ...rowToUser({
+        id: row.prof_id,
+        tenantId: row.prof_tenantId,
+        email: row.prof_email,
+        name: row.prof_name,
+        passwordHash: row.prof_passwordHash,
+        role: row.prof_role,
+        createdAt: row.prof_createdAt,
+        updatedAt: row.prof_updatedAt,
+      }),
+      professional: row.pp_userId ? rowToProfessionalProfile({
+        userId: row.pp_userId,
+        tenantId: row.pp_tenantId,
+        specialtyId: row.pp_specialtyId,
+        isActive: row.pp_isActive,
+        googleCalendarId: row.pp_googleCalendarId,
+        color: (row.pp_color && row.pp_color.trim() !== '') ? row.pp_color.trim() : null,
+        createdAt: row.pp_createdAt,
+        updatedAt: row.pp_updatedAt,
+      }) : null,
+    },
+    location: rowToLocation({
+      id: row.l_id,
+      tenantId: row.l_tenantId,
+      name: row.l_name,
+      address: row.l_address,
+      phone: row.l_phone,
+      createdAt: row.l_createdAt,
+      updatedAt: row.l_updatedAt,
+    }),
+    specialty: rowToSpecialty({
+      id: row.s_id,
+      tenantId: row.s_tenantId,
+      name: row.s_name,
+      createdAt: row.s_createdAt,
+      updatedAt: row.s_updatedAt,
+    }),
+  });
+
+  return { list: result.map(mapRow), total };
 }
 
 export async function updateAppointment(data: {

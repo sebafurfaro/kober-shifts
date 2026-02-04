@@ -4,12 +4,12 @@ import { MessageCircle } from "lucide-react";
 import { MetricCard } from "./MetricCard";
 
 export interface WhatsAppRemindersMetricCardProps {
-  used: number;
-  assigned: number;
+  used?: number;
+  assigned?: number;
 }
 
 /** Tarjeta de métrica de recordatorios WhatsApp (usados / asignados). Sin selector Mes/Año. */
-export function WhatsAppRemindersMetricCard({ used, assigned }: WhatsAppRemindersMetricCardProps) {
+export function WhatsAppRemindersMetricCard({ used = 0, assigned = 0 }: WhatsAppRemindersMetricCardProps) {
   return (
     <MetricCard
       title="Recordatorios WhatsApp"

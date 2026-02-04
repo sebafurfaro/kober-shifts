@@ -257,6 +257,7 @@ export default function NewAppointment() {
           specialtyId: selectedSpecialty,
           startAt: startAt.toISOString(),
           endAt: endAt.toISOString(),
+          ...(selectedService?.id && { serviceId: selectedService.id }),
         }),
       });
 

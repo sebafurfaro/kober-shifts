@@ -89,20 +89,17 @@ export default function AnalyticsPageClient() {
             <RevenueMetricCard
               totalMonth={metrics?.revenue?.totalMonth ?? 0}
               totalYear={metrics?.revenue?.totalYear ?? 0}
-              period={periodByBox.revenue}
-              onPeriodChange={(p) => setPeriodByBox((prev) => ({ ...prev, revenue: p }))}
+              byMonth={metrics?.revenue?.byMonth ?? []}
             />
             <AppointmentsMetricCard
               totalMonth={metrics?.appointments?.totalMonth ?? 0}
               totalYear={metrics?.appointments?.totalYear ?? 0}
-              period={periodByBox.appointments}
-              onPeriodChange={(p) => setPeriodByBox((prev) => ({ ...prev, appointments: p }))}
+              byMonth={metrics?.appointments?.byMonth ?? []}
             />
             <CancellationsMetricCard
-              totalMonth={metrics?.patients?.totalMonth ?? 0}
-              totalYear={metrics?.patients?.totalYear ?? 0}
-              period={periodByBox.patients}
-              onPeriodChange={(p) => setPeriodByBox((prev) => ({ ...prev, patients: p }))}
+              totalMonth={metrics?.cancellations?.totalMonth ?? 0}
+              totalYear={metrics?.cancellations?.totalYear ?? 0}
+              byMonth={metrics?.cancellations?.byMonth ?? []}
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

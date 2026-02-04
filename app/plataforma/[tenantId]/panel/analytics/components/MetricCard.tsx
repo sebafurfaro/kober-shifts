@@ -42,7 +42,7 @@ export function MetricCard({
             <div className="flex gap-1">
               <Button
                 size="sm"
-                variant={period === "month" ? "solid" : "bordered"}
+                variant={period === "month" ? "flat" : "bordered"}
                 className="min-w-12 text-white border-white/40"
                 onPress={() => onPeriodChange("month")}
               >
@@ -50,7 +50,7 @@ export function MetricCard({
               </Button>
               <Button
                 size="sm"
-                variant={period === "year" ? "solid" : "bordered"}
+                variant={period === "year" ? "flat" : "bordered"}
                 className="min-w-12 text-white border-white/40"
                 onPress={() => onPeriodChange("year")}
               >

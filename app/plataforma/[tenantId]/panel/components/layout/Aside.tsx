@@ -14,6 +14,7 @@ import {
   LayoutGrid,
   BookOpen,
   UserIcon,
+  CalendarCheck2,
 } from "lucide-react";
 import { Alert } from "@heroui/react";
 import Logo from "@/app/branding/Logo";
@@ -254,6 +255,12 @@ export function Aside({
                 href={`${base}/admin/payments`}
                 label="Pagos"
                 icon={<CircleDollarSign className="w-5 h-5" />}
+                isCollapsed={effectiveIsCollapsed}
+              />
+              <NavItem
+                href={`${base}/admin/turnos`}
+                label="Turnos"
+                icon={<CalendarCheck2 className="w-5 h-5" />}
                 isCollapsed={effectiveIsCollapsed}
               />
               {gestionItems

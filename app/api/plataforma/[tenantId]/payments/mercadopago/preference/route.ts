@@ -170,7 +170,11 @@ export async function POST(
     );
 
     if (purpose === "deposit" && appointment.status === AppointmentStatus.REQUESTED) {
-      await updateAppointmentStatus(appointmentId, tenantId, AppointmentStatus.PENDING_DEPOSIT);
+      try {
+        await updateAppointmentStatus(appointmentId, tenantId, AppointmentStatus.PENDING_DEPOSIT);
+      } catch (err) {
+        console.warn("Could not set appointment to PENDING_DEPOSIT (run migration_mercadopago_oauth.sql if needed):", err);
+      }
     }
 
     return NextResponse.json({

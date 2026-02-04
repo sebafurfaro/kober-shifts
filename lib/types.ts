@@ -149,8 +149,11 @@ export interface Appointment {
   professionalId: string;
   locationId: string;
   specialtyId: string;
+  serviceId?: string | null;
   googleEventId: string | null;
   notes: string | null;
+  patientFirstName?: string | null;
+  patientLastName?: string | null;
   cancellationReason: string | null;
   cancelledBy: Role | null;
   createdAt: Date;

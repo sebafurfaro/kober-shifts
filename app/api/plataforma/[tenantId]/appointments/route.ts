@@ -143,6 +143,7 @@ export async function POST(
     endAt = utcToMySQLDate(utcDate);
   }
   const notes = typeof body.notes === "string" ? body.notes : null;
+  const serviceId = typeof body.serviceId === "string" ? body.serviceId : null;
 
   // Validate required fields based on section visibility
   if (!patientId || !professionalId || !startAt || !endAt) {
@@ -243,11 +244,14 @@ export async function POST(
     professionalId: professional.id,
     locationId: showLocations && location ? location.id : null,
     specialtyId: showSpecialties && specialty ? specialty.id : null,
+    serviceId: serviceId ?? null,
     startAt,
     endAt,
     status: AppointmentStatus.REQUESTED,
     googleEventId,
     notes,
+    patientFirstName: patient.firstName ?? null,
+    patientLastName: patient.lastName ?? null,
   });
 
   return NextResponse.json({ appointmentId: appointment.id, googleEventId: appointment.googleEventId });
