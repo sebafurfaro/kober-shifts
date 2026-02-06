@@ -42,6 +42,7 @@ export async function POST(req: Request) {
     show_specialties?: boolean;
     show_coverage?: boolean;
     show_mercado_pago?: boolean;
+    calendar?: boolean;
     payment_enabled?: boolean;
   } | undefined;
   const limits = body.limits as {
@@ -67,6 +68,7 @@ export async function POST(req: Request) {
       show_specialties: features?.show_specialties ?? true,
       show_coverage: features?.show_coverage ?? true,
       show_mercado_pago: features?.show_mercado_pago ?? true,
+      calendar: features?.calendar ?? true,
       payment_enabled: features?.payment_enabled ?? true,
     };
 

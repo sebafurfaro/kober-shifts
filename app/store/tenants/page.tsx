@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   CardBody,
+  CardHeader,
   Table,
   TableHeader,
   TableColumn,
@@ -17,14 +18,8 @@ import {
 import { Trash2, Settings } from "lucide-react";
 import { ConfirmationDialog } from "../../plataforma/[tenantId]/panel/components/alerts/ConfirmationDialog";
 import { AlertDialog } from "../../plataforma/[tenantId]/panel/components/alerts/AlertDialog";
-import { TenantFormDialog } from "../components/TenantFormDialog";
-import {
-  TenantConfigDialog,
-  TenantFeatureFlags,
-  TenantLimits,
-  TenantTranslations,
-} from "../components/TenantConfigDialog";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import type { TenantFeatureFlags, TenantLimits } from "../components/TenantConfigDialog";
 
 interface TenantConfig {
   features: TenantFeatureFlags;
@@ -45,7 +40,6 @@ export default function StoreTenantsPage() {
   const router = useRouter();
   const [tenants, setTenants] = React.useState<Tenant[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [dialogOpen, setDialogOpen] = React.useState(false);
   const [confirmationDialog, setConfirmationDialog] = React.useState<{
     open: boolean;
     message: string;
@@ -60,10 +54,6 @@ export default function StoreTenantsPage() {
     message: string;
     type: "error" | "info" | "success" | "warning";
   }>({ open: false, message: "", type: "error" });
-  const [configDialog, setConfigDialog] = React.useState<{
-    open: boolean;
-    tenant: Tenant | null;
-  }>({ open: false, tenant: null });
 
   const loadTenants = React.useCallback(async () => {
     try {
@@ -109,17 +99,6 @@ export default function StoreTenantsPage() {
     loadTenants();
   }, [loadTenants]);
 
-  const searchParams = useSearchParams();
-  React.useEffect(() => {
-    if (searchParams.get("create") === "1") {
-      setDialogOpen(true);
-    }
-  }, [searchParams]);
-
-  const handleCreate = () => {
-    setDialogOpen(true);
-  };
-
   const handleDelete = (tenant: Tenant) => {
     setConfirmationDialog({
       open: true,
@@ -145,87 +124,30 @@ export default function StoreTenantsPage() {
     });
   };
 
-  const handleSubmit = async (data: {
-    name: string;
-    id?: string;
-    logoUrl?: string;
-    features?: { show_specialties: boolean; show_coverage: boolean; show_mercado_pago: boolean; payment_enabled: boolean };
-    limits?: { maxUsers: number; whatsappRemindersLimit: number };
-  }) => {
-    try {
-      const res = await fetch(`/api/store/tenants`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: data.name,
-          id: data.id,
-          logoUrl: data.logoUrl,
-          features: data.features,
-          limits: data.limits,
-        }),
-      });
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        throw new Error(error.error || "Error al crear tenant");
-      }
-      await loadTenants();
-      setDialogOpen(false);
-    } catch (error: any) {
-      throw error;
-    }
-  };
-
-  const handleSaveConfig = async (
-    tenantId: string,
-    data: { features: TenantFeatureFlags; limits: TenantLimits; translations: TenantTranslations }
-  ) => {
-    const [featuresRes, settingsRes] = await Promise.all([
-      fetch(`/api/store/tenants/${tenantId}/features`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ features: data.features, limits: data.limits }),
-      }),
-      fetch(`/api/store/tenants/${tenantId}/settings`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          patientLabel: data.translations.patientLabel,
-          professionalLabel: data.translations.professionalLabel,
-        }),
-      }),
-    ]);
-    if (!featuresRes.ok) {
-      const err = await featuresRes.json().catch(() => ({}));
-      const msg = err.detail ? `${err.error}: ${err.detail}` : (err.error || "Error al guardar configuración");
-      throw new Error(msg);
-    }
-    if (!settingsRes.ok) {
-      const err = await settingsRes.json().catch(() => ({}));
-      const msg = err.error || "Error al guardar traducciones";
-      throw new Error(msg);
-    }
-    setTenants((prev) =>
-      prev.map((t) =>
-        t.id === tenantId ? { ...t, config: { features: data.features, limits: data.limits } } : t
-      )
-    );
-  };
+  const tableHeader = [
+    { label: "ID", key: "id" },
+    { label: "Nombre", key: "name" },
+    { label: "Estado", key: "status" },
+    { label: "Max usuarios", key: "maxUsers" },
+    { label: "Recordatorios WhatsApp", key: "whatsappRemindersLimit" },
+    { label: "Fecha de Creación", key: "createdAt" },
+    { label: "Acciones", key: "actions" },
+  ];
 
   return (
     <div className="w-full mx-auto px-4 py-8 space-y-4">
       <Card className="max-w-5xl mx-auto shadow-lg card">
+        <CardHeader className="flex items-center justify-between gap-3 text-slate-800">
+          <div className="text-base font-semibold">Tenants</div>
+        </CardHeader>
         <CardBody>
           <Table aria-label="Tabla de tenants" classNames={{base: "text-slate-800"}}>
-            <TableHeader>
-              <TableColumn>ID</TableColumn>
-              <TableColumn>Nombre</TableColumn>
-              <TableColumn>Estado</TableColumn>
-              <TableColumn>Max usuarios</TableColumn>
-              <TableColumn>Recordatorios WhatsApp</TableColumn>
-              <TableColumn>Fecha de Creación</TableColumn>
-              <TableColumn align="end">Acciones</TableColumn>
+            <TableHeader columns={tableHeader}>
+              {(header) => (
+                <TableColumn key={header.key} align={header.key === "actions" ? "end" : "start"}>
+                  {header.label}
+                </TableColumn>
+              )}
             </TableHeader>
             <TableBody
               isLoading={loading}
@@ -273,9 +195,7 @@ export default function StoreTenantsPage() {
                         <Button
                           size="sm"
                           variant="flat"
-                          onPress={() =>
-                            setConfigDialog({ open: true, tenant })
-                          }
+                          onPress={() => router.push(`/store/tenants/${tenant.id}`)}
                           isIconOnly
                           aria-label="Configurar"
                           title="Configurar límites y feature flags"
@@ -300,41 +220,6 @@ export default function StoreTenantsPage() {
           </Table>
         </CardBody>
       </Card>
-
-        <TenantFormDialog
-          open={dialogOpen}
-          onClose={() => {
-            setDialogOpen(false);
-            router.replace("/store/tenants");
-          }}
-          onSubmit={handleSubmit}
-        />
-
-        {configDialog.tenant && (
-          <TenantConfigDialog
-            open={configDialog.open}
-            onClose={() => setConfigDialog({ open: false, tenant: null })}
-            tenantId={configDialog.tenant.id}
-            tenantName={configDialog.tenant.name}
-            initialFeatures={
-              configDialog.tenant.config?.features ?? {
-                show_specialties: true,
-                show_coverage: true,
-                show_mercado_pago: true,
-                payment_enabled: true,
-              }
-            }
-            initialLimits={
-              configDialog.tenant.config?.limits ?? {
-                maxUsers: 1,
-                whatsappRemindersLimit: 0,
-              }
-            }
-            onSave={(data) =>
-              handleSaveConfig(configDialog.tenant!.id, data)
-            }
-          />
-        )}
 
         <ConfirmationDialog
           open={confirmationDialog.open}

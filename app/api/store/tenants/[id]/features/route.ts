@@ -21,6 +21,7 @@ const DEFAULT_FEATURES = {
   show_specialties: true,
   show_coverage: true,
   show_mercado_pago: true,
+  calendar: true,
   payment_enabled: true,
 };
 
@@ -108,6 +109,7 @@ export async function PUT(
       show_specialties?: boolean;
       show_coverage?: boolean;
       show_mercado_pago?: boolean;
+      calendar?: boolean;
       payment_enabled?: boolean;
     } | undefined;
     const limits = body.limits as {
@@ -139,6 +141,7 @@ export async function PUT(
           show_specialties: features?.show_specialties ?? doc?.features?.show_specialties ?? true,
           show_coverage: features?.show_coverage ?? doc?.features?.show_coverage ?? true,
           show_mercado_pago: features?.show_mercado_pago ?? doc?.features?.show_mercado_pago ?? true,
+          calendar: features?.calendar ?? doc?.features?.calendar ?? true,
           payment_enabled: features?.payment_enabled ?? docPaymentEnabled ?? true,
         };
 

@@ -9,7 +9,6 @@ import {
   ModalFooter,
   Button,
   Input,
-  Switch,
   Divider,
   Alert,
 } from "@heroui/react";
@@ -18,6 +17,7 @@ export interface TenantFeatureFlags {
   show_specialties: boolean;
   show_coverage: boolean;
   show_mercado_pago: boolean;
+  calendar: boolean;
   payment_enabled: boolean;
 }
 
@@ -49,6 +49,7 @@ const defaultFeatures: TenantFeatureFlags = {
   show_specialties: true,
   show_coverage: true,
   show_mercado_pago: true,
+  calendar: true,
   payment_enabled: true,
 };
 
@@ -146,7 +147,7 @@ export function TenantConfigDialog({
     <Modal
       isOpen={open}
       onClose={onClose}
-      size="md"
+      size="lg"
       scrollBehavior="inside"
       classNames={{ wrapper: "z-[99999]" }}
     >
@@ -231,38 +232,61 @@ export function TenantConfigDialog({
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">Feature flags</h3>
                 <div className="space-y-3 flex flex-col gap-2">
-                  <Switch
-                    isSelected={features.show_specialties}
-                    onValueChange={(value) => setFeature("show_specialties", value)}
-                    isDisabled={loading}
-                    classNames={{ label: "text-slate-800" }}
-                  >
-                    Mostrar especialidades
-                  </Switch>
-                  <Switch
-                    isSelected={features.show_coverage}
-                    onValueChange={(value) => setFeature("show_coverage", value)}
-                    isDisabled={loading}
-                    classNames={{ label: "text-slate-800" }}
-                  >
-                    Mostrar coberturas
-                  </Switch>
-                  <Switch
-                    isSelected={features.show_mercado_pago}
-                    onValueChange={(value) => setFeature("show_mercado_pago", value)}
-                    isDisabled={loading}
-                    classNames={{ label: "text-slate-800" }}
-                  >
-                    Mostrar Mercado Pago
-                  </Switch>
-                  <Switch
-                    isSelected={features.payment_enabled}
-                    onValueChange={(value) => setFeature("payment_enabled", value)}
-                    isDisabled={loading}
-                    classNames={{ label: "text-slate-800" }}
-                  >
-                    Habilitar Tenant
-                  </Switch>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-slate-800">Mostrar especialidades</span>
+                    <Button
+                      variant={features.show_specialties ? "solid" : "bordered"}
+                      color={features.show_specialties ? "success" : ("info" as "primary")}
+                      isDisabled={loading}
+                      onPress={() => setFeature("show_specialties", !features.show_specialties)}
+                    >
+                      {features.show_specialties ? "Habilitado" : "Deshabilitado"}
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-slate-800">Mostrar coberturas</span>
+                    <Button
+                      variant={features.show_coverage ? "solid" : "bordered"}
+                      color={features.show_coverage ? "success" : ("info" as "primary")}
+                      isDisabled={loading}
+                      onPress={() => setFeature("show_coverage", !features.show_coverage)}
+                    >
+                      {features.show_coverage ? "Habilitado" : "Deshabilitado"}
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-slate-800">Mostrar Mercado Pago</span>
+                    <Button
+                      variant={features.show_mercado_pago ? "solid" : "bordered"}
+                      color={features.show_mercado_pago ? "success" : ("info" as "primary")}
+                      isDisabled={loading}
+                      onPress={() => setFeature("show_mercado_pago", !features.show_mercado_pago)}
+                    >
+                      {features.show_mercado_pago ? "Habilitado" : "Deshabilitado"}
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-slate-800">Mostrar calendario</span>
+                    <Button
+                      variant={features.calendar ? "solid" : "bordered"}
+                      color={features.calendar ? "success" : ("info" as "primary")}
+                      isDisabled={loading}
+                      onPress={() => setFeature("calendar", !features.calendar)}
+                    >
+                      {features.calendar ? "Habilitado" : "Deshabilitado"}
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-slate-800">Habilitar tenant</span>
+                    <Button
+                      variant={features.payment_enabled ? "solid" : "bordered"}
+                      color={features.payment_enabled ? "success" : ("info" as "primary")}
+                      isDisabled={loading}
+                      onPress={() => setFeature("payment_enabled", !features.payment_enabled)}
+                    >
+                      {features.payment_enabled ? "Habilitado" : "Deshabilitado"}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
