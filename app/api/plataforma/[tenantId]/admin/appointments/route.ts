@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import {
   listAppointmentsForAdminRaw,
+  listAppointmentsForAdminRawWithSearch,
   findUsersByIds,
   findLocationsByIds,
   findSpecialtiesByIds,
@@ -27,6 +28,7 @@ export async function GET(
   const url = new URL(req.url);
   const filter = (url.searchParams.get("filter") || "todos") as Filter;
   const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
+  const search = (url.searchParams.get("search") || "").trim();
 
   const now = new Date();
   const tz = "America/Argentina/Buenos_Aires";
@@ -72,14 +74,17 @@ export async function GET(
       orderBy = "startAt_asc";
   }
 
-  const { list: appointmentList, total } = await listAppointmentsForAdminRaw(tenantId, {
+  const listOptions = {
     startDate,
     endDate,
     statuses,
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
     orderBy,
-  });
+  };
+  const { list: appointmentList, total } = search
+    ? await listAppointmentsForAdminRawWithSearch(tenantId, { ...listOptions, search })
+    : await listAppointmentsForAdminRaw(tenantId, listOptions);
 
   const patientIds = [...new Set(appointmentList.map((a) => a.patientId))];
   const professionalIds = [...new Set(appointmentList.map((a) => a.professionalId))];

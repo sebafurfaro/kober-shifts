@@ -15,12 +15,15 @@ import {
   Pagination,
   Tooltip,
   Chip,
+  Input,
 } from "@heroui/react";
-import { CircleCheck, CircleX, Hand, MessageCircle } from "lucide-react";
+import { CircleCheck, CircleX, Hand, MessageCircle, Plus, Search } from "lucide-react";
 import { PanelHeader } from "../../components/PanelHeader";
 import { ConfirmationDialog } from "../../components/alerts/ConfirmationDialog";
 import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { useParams } from "next/navigation";
+import { useAppointmentsInvalidationStore } from "@/lib/appointments-invalidation-store";
+import { CreateTurnoDialog } from "./CreateTurnoDialog";
 
 type Filter = "proximos" | "hoy" | "manana" | "todos";
 
@@ -73,18 +76,29 @@ function formatPrice(value: number): string {
 export default function AdminTurnosPage() {
   const params = useParams();
   const tenantId = params.tenantId as string;
+  const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
+  const appointmentsVersion = useAppointmentsInvalidationStore((s) => s.version);
   const [appointments, setAppointments] = React.useState<AppointmentRow[]>([]);
   const [total, setTotal] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
   const [filter, setFilter] = React.useState<Filter>("todos");
   const [page, setPage] = React.useState(1);
+  const [search, setSearch] = React.useState("");
+  const [searchInput, setSearchInput] = React.useState("");
   const [cancelDialog, setCancelDialog] = React.useState<AppointmentRow | null>(null);
   const [alert, setAlert] = React.useState<{ open: boolean; message: string; type: "error" | "success" }>({ open: false, message: "", type: "error" });
+
+  React.useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const loadAppointments = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/plataforma/${tenantId}/admin/appointments?filter=${filter}&page=${page}`, { credentials: "include" });
+      const q = new URLSearchParams({ filter, page: String(page) });
+      if (search) q.set("search", search);
+      const res = await fetch(`/api/plataforma/${tenantId}/admin/appointments?${q}`, { credentials: "include" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(data.error || `Error ${res.status} al cargar turnos`);
@@ -99,11 +113,24 @@ export default function AdminTurnosPage() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, filter, page]);
+  }, [tenantId, filter, page, search]);
 
   React.useEffect(() => {
     loadAppointments();
   }, [loadAppointments]);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  // Refrescar lista cuando se crea/edita/elimina un turno desde el calendario u otro módulo
+  const prevVersionRef = React.useRef(appointmentsVersion);
+  React.useEffect(() => {
+    if (prevVersionRef.current !== appointmentsVersion) {
+      prevVersionRef.current = appointmentsVersion;
+      loadAppointments();
+    }
+  }, [appointmentsVersion, loadAppointments]);
 
   const totalPages = Math.max(1, Math.ceil(total / 10));
 
@@ -174,30 +201,53 @@ export default function AdminTurnosPage() {
           subtitle="Podrás ver todos los turnos registrados"
         />
 
-        <Card className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden text-slate-800">
+        <Card className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden text-slate-800 p-4">
           <CardBody className="p-0">
-            <div className="p-4 border-b border-gray-200 flex flex-wrap gap-2">
-              {(
-                [
-                  { key: "proximos" as const, label: "Próximos" },
-                  { key: "hoy" as const, label: "Hoy" },
-                  { key: "manana" as const, label: "Mañana" },
-                  { key: "todos" as const, label: "Todos" },
-                ] as const
-              ).map(({ key, label }) => (
+            <div className="flex items-center justify-between w-full mb-4">
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    { key: "proximos" as const, label: "Próximos" },
+                    { key: "hoy" as const, label: "Hoy" },
+                    { key: "manana" as const, label: "Mañana" },
+                    { key: "todos" as const, label: "Todos" },
+                  ] as const
+                ).map(({ key, label }) => (
+                  <Button
+                    key={key}
+                    size="sm"
+                    variant={filter === key ? "solid" : "bordered"}
+                    color="primary"
+                    onPress={() => {
+                      setFilter(key);
+                      setPage(1);
+                    }}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+              
                 <Button
-                  key={key}
-                  size="sm"
-                  variant={filter === key ? "solid" : "bordered"}
                   color="primary"
-                  onPress={() => {
-                    setFilter(key);
-                    setPage(1);
-                  }}
+                  className="rounded-full flex items-center justify-center min-w-14! w-14! min-h-14! h-14!"
+                  onPress={() => setCreateDialogOpen(true)}
+                  aria-label="Agregar turno"
                 >
-                  {label}
+                  <Plus className="w-4 h-4" />
                 </Button>
-              ))}
+                
+            </div>
+
+            <div className="w-48 py-3">
+              <Input
+                type="text"
+                placeholder="Buscar turno"
+                variant="bordered"
+                value={searchInput}
+                onValueChange={setSearchInput}
+                startContent={<Search className="w-4 h-4 text-gray-400" />}
+              />
             </div>
 
             <Table aria-label="Turnos" removeWrapper>
@@ -232,8 +282,8 @@ export default function AdminTurnosPage() {
                       <TableCell>
                         <Chip size="sm" variant="flat" color={
                           apt.status === "CONFIRMED" ? "success" :
-                          apt.status === "CANCELLED" ? "danger" :
-                          apt.status === "ATTENDED" ? "primary" : "warning"
+                            apt.status === "CANCELLED" ? "danger" :
+                              apt.status === "ATTENDED" ? "primary" : "warning"
                         }>
                           {STATUS_LABELS[apt.status] ?? apt.status}
                         </Chip>
@@ -328,7 +378,7 @@ export default function AdminTurnosPage() {
           message="¿Estás seguro de que deseas cancelar este turno?"
           confirmText="Cancelar turno"
           cancelText="No"
-          type="danger"
+          type="error"
         />
 
         <AlertDialog
@@ -336,6 +386,13 @@ export default function AdminTurnosPage() {
           onClose={() => setAlert((a) => ({ ...a, open: false }))}
           message={alert.message}
           type={alert.type}
+        />
+
+        <CreateTurnoDialog
+          tenantId={tenantId}
+          isOpen={createDialogOpen}
+          onClose={() => setCreateDialogOpen(false)}
+          onSuccess={loadAppointments}
         />
       </div>
     </div>

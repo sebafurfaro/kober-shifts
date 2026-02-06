@@ -22,7 +22,7 @@ import { Dispatch, SetStateAction } from "react";
 
 type Role = "PATIENT" | "PROFESSIONAL" | "ADMIN";
 
-const DRAWER_WIDTH = 260;
+const DRAWER_WIDTH = 210;
 const DRAWER_COLLAPSED_WIDTH = 64;
 
 interface NavItemProps {
@@ -36,9 +36,8 @@ function NavItem({ href, label, icon, isCollapsed }: NavItemProps) {
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 py-3 text-slate-800 hover:bg-[#0288D1]/10 transition-all duration-300 ease-in-out rounded-md font-primary ${
-        isCollapsed ? "justify-center px-2" : "px-4"
-      }`}
+      className={`flex items-center gap-3 py-3 text-slate-800 hover:bg-[#0288D1]/10 transition-all duration-300 ease-in-out rounded-md font-primary ${isCollapsed ? "justify-center px-2" : "px-4"
+        }`}
       title={isCollapsed ? label : undefined}
     >
       <span className="w-5 h-5 shrink-0">{icon}</span>
@@ -107,7 +106,7 @@ export function Aside({
         const max = typeof data.maxUsers === "number" ? data.maxUsers : 0;
         setUsage({ used, max });
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => { cancelled = true; };
   }, [currentTenantId, role]);
 
@@ -141,13 +140,12 @@ export function Aside({
 
   return (
     <aside
-      className={`fixed top-0 left-0 h-screen bg-white text-slate-900 z-49 transition-all duration-300 ${
-        isMobile
-          ? mobileDrawerOpen
-            ? "translate-x-0"
-            : "-translate-x-full"
-          : "translate-x-0"
-      }`}
+      className={`fixed top-0 left-0 h-screen bg-white text-slate-900 z-49 transition-all duration-300 ${isMobile
+        ? mobileDrawerOpen
+          ? "translate-x-0"
+          : "-translate-x-full"
+        : "translate-x-0"
+        }`}
       style={{ width: `${currentWidth}px` }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -155,9 +153,8 @@ export function Aside({
       <div className="overflow-y-auto h-full py-4">
         {/* Logo and Toggle */}
         <div
-          className={`flex mb-4 pb-4 border-b border-slate-200 ${
-            effectiveIsCollapsed ? "flex-col items-center px-2 gap-2" : "items-center justify-between px-4"
-          }`}
+          className={`flex mb-4 pb-4 border-b border-slate-200 ${effectiveIsCollapsed ? "flex-col items-center px-2 gap-2" : "items-center justify-between px-4"
+            }`}
         >
           {!effectiveIsCollapsed && (
             <div className="flex items-center gap-2">
@@ -173,9 +170,8 @@ export function Aside({
               aria-label={effectiveIsCollapsed ? "Expand menu" : "Collapse menu"}
             >
               <ChevronLeft
-                className={`w-5 h-5 transition-transform duration-300 ${
-                  effectiveIsCollapsed ? "rotate-180" : ""
-                }`}
+                className={`w-5 h-5 transition-transform duration-300 ${effectiveIsCollapsed ? "rotate-180" : ""
+                  }`}
               />
             </button>
           )}

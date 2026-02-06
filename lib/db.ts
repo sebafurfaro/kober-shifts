@@ -1468,6 +1468,65 @@ export async function listAppointmentsForAdminRaw(
   return { list, total };
 }
 
+/** Lista appointments con filtro de búsqueda por nombre de paciente, profesional, sede, especialidad o servicio. */
+export async function listAppointmentsForAdminRawWithSearch(
+  tenantId: string,
+  options: {
+    search: string;
+    startDate?: Date;
+    endDate?: Date;
+    statuses?: AppointmentStatus[];
+    limit: number;
+    offset: number;
+    orderBy: 'startAt_asc' | 'startAt_desc';
+  }
+): Promise<{ list: Appointment[]; total: number }> {
+  const { search, startDate, endDate, statuses, limit, offset, orderBy } = options;
+  const searchPattern = `%${search.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
+  let whereClause = `a.tenantId = ? AND (p.name LIKE ? OR prof.name LIKE ? OR l.name LIKE ? OR s.name LIKE ? OR srv.name LIKE ?)`;
+  const params: any[] = [tenantId, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern];
+  if (startDate != null) {
+    whereClause += ' AND a.startAt >= ?';
+    params.push(startDate);
+  }
+  if (endDate != null) {
+    whereClause += ' AND a.startAt <= ?';
+    params.push(endDate);
+  }
+  if (statuses != null && statuses.length > 0) {
+    whereClause += ` AND a.status IN (${statuses.map(() => '?').join(',')})`;
+    statuses.forEach(s => params.push(s));
+  }
+  const orderClause = orderBy === 'startAt_desc' ? ' ORDER BY a.startAt DESC' : ' ORDER BY a.startAt ASC';
+  const limitNum = Math.min(1000, Math.max(1, Number(limit)));
+  const offsetNum = Math.max(0, Number(offset));
+
+  const countQuery = `
+    SELECT COUNT(DISTINCT a.id) as total FROM appointments a
+    INNER JOIN users p ON a.patientId = p.id AND a.tenantId = p.tenantId
+    INNER JOIN users prof ON a.professionalId = prof.id AND a.tenantId = prof.tenantId
+    INNER JOIN locations l ON a.locationId = l.id AND a.tenantId = l.tenantId
+    INNER JOIN specialties s ON a.specialtyId = s.id AND a.tenantId = s.tenantId
+    LEFT JOIN services srv ON a.serviceId = srv.id AND a.tenantId = srv.tenantId
+    WHERE ${whereClause}
+  `;
+  const [countRows] = await mysql.execute(countQuery, params);
+  const total = Number((countRows as any[])[0]?.total ?? 0);
+
+  const listQuery = `
+    SELECT a.* FROM appointments a
+    INNER JOIN users p ON a.patientId = p.id AND a.tenantId = p.tenantId
+    INNER JOIN users prof ON a.professionalId = prof.id AND a.tenantId = prof.tenantId
+    INNER JOIN locations l ON a.locationId = l.id AND a.tenantId = l.tenantId
+    INNER JOIN specialties s ON a.specialtyId = s.id AND a.tenantId = s.tenantId
+    LEFT JOIN services srv ON a.serviceId = srv.id AND a.tenantId = srv.tenantId
+    WHERE ${whereClause}${orderClause} LIMIT ${limitNum} OFFSET ${offsetNum}
+  `;
+  const [rows] = await mysql.execute(listQuery, params);
+  const list = (rows as any[]).map(rowToAppointment);
+  return { list, total };
+}
+
 export async function listAppointmentsForAdmin(
   tenantId: string,
   options: {

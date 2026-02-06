@@ -14,15 +14,17 @@ import {
   Card,
   CardBody,
 } from "@heroui/react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Toolbar } from "./calendar/Toolbar";
 
-import { fullCalendarDateToLocal, localDateToFullCalendar, serializeBATimeAsUTC } from "@/lib/timezone";
+import { fullCalendarDateToLocal, localDateToFullCalendar, serializeBATimeAsUTC, toZonedTime, BUENOS_AIRES_TIMEZONE } from "@/lib/timezone";
 import { EventDialogTitle } from "./calendar/EventDialogTitle";
 import { EventDialogContent } from "./calendar/EventDialogContent";
 import { EventDialogActions } from "./calendar/EventDialogActions";
 import { ConfirmationDialog } from "./alerts/ConfirmationDialog";
 import { AlertDialog } from "./alerts/AlertDialog";
+import { useCreateAppointment } from "@/lib/use-create-appointment";
+import { useAppointmentsInvalidationStore } from "@/lib/appointments-invalidation-store";
 
 type ViewType = "dayGridMonth" | "timeGridWeek" | "timeGridDay";
 
@@ -74,10 +76,14 @@ interface EventDialogData {
 
 export function Calendar() {
   const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const tenantId = params.tenantId as string;
+  const { createAppointment: createAppointmentApi } = useCreateAppointment(tenantId);
+  const invalidateAppointments = useAppointmentsInvalidationStore((s) => s.invalidate);
   const calendarRef = useRef<FullCalendar>(null);
   const [currentView, setCurrentView] = useState<ViewType>("dayGridMonth");
-  const [timezone, setTimezone] = useState<string>("America/Argentina/Buenos_Aires");
+  const [timezone, setTimezone] = useState<string>(BUENOS_AIRES_TIMEZONE);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -155,6 +161,31 @@ export function Calendar() {
     setMounted(true);
   }, []);
 
+  // Abrir diálogo "Agregar evento" cuando se navega con ?addEvent=1 (ej. desde Turnos). Opcional: ?date=YYYY-MM-DD&time=HH:mm
+  useEffect(() => {
+    if (!mounted) return;
+    if (searchParams.get("addEvent") !== "1") return;
+    const dateParam = searchParams.get("date");
+    const timeParam = searchParams.get("time");
+    let startDate: Date;
+    let endDate: Date;
+    if (dateParam && timeParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) && /^\d{1,2}:\d{2}$/.test(timeParam)) {
+      const [hours, minutes] = timeParam.split(":").map(Number);
+      const [y, m, d] = dateParam.split("-").map(Number);
+      startDate = new Date(Date.UTC(y, m - 1, d, hours, minutes, 0, 0));
+      endDate = new Date(Date.UTC(y, m - 1, d, hours, minutes + 30, 0, 0));
+    } else {
+      const now = new Date();
+      const baNow = toZonedTime(now, BUENOS_AIRES_TIMEZONE);
+      startDate = new Date(Date.UTC(baNow.getFullYear(), baNow.getMonth(), baNow.getDate(), 9, 0, 0, 0));
+      endDate = new Date(Date.UTC(baNow.getFullYear(), baNow.getMonth(), baNow.getDate(), 9, 30, 0, 0));
+    }
+    setEventDialogMode("create");
+    setEventDialogData({ start: startDate, end: endDate });
+    setEventDialogOpen(true);
+    router.replace(`/plataforma/${tenantId}/panel`, { scroll: false });
+  }, [mounted, tenantId, router, searchParams]);
+
   // Load FullCalendar styles from CDN to avoid Tailwind CSS v4 conflicts
   useEffect(() => {
     if (typeof document !== "undefined") {
@@ -219,6 +250,7 @@ export function Calendar() {
             specialtyIds: p.professional?.specialtyIds || (p.professional?.specialtyId ? [p.professional.specialtyId] : []),
             availableDays: p.professional?.availableDays || null,
             availableHours: p.professional?.availableHours || null,
+            availabilityConfig: p.professional?.availabilityConfig || null,
           }))
           : [];
         setProfessionals(normalizedProfessionals);
@@ -789,6 +821,7 @@ export function Calendar() {
                           method: "DELETE",
                         });
                         if (!res.ok) throw new Error("Failed to delete appointment");
+                        invalidateAppointments();
                         setEventDialogOpen(false);
                         if (calendarRef.current) {
                           const calendar = calendarRef.current.getApi();
@@ -939,41 +972,60 @@ export function Calendar() {
                     return;
                   }
                   try {
-                    // eventDialogData has BA components stored as UTC components
-                    // We need to serialize them preserving those components (not converting to actual UTC)
-                    // The backend will extract them using utcToMySQLDate
-                    const res = await fetch(
-                      eventDialogMode === "edit"
-                        ? `/api/plataforma/${tenantId}/appointments/${eventDialogData.id}`
-                        : `/api/plataforma/${tenantId}/appointments`,
-                      {
-                        method: eventDialogMode === "edit" ? "PATCH" : "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          ...(eventDialogMode === "edit" && { id: eventDialogData.id }),
-                          patientId: eventDialogData.patientId,
-                          professionalId: eventDialogData.professionalId,
-                          locationId: showLocations ? eventDialogData.locationId : null,
-                          specialtyId: showSpecialties ? eventDialogData.specialtyId : null,
+                    if (eventDialogMode === "create") {
+                      await createAppointmentApi(
+                        {
+                          patientId: eventDialogData.patientId!,
+                          professionalId: eventDialogData.professionalId!,
+                          locationId: showLocations ? eventDialogData.locationId ?? null : null,
+                          specialtyId: showSpecialties ? eventDialogData.specialtyId ?? null : null,
                           startAt: serializeBATimeAsUTC(eventDialogData.start),
                           endAt: serializeBATimeAsUTC(eventDialogData.end),
                           notes: eventDialogData.notes || null,
-                        }),
+                        },
+                        {
+                          onSuccess: () => {
+                            setEventDialogOpen(false);
+                            setEventDialogMode("view");
+                            if (calendarRef.current) {
+                              const calendar = calendarRef.current.getApi();
+                              setTimeout(() => {
+                                loadEvents(calendar.view.activeStart, calendar.view.activeEnd, true);
+                              }, 100);
+                            }
+                          },
+                        }
+                      );
+                    } else {
+                      const res = await fetch(
+                        `/api/plataforma/${tenantId}/appointments/${eventDialogData.id}`,
+                        {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            patientId: eventDialogData.patientId,
+                            professionalId: eventDialogData.professionalId,
+                            locationId: showLocations ? eventDialogData.locationId : null,
+                            specialtyId: showSpecialties ? eventDialogData.specialtyId : null,
+                            startAt: serializeBATimeAsUTC(eventDialogData.start),
+                            endAt: serializeBATimeAsUTC(eventDialogData.end),
+                            notes: eventDialogData.notes || null,
+                          }),
+                        }
+                      );
+                      if (!res.ok) {
+                        const errorData = await res.json().catch(() => ({}));
+                        throw new Error(errorData.error || "Failed to save");
                       }
-                    );
-                    if (!res.ok) {
-                      const errorData = await res.json().catch(() => ({}));
-                      throw new Error(errorData.error || "Failed to save");
-                    }
-                    setEventDialogOpen(false);
-                    setEventDialogMode("view");
-                    // Force reload to get updated event with professional color
-                    if (calendarRef.current) {
-                      const calendar = calendarRef.current.getApi();
-                      // Small delay to ensure database is updated
-                      setTimeout(() => {
-                        loadEvents(calendar.view.activeStart, calendar.view.activeEnd, true);
-                      }, 100);
+                      invalidateAppointments();
+                      setEventDialogOpen(false);
+                      setEventDialogMode("view");
+                      if (calendarRef.current) {
+                        const calendar = calendarRef.current.getApi();
+                        setTimeout(() => {
+                          loadEvents(calendar.view.activeStart, calendar.view.activeEnd, true);
+                        }, 100);
+                      }
                     }
                   } catch (error) {
                     console.error("Error saving event:", error);

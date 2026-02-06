@@ -1,14 +1,34 @@
 import {
-  Input,
   Select,
   SelectItem,
   Textarea,
   Chip,
+  DatePicker,
 } from "@heroui/react";
+import { CalendarDateTime } from "@internationalized/date";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { formatForDateTimeLocal, parseFromDateTimeLocal, formatInBuenosAires, localDateToFullCalendar } from "@/lib/timezone";
+import { formatInBuenosAires, localDateToFullCalendar } from "@/lib/timezone";
 import { useMemo } from "react";
+import {
+  getProfessionalAvailableDayNumbers,
+  createIsDateUnavailableForProfessional,
+} from "@/lib/professional-availability";
+
+function dateToCalendarDateTime(d: Date): CalendarDateTime {
+  return new CalendarDateTime(
+    d.getUTCFullYear(),
+    d.getUTCMonth() + 1,
+    d.getUTCDate(),
+    d.getUTCHours(),
+    d.getUTCMinutes(),
+    0
+  );
+}
+
+function calendarDateTimeToDate(c: CalendarDateTime): Date {
+  return new Date(Date.UTC(c.year, c.month - 1, c.day, c.hour, c.minute, 0));
+}
 
 interface CalendarEvent {
   id: string;
@@ -109,6 +129,23 @@ export function EventDialogContent({
   const locationSelectedKeys = useMemo(() => {
     return eventDialogData?.locationId ? [String(eventDialogData.locationId)] : [];
   }, [eventDialogData?.locationId]);
+
+  const selectedProfessionalForAvailability = useMemo(
+    () =>
+      eventDialogData?.professionalId
+        ? professionals.find((p) => String(p.id) === String(eventDialogData.professionalId))
+        : null,
+    [eventDialogData?.professionalId, professionals]
+  );
+  const availableDayNumbers = useMemo(
+    () => getProfessionalAvailableDayNumbers(selectedProfessionalForAvailability ?? undefined),
+    [selectedProfessionalForAvailability]
+  );
+  const isDateUnavailable = useMemo(
+    () => createIsDateUnavailableForProfessional(availableDayNumbers),
+    [availableDayNumbers]
+  );
+
   if (mode === "view" && selectedEvent) {
     // Show holiday event information
     if (selectedEvent.extendedProps?.professionalHoliday || selectedEvent.extendedProps?.isHoliday) {
@@ -411,39 +448,35 @@ export function EventDialogContent({
           ))}
         </Select>
       )}
-      <Input
+      <DatePicker
         label="Inicio"
-        type="datetime-local"
-        value={
-          eventDialogData?.start
-            ? formatForDateTimeLocal(eventDialogData.start)
-            : ""
-        }
-        onValueChange={(value) => {
-          const localDate = parseFromDateTimeLocal(value);
-          onDataChange({
-            ...eventDialogData!,
-            start: localDate,
-          });
+        granularity="minute"
+        value={eventDialogData?.start ? dateToCalendarDateTime(eventDialogData.start) : undefined}
+        onChange={(value) => {
+          if (value && eventDialogData) {
+            onDataChange({
+              ...eventDialogData,
+              start: calendarDateTimeToDate(value as CalendarDateTime),
+            });
+          }
         }}
-        autoComplete="off"
+        isDateUnavailable={isDateUnavailable}
+        hideTimeZone
       />
-      <Input
+      <DatePicker
         label="Fin"
-        type="datetime-local"
-        value={
-          eventDialogData?.end
-            ? formatForDateTimeLocal(eventDialogData.end)
-            : ""
-        }
-        onValueChange={(value) => {
-          const localDate = parseFromDateTimeLocal(value);
-          onDataChange({
-            ...eventDialogData!,
-            end: localDate,
-          });
+        granularity="minute"
+        value={eventDialogData?.end ? dateToCalendarDateTime(eventDialogData.end) : undefined}
+        onChange={(value) => {
+          if (value && eventDialogData) {
+            onDataChange({
+              ...eventDialogData,
+              end: calendarDateTimeToDate(value as CalendarDateTime),
+            });
+          }
         }}
-        autoComplete="off"
+        isDateUnavailable={isDateUnavailable}
+        hideTimeZone
       />
       <Textarea
         label="Notas"

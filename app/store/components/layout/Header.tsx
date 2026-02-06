@@ -18,7 +18,7 @@ export function StoreHeader() {
   };
 
   return (
-    <header className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+    <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between text-slate-800">
         <Link
           href="/store/tenants/metricas"
@@ -29,7 +29,7 @@ export function StoreHeader() {
         <nav className="flex items-center gap-2">
           <Button
             as={Link}
-            href="/store/tenants?create=1"
+            href="/store/tenants/new"
             color="primary"
             size="sm"
             startContent={<Plus className="w-4 h-4" />}
