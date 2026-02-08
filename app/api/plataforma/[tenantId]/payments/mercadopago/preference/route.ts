@@ -5,7 +5,7 @@ import mysql from "@/lib/mysql";
 import { Role } from "@/lib/types";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { randomUUID } from "crypto";
-import { getMercadoPagoAccountByTenant } from "@/lib/mercadopago-accounts";
+import { getMercadoPagoAccountByTenant, getMercadoPagoAccountWithRefresh } from "@/lib/mercadopago-accounts";
 import { findAppointmentById, updateAppointmentStatus } from "@/lib/db";
 import { AppointmentStatus } from "@/lib/types";
 
@@ -28,7 +28,11 @@ async function getTenantPaymentsSettings(tenantId: string) {
 }
 
 async function getAccessTokenForTenant(tenantId: string): Promise<string | null> {
-  const account = await getMercadoPagoAccountByTenant(tenantId);
+  const accountFetcher =
+    typeof getMercadoPagoAccountWithRefresh === "function"
+      ? getMercadoPagoAccountWithRefresh
+      : getMercadoPagoAccountByTenant;
+  const account = await accountFetcher(tenantId);
   if (account?.accessToken) return account.accessToken;
   const settings = await getTenantPaymentsSettings(tenantId);
   if (settings?.mercadoPago?.accessToken) return settings.mercadoPago.accessToken;
@@ -131,26 +135,6 @@ export async function POST(
       },
     });
 
-    const paymentsCollection = (await mongoClientPromise)
-      .db()
-      .collection("payments");
-
-    await paymentsCollection.insertOne({
-      tenantId,
-      appointmentId,
-      purpose,
-      amount: Number(amount),
-      status: "PENDING",
-      provider: "mercadopago",
-      mercadoPago: {
-        preferenceId: preferenceResult.id,
-        initPoint: preferenceResult.init_point,
-        sandboxInitPoint: preferenceResult.sandbox_init_point,
-      },
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
     await ensurePaymentsTable();
     await mysql.execute(
       `INSERT INTO appointment_payments
@@ -168,6 +152,29 @@ export async function POST(
         null,
       ]
     );
+
+    const paymentsCollection = (await mongoClientPromise)
+      .db()
+      .collection("payments");
+    try {
+      await paymentsCollection.insertOne({
+        tenantId,
+        appointmentId,
+        purpose,
+        amount: Number(amount),
+        status: "PENDING",
+        provider: "mercadopago",
+        mercadoPago: {
+          preferenceId: preferenceResult.id,
+          initPoint: preferenceResult.init_point,
+          sandboxInitPoint: preferenceResult.sandbox_init_point,
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    } catch (mongoError) {
+      console.error("Error saving payment to MongoDB:", mongoError);
+    }
 
     if (purpose === "deposit" && appointment.status === AppointmentStatus.REQUESTED) {
       try {

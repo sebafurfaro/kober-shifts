@@ -3,6 +3,7 @@ import { encryptToken, decryptToken } from "./mercadopago-encrypt";
 import { randomUUID } from "crypto";
 
 const TABLE = "mercadopago_accounts";
+const MP_OAUTH_TOKEN_URL = "https://api.mercadopago.com/oauth/token";
 
 export interface MercadoPagoAccount {
   id: string;
@@ -71,6 +72,56 @@ export async function getMercadoPagoAccountByTenant(
     return rowToAccount(row);
   } catch {
     return null;
+  }
+}
+
+export async function getMercadoPagoAccountWithRefresh(
+  tenantId: string
+): Promise<MercadoPagoAccount | null> {
+  const account = await getMercadoPagoAccountByTenant(tenantId);
+  if (!account) return null;
+  if (!account.expiresAt) return account;
+  const clientId = process.env.MERCADOPAGO_CLIENT_ID;
+  const clientSecret = process.env.MERCADOPAGO_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return account;
+  const now = Date.now();
+  if (account.expiresAt.getTime() - now > 60 * 1000) return account;
+  try {
+    const tokenRes = await fetch(MP_OAUTH_TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: "refresh_token",
+        refresh_token: account.refreshToken,
+      }),
+    });
+    if (!tokenRes.ok) {
+      const errBody = await tokenRes.text();
+      console.error("MercadoPago refresh token error:", tokenRes.status, errBody);
+      return account;
+    }
+    const data = (await tokenRes.json()) as {
+      access_token: string;
+      refresh_token?: string;
+      expires_in?: number;
+      user_id?: number;
+    };
+    const expiresAt = data.expires_in
+      ? new Date(Date.now() + data.expires_in * 1000)
+      : null;
+    const updated = await upsertMercadoPagoAccount({
+      tenantId,
+      mpUserId: data.user_id ?? account.mpUserId,
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token || account.refreshToken,
+      expiresAt,
+    });
+    return updated;
+  } catch (error) {
+    console.error("MercadoPago refresh token exception:", error);
+    return account;
   }
 }
 

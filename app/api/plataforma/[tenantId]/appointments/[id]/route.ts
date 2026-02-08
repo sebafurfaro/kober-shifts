@@ -1,8 +1,32 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { findAppointmentById, updateAppointment, findAppointmentWithRelations, deleteAppointment } from "@/lib/db";
+import { findAppointmentById, updateAppointment, findAppointmentWithRelations, deleteAppointment, findServiceById } from "@/lib/db";
 import { AppointmentStatus, Role } from "@/lib/types";
 import { utcToMySQLDate } from "@/lib/timezone";
+import mysql from "@/lib/mysql";
+import { randomUUID } from "crypto";
+import { renderBasicTemplate, sendMail } from "@/lib/email";
+
+async function ensurePaymentsTable() {
+  await mysql.execute(`
+    CREATE TABLE IF NOT EXISTS appointment_payments (
+      id VARCHAR(36) PRIMARY KEY,
+      tenantId VARCHAR(255) NOT NULL,
+      appointmentId VARCHAR(255) NOT NULL,
+      provider VARCHAR(50) NOT NULL,
+      purpose VARCHAR(20) NOT NULL,
+      amount DECIMAL(12,2) NOT NULL,
+      status VARCHAR(30) NOT NULL,
+      preferenceId VARCHAR(255),
+      paymentId VARCHAR(255),
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_appt_payments_tenant (tenantId),
+      INDEX idx_appt_payments_appointment (appointmentId),
+      INDEX idx_appt_payments_preference (preferenceId)
+    )
+  `);
+}
 
 export async function PATCH(
   req: Request,
@@ -54,6 +78,87 @@ export async function PATCH(
     ...(locationId && { locationId }),
     ...(specialtyId && { specialtyId }),
   });
+
+  if (status === AppointmentStatus.CONFIRMED && appointment.status === AppointmentStatus.PENDING_DEPOSIT) {
+    try {
+      await ensurePaymentsTable();
+      const [result] = await mysql.execute(
+        `UPDATE appointment_payments
+         SET status = 'approved', updatedAt = CURRENT_TIMESTAMP
+         WHERE tenantId = ? AND appointmentId = ? AND status <> 'approved'`,
+        [tenantId, id]
+      );
+      const updatedRows = Number((result as { affectedRows?: number }).affectedRows ?? 0);
+      if (updatedRows === 0 && appointment.serviceId) {
+        const service = await findServiceById(appointment.serviceId, tenantId);
+        if (service) {
+          const amount = Math.round((service.price * service.seniaPercent) / 100 * 100) / 100;
+          if (Number.isFinite(amount) && amount > 0) {
+            await mysql.execute(
+              `INSERT INTO appointment_payments
+               (id, tenantId, appointmentId, provider, purpose, amount, status, preferenceId, paymentId)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                randomUUID(),
+                tenantId,
+                id,
+                "manual",
+                "deposit",
+                amount,
+                "approved",
+                null,
+                null,
+              ]
+            );
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error marking appointment payment as approved:", error);
+    }
+  }
+
+  if (status === AppointmentStatus.CONFIRMED && appointment.status !== AppointmentStatus.CONFIRMED) {
+    try {
+      const data = await findAppointmentWithRelations(id, tenantId);
+      if (data) {
+        const startAt = data.appointment.startAt instanceof Date
+          ? data.appointment.startAt
+          : new Date(data.appointment.startAt);
+        const startIso = startAt.toISOString();
+        const text = `Tu turno fue confirmado.\n\nEspecialidad: ${data.specialty.name}\nSede: ${data.location.name}\nInicio: ${startIso}`;
+        await sendMail({
+          to: data.patient.email,
+          subject: "Turno confirmado",
+          text,
+          html: renderBasicTemplate({
+            title: "Turno confirmado",
+            preview: "Tu turno fue confirmado.",
+            body: `<p>Tu turno fue confirmado.</p>
+                   <p><strong>Especialidad:</strong> ${data.specialty.name}<br/>
+                   <strong>Sede:</strong> ${data.location.name}<br/>
+                   <strong>Inicio:</strong> ${startIso}</p>`,
+          }),
+        });
+        await sendMail({
+          to: data.professional.email,
+          subject: "Turno confirmado",
+          text: `Turno confirmado.\n\nPaciente: ${data.patient.name} (${data.patient.email})\nEspecialidad: ${data.specialty.name}\nSede: ${data.location.name}\nInicio: ${startIso}`,
+          html: renderBasicTemplate({
+            title: "Turno confirmado",
+            preview: "Turno confirmado.",
+            body: `<p>Turno confirmado.</p>
+                   <p><strong>Paciente:</strong> ${data.patient.name} (${data.patient.email})<br/>
+                   <strong>Especialidad:</strong> ${data.specialty.name}<br/>
+                   <strong>Sede:</strong> ${data.location.name}<br/>
+                   <strong>Inicio:</strong> ${startIso}</p>`,
+          }),
+        });
+      }
+    } catch (error) {
+      console.error("Error sending confirmation email:", error);
+    }
+  }
 
   return NextResponse.json(updated);
 }

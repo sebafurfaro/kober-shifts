@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { findUserById, findLocationById, findSpecialtyById, findProfessionalProfileByUserId, findGoogleOAuthTokenByUserId, createAppointment, findServiceById } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { createAppointmentEvent } from "@/lib/googleCalendar";
-import { sendMail } from "@/lib/email";
+import { renderBasicTemplate, sendMail } from "@/lib/email";
 import { AppointmentStatus, Role } from "@/lib/types";
 import { randomUUID } from "crypto";
 import { utcToMySQLDate } from "@/lib/timezone";
@@ -114,15 +114,33 @@ export async function POST(
     patientLastName: patient.lastName ?? null,
   });
 
+  const startIso = startAt.toISOString();
   await sendMail({
     to: patient.email,
     subject: "Turno solicitado",
-    text: `Tu turno fue solicitado.\n\nEspecialidad: ${specialty.name}\nSede: ${location.name}\nInicio: ${startAt.toISOString()}`,
+    text: `Tu turno fue solicitado.\n\nEspecialidad: ${specialty.name}\nSede: ${location.name}\nInicio: ${startIso}`,
+    html: renderBasicTemplate({
+      title: "Turno solicitado",
+      preview: "Tu turno fue solicitado.",
+      body: `<p>Tu turno fue solicitado.</p>
+             <p><strong>Especialidad:</strong> ${specialty.name}<br/>
+             <strong>Sede:</strong> ${location.name}<br/>
+             <strong>Inicio:</strong> ${startIso}</p>`,
+    }),
   });
   await sendMail({
     to: professional.email,
     subject: "Nuevo turno solicitado",
-    text: `Tenés un turno solicitado.\n\nPaciente: ${patient.name} (${patient.email})\nEspecialidad: ${specialty.name}\nSede: ${location.name}\nInicio: ${startAt.toISOString()}`,
+    text: `Tenés un turno solicitado.\n\nPaciente: ${patient.name} (${patient.email})\nEspecialidad: ${specialty.name}\nSede: ${location.name}\nInicio: ${startIso}`,
+    html: renderBasicTemplate({
+      title: "Nuevo turno solicitado",
+      preview: "Tenes un turno solicitado.",
+      body: `<p>Tenes un turno solicitado.</p>
+             <p><strong>Paciente:</strong> ${patient.name} (${patient.email})<br/>
+             <strong>Especialidad:</strong> ${specialty.name}<br/>
+             <strong>Sede:</strong> ${location.name}<br/>
+             <strong>Inicio:</strong> ${startIso}</p>`,
+    }),
   });
 
   return NextResponse.json({ appointmentId: appointment.id, googleEventId: appointment.googleEventId });

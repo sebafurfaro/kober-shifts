@@ -3,12 +3,17 @@ import { mongoClientPromise } from "@/lib/mongo";
 import mysql from "@/lib/mysql";
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import crypto from "crypto";
-import { getMercadoPagoAccountByTenant } from "@/lib/mercadopago-accounts";
-import { findAppointmentById, updateAppointmentStatus } from "@/lib/db";
+import { getMercadoPagoAccountByTenant, getMercadoPagoAccountWithRefresh } from "@/lib/mercadopago-accounts";
+import { findAppointmentById, updateAppointmentStatus, findAppointmentWithRelations } from "@/lib/db";
 import { AppointmentStatus } from "@/lib/types";
+import { renderBasicTemplate, sendMail } from "@/lib/email";
 
 async function getTenantAccessToken(tenantId: string): Promise<string | null> {
-  const account = await getMercadoPagoAccountByTenant(tenantId);
+  const accountFetcher =
+    typeof getMercadoPagoAccountWithRefresh === "function"
+      ? getMercadoPagoAccountWithRefresh
+      : getMercadoPagoAccountByTenant;
+  const account = await accountFetcher(tenantId);
   if (account?.accessToken) return account.accessToken;
   const client = await mongoClientPromise;
   const db = client.db();
@@ -86,6 +91,53 @@ function validateSignature({
   return digest === parsed.v1;
 }
 
+function normalizeAmount(value: unknown): number | null {
+  const amount = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(amount)) return null;
+  return Math.round(amount * 100) / 100;
+}
+
+async function findPaymentRow({
+  tenantId,
+  paymentId,
+  preferenceId,
+  appointmentId,
+}: {
+  tenantId: string;
+  paymentId: string | null;
+  preferenceId: string | null;
+  appointmentId: string | null;
+}) {
+  if (paymentId) {
+    const [rows] = await mysql.execute(
+      `SELECT id, appointmentId, amount, status, paymentId FROM appointment_payments
+       WHERE tenantId = ? AND paymentId = ? LIMIT 1`,
+      [tenantId, paymentId]
+    );
+    const result = rows as any[];
+    if (result.length > 0) return result[0];
+  }
+  if (preferenceId) {
+    const [rows] = await mysql.execute(
+      `SELECT id, appointmentId, amount, status, paymentId FROM appointment_payments
+       WHERE tenantId = ? AND preferenceId = ? LIMIT 1`,
+      [tenantId, preferenceId]
+    );
+    const result = rows as any[];
+    if (result.length > 0) return result[0];
+  }
+  if (appointmentId) {
+    const [rows] = await mysql.execute(
+      `SELECT id, appointmentId, amount, status, paymentId FROM appointment_payments
+       WHERE tenantId = ? AND appointmentId = ? LIMIT 1`,
+      [tenantId, appointmentId]
+    );
+    const result = rows as any[];
+    if (result.length > 0) return result[0];
+  }
+  return null;
+}
+
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ tenantId: string }> }
@@ -127,29 +179,47 @@ export async function POST(
     const mpClient = new MercadoPagoConfig({ accessToken });
     const payment = new Payment(mpClient);
     const paymentData = await payment.get({ id: String(dataId) });
+    const paymentId = paymentData.id ? String(paymentData.id) : null;
+    const preferenceId = paymentData.preference_id ? String(paymentData.preference_id) : null;
+    const externalReference = paymentData.external_reference ? String(paymentData.external_reference) : null;
 
     const paymentsCollection = (await mongoClientPromise)
       .db()
       .collection("payments");
 
-    await paymentsCollection.updateOne(
-      { tenantId, "mercadoPago.preferenceId": paymentData.preference_id },
-      {
-        $set: {
-          status: paymentData.status,
-          mercadoPago: {
-            preferenceId: paymentData.preference_id,
-            paymentId: paymentData.id,
-            status: paymentData.status,
-            statusDetail: paymentData.status_detail,
-          },
-          updatedAt: new Date(),
-        },
-      }
-    );
-
     await ensurePaymentsTable();
-    const appointmentId = paymentData.external_reference || null;
+    const paymentRow = await findPaymentRow({
+      tenantId,
+      paymentId,
+      preferenceId,
+      appointmentId: externalReference,
+    });
+
+    if (paymentRow?.paymentId && paymentId && paymentRow.paymentId === paymentId) {
+      if (paymentRow.status === paymentData.status || paymentRow.status === "approved") {
+        return NextResponse.json({ received: true });
+      }
+    }
+
+    const expectedAmount = normalizeAmount(paymentRow?.amount);
+    const receivedAmount = normalizeAmount((paymentData as { transaction_amount?: unknown }).transaction_amount);
+    if (expectedAmount !== null && receivedAmount !== null && expectedAmount !== receivedAmount) {
+      console.warn(
+        "Webhook payment amount mismatch",
+        { tenantId, paymentId, expectedAmount, receivedAmount }
+      );
+      return NextResponse.json({ received: true });
+    }
+
+    const appointmentId = externalReference || paymentRow?.appointmentId || null;
+    if (appointmentId) {
+      const appointment = await findAppointmentById(appointmentId, tenantId);
+      if (!appointment) {
+        console.warn("Webhook appointment not found for tenant", { tenantId, appointmentId });
+        return NextResponse.json({ received: true });
+      }
+    }
+
     if (paymentData.preference_id) {
       await mysql.execute(
         `UPDATE appointment_payments
@@ -176,6 +246,22 @@ export async function POST(
       );
     }
 
+    await paymentsCollection.updateOne(
+      { tenantId, "mercadoPago.preferenceId": paymentData.preference_id },
+      {
+        $set: {
+          status: paymentData.status,
+          mercadoPago: {
+            preferenceId: paymentData.preference_id,
+            paymentId: paymentData.id,
+            status: paymentData.status,
+            statusDetail: paymentData.status_detail,
+          },
+          updatedAt: new Date(),
+        },
+      }
+    );
+
     if (
       paymentData.status === "approved" &&
       appointmentId &&
@@ -188,6 +274,44 @@ export async function POST(
           appointment.status === AppointmentStatus.REQUESTED)
       ) {
         await updateAppointmentStatus(appointmentId, tenantId, AppointmentStatus.CONFIRMED);
+        try {
+          const data = await findAppointmentWithRelations(appointmentId, tenantId);
+          if (data) {
+            const startAt = data.appointment.startAt instanceof Date
+              ? data.appointment.startAt
+              : new Date(data.appointment.startAt);
+            const startIso = startAt.toISOString();
+            await sendMail({
+              to: data.patient.email,
+              subject: "Turno confirmado",
+              text: `Tu turno fue confirmado.\n\nEspecialidad: ${data.specialty.name}\nSede: ${data.location.name}\nInicio: ${startIso}`,
+              html: renderBasicTemplate({
+                title: "Turno confirmado",
+                preview: "Tu turno fue confirmado.",
+                body: `<p>Tu turno fue confirmado.</p>
+                       <p><strong>Especialidad:</strong> ${data.specialty.name}<br/>
+                       <strong>Sede:</strong> ${data.location.name}<br/>
+                       <strong>Inicio:</strong> ${startIso}</p>`,
+              }),
+            });
+            await sendMail({
+              to: data.professional.email,
+              subject: "Turno confirmado",
+              text: `Turno confirmado.\n\nPaciente: ${data.patient.name} (${data.patient.email})\nEspecialidad: ${data.specialty.name}\nSede: ${data.location.name}\nInicio: ${startIso}`,
+              html: renderBasicTemplate({
+                title: "Turno confirmado",
+                preview: "Turno confirmado.",
+                body: `<p>Turno confirmado.</p>
+                       <p><strong>Paciente:</strong> ${data.patient.name} (${data.patient.email})<br/>
+                       <strong>Especialidad:</strong> ${data.specialty.name}<br/>
+                       <strong>Sede:</strong> ${data.location.name}<br/>
+                       <strong>Inicio:</strong> ${startIso}</p>`,
+              }),
+            });
+          }
+        } catch (error) {
+          console.error("Error sending confirmation email:", error);
+        }
       }
     }
 

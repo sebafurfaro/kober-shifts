@@ -149,6 +149,7 @@ export function PanelLayoutShell({
         logout={logout}
         asideWidth={asideWidth}
         tenantId={currentTenantId}
+        role={role}
       />
 
       {/* Drawer */}
