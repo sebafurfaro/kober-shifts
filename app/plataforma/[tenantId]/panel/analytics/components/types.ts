@@ -13,6 +13,12 @@ export interface AnalyticsMetrics {
   patients: { totalMonth: number; totalYear: number; byMonth: Array<{ year: number; month: number; count: number }> };
   cancellations: { totalMonth: number; totalYear: number; byMonth: Array<{ year: number; month: number; count: number }> };
   reminders?: { assigned: number; used: number };
+  timeSlots?: {
+    morning: number;
+    afternoon: number;
+    night: number;
+    mostConsumed: string;
+  };
 }
 
 export interface Patient {

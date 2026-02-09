@@ -24,6 +24,7 @@ model User {
   id           String               @id @default(cuid())
   email        String               @unique
   name         String
+  phoneNumber  String?
   passwordHash String
   role         Role
 
@@ -35,6 +36,8 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("users")
 }
 
 model Specialty {
@@ -46,6 +49,8 @@ model Specialty {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("specialties")
 }
 
 model Location {
@@ -58,6 +63,8 @@ model Location {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("locations")
 }
 
 model ProfessionalProfile {
@@ -72,6 +79,8 @@ model ProfessionalProfile {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("professional_profiles")
 }
 
 model GoogleOAuthToken {
@@ -87,6 +96,8 @@ model GoogleOAuthToken {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("google_oauth_tokens")
 }
 
 model Appointment {
@@ -117,6 +128,7 @@ model Appointment {
   @@index([patientId, startAt])
   @@index([professionalId, startAt])
   @@index([status, startAt])
+  @@map("appointments")
 }
 
 

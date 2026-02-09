@@ -6,6 +6,7 @@ import { Spinner } from "@heroui/react";
 import { RevenueMetricCard } from "./components/RevenueMetricCard";
 import { AppointmentsMetricCard } from "./components/AppointmentsMetricCard";
 import { CancellationsMetricCard } from "./components/CancellationsMetricCard";
+import { TimeSlotMetricCard } from "./components/TimeSlotMetricCard";
 import { RevenueChart } from "./components/RevenueChart";
 import { PatientsTable } from "./components/PatientsTable";
 import type { AnalyticsMetrics, PatientsResponse } from "./components/types";
@@ -85,7 +86,7 @@ export default function AnalyticsPageClient() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <RevenueMetricCard
               totalMonth={metrics?.revenue?.totalMonth ?? 0}
               totalYear={metrics?.revenue?.totalYear ?? 0}
@@ -101,21 +102,27 @@ export default function AnalyticsPageClient() {
               totalYear={metrics?.cancellations?.totalYear ?? 0}
               byMonth={metrics?.cancellations?.byMonth ?? []}
             />
+            <TimeSlotMetricCard
+              morning={metrics?.timeSlots?.morning ?? 0}
+              afternoon={metrics?.timeSlots?.afternoon ?? 0}
+              night={metrics?.timeSlots?.night ?? 0}
+              mostConsumed={metrics?.timeSlots?.mostConsumed ?? "N/A"}
+            />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="col-span-2">
-            <PatientsTable
-              patientsData={patientsData}
-              loading={patientsLoading}
-              currentPage={1}
-              sortBy="totalAppointments"
-              onPageChange={() => {}}
-              onSortChange={() => {}}
-              patientLabel={patientLabel}
-              top10Only
-            />
+              <PatientsTable
+                patientsData={patientsData}
+                loading={patientsLoading}
+                currentPage={1}
+                sortBy="totalAppointments"
+                onPageChange={() => { }}
+                onSortChange={() => { }}
+                patientLabel={patientLabel}
+                top10Only
+              />
             </div>
-              <RevenueChart metrics={metrics} />
+            <RevenueChart metrics={metrics} />
           </div>
         </div>
       )}

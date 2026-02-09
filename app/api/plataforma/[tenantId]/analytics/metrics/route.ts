@@ -144,17 +144,58 @@ export async function GET(
       const limits = doc?.limits && typeof doc.limits === "object" ? doc.limits : {};
       remindersAssigned =
         typeof (limits as { whatsappRemindersLimit?: number }).whatsappRemindersLimit === "number" &&
-        (limits as { whatsappRemindersLimit: number }).whatsappRemindersLimit >= 0
+          (limits as { whatsappRemindersLimit: number }).whatsappRemindersLimit >= 0
           ? (limits as { whatsappRemindersLimit: number }).whatsappRemindersLimit
           : 0;
       const usage = doc?.usage && typeof doc.usage === "object" ? doc.usage : {};
       remindersUsed =
         typeof (usage as { remindersUsed?: number }).remindersUsed === "number" &&
-        (usage as { remindersUsed: number }).remindersUsed >= 0
+          (usage as { remindersUsed: number }).remindersUsed >= 0
           ? (usage as { remindersUsed: number }).remindersUsed
           : 0;
     } catch {
       // Ignore Mongo errors
+    }
+
+    // --- Horarios mas consumidos (mes actual) ---
+    // Morning: 06:00 - 11:59
+    // Afternoon: 12:00 - 19:59
+    // Night: 20:00 - 05:59 (Hour >= 20 OR Hour < 6)
+
+    let timeSlots = { morning: 0, afternoon: 0, night: 0, mostConsumed: "N/A" };
+
+    try {
+      const [hoursRows] = await mysql.execute(
+        `SELECT HOUR(startAt) as h, COUNT(*) as total 
+         FROM appointments 
+         WHERE tenantId = ? AND startAt >= ? AND startAt <= ?
+         GROUP BY h`,
+        [tenantId, monthStart, monthEnd]
+      );
+
+      const hoursData = hoursRows as { h: number; total: number }[];
+
+      hoursData.forEach(({ h, total }) => {
+        const count = Number(total);
+        if (h >= 6 && h < 12) {
+          timeSlots.morning += count;
+        } else if (h >= 12 && h < 20) {
+          timeSlots.afternoon += count;
+        } else {
+          // 20-23 and 0-5
+          timeSlots.night += count;
+        }
+      });
+
+      // Determinar el más consumido
+      const max = Math.max(timeSlots.morning, timeSlots.afternoon, timeSlots.night);
+      if (max > 0) {
+        if (timeSlots.morning === max) timeSlots.mostConsumed = "Mañana";
+        else if (timeSlots.afternoon === max) timeSlots.mostConsumed = "Tarde";
+        else timeSlots.mostConsumed = "Noche";
+      }
+    } catch (err) {
+      console.error("Error calculating time slots:", err);
     }
 
     return NextResponse.json({
@@ -184,6 +225,12 @@ export async function GET(
         assigned: remindersAssigned,
         used: remindersUsed,
       },
+      timeSlots: {
+        morning: timeSlots.morning,
+        afternoon: timeSlots.afternoon,
+        night: timeSlots.night,
+        mostConsumed: timeSlots.mostConsumed,
+      }
     });
   } catch (error) {
     console.error("Error fetching analytics metrics:", error);
