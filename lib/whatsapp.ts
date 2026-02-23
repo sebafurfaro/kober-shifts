@@ -1,82 +1,84 @@
-
-import { Appointment, User, Location } from "@prisma/client";
+import { Appointment, User, Location, Specialty } from "@prisma/client";
 import { format } from "date-fns";
 import { es } from "date-fns/locale/es";
 
 // Environment variables
-const WHATSAPP_API_TOKEN = process.env.WHATSAPP_API_TOKEN;
+const WHATSAPP_API_TOKEN = process.env.WHATSAPP_API_TOKEN || "EAARbt62OYhUBQ6QiUsfz3DKGS707j8xZBflI0DPt6ZCy10hGTAinUQ4ktQIvV6pfkCDNUZBk0oiHirwNqMyzsUnFoCcGlWhtaOfEQeZBDIK1pAtQHnBVnZAqpD95hklaZA5FCb1n9ANRCdgZBw5CI40V8kLDQMvxVNdlSXaZBi74m6IM6epjLBZA9BaqFNplkQ6wZAFO36uxVWsAF4ZADZAqtuMO9WcYVpgtix8Rj9HZCPDmtNJEcKURb9C2LeiWd8ZCrhEud5anNx6ZCPt3avAn79PC9Q06v1M1QZDZD";
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 
 /**
- * Sends a WhatsApp reminder template message to a user.
+ * Sends a WhatsApp reminder to a user.
  * 
- * Template: "recordatorio_turno" (must be created in Meta Business Manager)
- * Variables assumed:
- * {{1}}: Name of the patient
- * {{2}}: Date of appointment (e.g., "Lunes 10 de Marzo")
- * {{3}}: Time of appointment (e.g., "14:30")
- * {{4}}: Professional's name
+ * Default Template: "recordatorio_turno_v2" (or similar)
+ * The message according to the doc:
+ * Hola {{1}} ✨
+ * Ya casi es tu turno en {{2}}.
+ * 
+ * 🧑‍🎨 {{3}} con {{4}}
+ * 📅 {{5}} a las {{6}}
+ * 
+ * Si necesitás hacer algún cambio, podés gestionarlo desde tu cuenta.
+ * ¡Nos vemos pronto!
  * 
  * @param appointment - The appointment object with included relations
  * @param patientPhoneNumber - The properly formatted phone number (e.g., "54911...")
+ * @param customMessage - Optional dynamic message text. If provided, sends as a text message instead of template (Note: may fail for business-initiated if outside 24h window)
  */
 export async function sendWhatsAppReminder(
   appointment: Appointment & {
     patient: User;
     professional: User;
     location: Location;
+    specialty: Specialty;
   },
-  patientPhoneNumber: string
+  patientPhoneNumber: string,
+  customMessage?: string
 ): Promise<boolean> {
   if (!WHATSAPP_API_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
-    console.error("WhatsApp credentials not found in environment variables.");
+    console.error("WhatsApp credentials (API Token or Phone Number ID) not found.");
     return false;
   }
 
-  // Format date and time in Spanish
-  // Note: appointment.startAt is a Date object. 
-  // If the app correctly handles it as a JS Date object representing the time,
-  // we can use standard formatting.
-  // Ideally, we should use the timezone utils from lib/timezone if needed,
-  // but for formatting output 'date-fns' with locale 'es' is good.
-  
   const dateStr = format(appointment.startAt, "EEEE d 'de' MMMM", { locale: es });
   const timeStr = format(appointment.startAt, "HH:mm");
 
-  const body = {
-    messaging_product: "whatsapp",
-    to: patientPhoneNumber,
-    type: "template",
-    template: {
-      name: "recordatorio_turno", // MUST MATCH META TEMPLATE NAME
-      language: {
-        code: "es", // MUST MATCH TEMPLATE LANGUAGE
+  let body: any;
+
+  if (customMessage) {
+    // If a custom message is provided, we try to send it as text. 
+    // WARNING: This only works for business-initiated if there's an open session, 
+    // or if the account has special permissions. Otherwise, templates must be used.
+    body = {
+      messaging_product: "whatsapp",
+      to: patientPhoneNumber,
+      type: "text",
+      text: { body: customMessage },
+    };
+  } else {
+    // Default template approach
+    body = {
+      messaging_product: "whatsapp",
+      to: patientPhoneNumber,
+      type: "template",
+      template: {
+        name: "recordatorio_turno_v2", // Updated template name to differentiate
+        language: { code: "es" },
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: appointment.patient.name }, // {{1}} nombre_cliente
+              { type: "text", text: appointment.location.name }, // {{2}} lugar
+              { type: "text", text: appointment.specialty.name }, // {{3}} servicio
+              { type: "text", text: appointment.professional.name }, // {{4}} profesional
+              { type: "text", text: dateStr }, // {{5}} fecha
+              { type: "text", text: timeStr }, // {{6}} hora
+            ],
+          },
+        ],
       },
-      components: [
-        {
-          type: "body",
-          parameters: [
-            {
-              type: "text",
-              text: appointment.patient.name, // {{1}}
-            },
-            {
-              type: "text",
-              text: dateStr, // {{2}}
-            },
-            {
-              type: "text",
-              text: timeStr, // {{3}}
-            },
-            {
-              type: "text",
-              text: appointment.professional.name, // {{4}}
-            },
-          ],
-        },
-      ],
-    },
-  };
+    };
+  }
 
   try {
     const response = await fetch(
@@ -98,10 +100,11 @@ export async function sendWhatsAppReminder(
     }
 
     const data = await response.json();
-    console.log("WhatsApp message sent:", data);
+    console.log("WhatsApp message sent successfully:", data);
     return true;
   } catch (error) {
     console.error("Exception sending WhatsApp message:", error);
     return false;
   }
 }
+

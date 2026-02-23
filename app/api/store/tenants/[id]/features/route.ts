@@ -23,6 +23,8 @@ const DEFAULT_FEATURES = {
   show_mercado_pago: true,
   calendar: true,
   payment_enabled: true,
+  whatsappNotifications: false,
+  whatsappCustomMessage: "",
 };
 
 const DEFAULT_LIMITS = {
@@ -111,6 +113,8 @@ export async function PUT(
       show_mercado_pago?: boolean;
       calendar?: boolean;
       payment_enabled?: boolean;
+      whatsappNotifications?: boolean;
+      whatsappCustomMessage?: string;
     } | undefined;
     const limits = body.limits as {
       maxUsers?: number;
@@ -143,6 +147,8 @@ export async function PUT(
           show_mercado_pago: features?.show_mercado_pago ?? doc?.features?.show_mercado_pago ?? true,
           calendar: features?.calendar ?? doc?.features?.calendar ?? true,
           payment_enabled: features?.payment_enabled ?? docPaymentEnabled ?? true,
+          whatsappNotifications: features?.whatsappNotifications ?? doc?.features?.whatsappNotifications ?? false,
+          whatsappCustomMessage: features?.whatsappCustomMessage ?? doc?.features?.whatsappCustomMessage ?? "",
         };
 
         const limitsData = {

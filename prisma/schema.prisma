@@ -20,8 +20,28 @@ enum AppointmentStatus {
   ATTENDED
 }
 
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  logoUrl   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users                User[]
+  specialties          Specialty[]
+  locations            Location[]
+  appointments         Appointment[]
+  professionalProfiles ProfessionalProfile[]
+  googleOAuthTokens    GoogleOAuthToken[]
+
+  @@map("tenants")
+}
+
 model User {
   id           String               @id @default(cuid())
+  tenantId     String               @default("default")
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   email        String               @unique
   name         String
   phoneNumber  String?
@@ -37,12 +57,15 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([tenantId])
   @@map("users")
 }
 
 model Specialty {
-  id   String @id @default(cuid())
-  name String @unique
+  id       String @id @default(cuid())
+  tenantId String @default("default")
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name     String @unique
 
   professionals ProfessionalProfile[]
   appointments  Appointment[]
@@ -50,46 +73,55 @@ model Specialty {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([tenantId])
   @@map("specialties")
 }
 
 model Location {
-  id      String @id @default(cuid())
-  name    String
-  address String
-  phone   String?
+  id       String @id @default(cuid())
+  tenantId String @default("default")
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name     String
+  address  String
+  phone    String?
 
   appointments Appointment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([tenantId])
   @@map("locations")
 }
 
 model ProfessionalProfile {
-  userId       String @id
-  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String @id
+  tenantId String @default("default")
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  specialtyId  String
-  specialty    Specialty @relation(fields: [specialtyId], references: [id], onDelete: Restrict)
+  specialtyId String
+  specialty   Specialty @relation(fields: [specialtyId], references: [id], onDelete: Restrict)
 
-  isActive       Boolean @default(true)
+  isActive         Boolean @default(true)
   googleCalendarId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([tenantId])
   @@map("professional_profiles")
 }
 
 model GoogleOAuthToken {
-  id           String @id @default(cuid())
-  userId       String @unique
-  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  tenantId String @default("default")
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId   String @unique
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  accessToken  String @db.Text
-  refreshToken String @db.Text
+  accessToken  String    @db.Text
+  refreshToken String    @db.Text
   scope        String?
   tokenType    String?
   expiryDate   DateTime?
@@ -97,12 +129,15 @@ model GoogleOAuthToken {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([tenantId])
   @@map("google_oauth_tokens")
 }
 
 model Appointment {
-  id             String            @id @default(cuid())
-  status         AppointmentStatus @default(REQUESTED)
+  id       String            @id @default(cuid())
+  tenantId String            @default("default")
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  status   AppointmentStatus @default(REQUESTED)
 
   startAt DateTime
   endAt   DateTime
@@ -125,10 +160,12 @@ model Appointment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([tenantId])
   @@index([patientId, startAt])
   @@index([professionalId, startAt])
   @@index([status, startAt])
   @@map("appointments")
 }
+
 
 

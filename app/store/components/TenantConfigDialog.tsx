@@ -19,6 +19,8 @@ export interface TenantFeatureFlags {
   show_mercado_pago: boolean;
   calendar: boolean;
   payment_enabled: boolean;
+  whatsappNotifications: boolean;
+  whatsappCustomMessage: string;
 }
 
 export interface TenantLimits {
@@ -51,6 +53,8 @@ const defaultFeatures: TenantFeatureFlags = {
   show_mercado_pago: true,
   calendar: true,
   payment_enabled: true,
+  whatsappNotifications: false,
+  whatsappCustomMessage: "",
 };
 
 const defaultLimits: TenantLimits = {
@@ -287,6 +291,30 @@ export function TenantConfigDialog({
                       {features.payment_enabled ? "Habilitado" : "Deshabilitado"}
                     </Button>
                   </div>
+
+                  <Divider className="my-2" />
+                  <h3 className="text-sm font-semibold text-gray-700 mb-1">WhatsApp</h3>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-slate-800">Notificaciones WhatsApp</span>
+                    <Button
+                      variant={features.whatsappNotifications ? "solid" : "bordered"}
+                      color={features.whatsappNotifications ? "success" : ("info" as "primary")}
+                      isDisabled={loading}
+                      onPress={() => setFeature("whatsappNotifications", !features.whatsappNotifications)}
+                    >
+                      {features.whatsappNotifications ? "Habilitado" : "Deshabilitado"}
+                    </Button>
+                  </div>
+                  <Input
+                    type="text"
+                    label="Mensaje WhatsApp Personalizado (Opcional)"
+                    value={features.whatsappCustomMessage}
+                    onValueChange={(value) => setFeatures(prev => ({ ...prev, whatsappCustomMessage: value }))}
+                    placeholder="Dejar vacío para usar mensaje por defecto"
+                    isDisabled={loading || !features.whatsappNotifications}
+                    classNames={{ input: "text-slate-800", inputWrapper: "text-slate-800" }}
+                  />
+
                 </div>
               </div>
             </div>

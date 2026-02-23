@@ -59,7 +59,7 @@ export function RevenueChart({ metrics }: RevenueChartProps) {
   }, [metrics?.revenue?.byMonth]);
 
   return (
-    <Card className="mb-8">
+    <Card>
       <CardBody className="p-6">
         <h3 className="text-lg font-semibold mb-4 text-gray-800">
           Ingresos por mes

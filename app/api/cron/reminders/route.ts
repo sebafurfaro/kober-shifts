@@ -1,9 +1,9 @@
-
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendWhatsAppReminder } from "@/lib/whatsapp";
+import { getTenantFeatures, incrementWhatsAppUsage } from "@/lib/tenant-features";
 import { toZonedTime } from "date-fns-tz";
-import { User, Appointment, Location, Specialty, ProfessionalProfile } from "@prisma/client";
+import { Appointment, User, Location, Specialty } from "@prisma/client";
 
 // Authenticate via cron secret
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -24,9 +24,6 @@ export async function GET(req: Request) {
     const targetTime = new Date(nowInBA);
     targetTime.setDate(targetTime.getDate() + 1);
 
-    // Define a 1-hour window around the target time to catch all appointments for this hour
-    // We use UTC components because our database stores dates as "naive" local time
-    // but Prisma/mysql2 interprets them as UTC.
     const queryStart = new Date(Date.UTC(
         targetTime.getFullYear(),
         targetTime.getMonth(),
@@ -40,7 +37,7 @@ export async function GET(req: Request) {
         targetTime.getFullYear(),
         targetTime.getMonth(),
         targetTime.getDate(),
-        targetTime.getUTCHours() + 1, // Window of 1 hour
+        targetTime.getUTCHours() + 1,
         0,
         0
     ));
@@ -48,7 +45,7 @@ export async function GET(req: Request) {
     try {
         const appointments = await prisma.appointment.findMany({
             where: {
-                status: "CONFIRMED", // Only remind confirmed appointments
+                status: "CONFIRMED",
                 startAt: {
                     gte: queryStart,
                     lt: queryEnd,
@@ -58,40 +55,59 @@ export async function GET(req: Request) {
                 patient: true,
                 professional: true,
                 location: true,
+                specialty: true,
             },
         });
 
         console.log(`[Cron:Reminders] Found ${appointments.length} appointments between ${queryStart.toISOString()} and ${queryEnd.toISOString()}`);
 
         let sentCount = 0;
+        let quotaSkippedCount = 0;
+        let featureDisabledCount = 0;
         const errors: any[] = [];
 
+        // Cache for tenant features to avoid redundant DB calls
+        const tenantFeaturesCache: Record<string, any> = {};
+
         for (const appointment of appointments) {
-            const { patient } = appointment;
+            const { tenantId, patient } = appointment;
 
             if (!patient.phoneNumber) {
                 console.warn(`[Cron:Reminders] user ${patient.id} has no phone number.`);
                 continue;
             }
 
-            // Convert phone number to WhatsApp format ensuring it has country code
-            // Assuming Argentina (+54), remove 0 and 15 if present, ensuring 549 prefix
-            // Logic: If starts with 549, good. If starts with 11, add 549.
-            // This logic depends heavily on how phone numbers are stored.
-            // For now, we assume stored number is clean enough or needs basic prefixing.
+            // Get tenant features (with cache)
+            if (!tenantFeaturesCache[tenantId]) {
+                tenantFeaturesCache[tenantId] = await getTenantFeatures(tenantId);
+            }
+            const features = tenantFeaturesCache[tenantId];
 
-            let phone = patient.phoneNumber.replace(/\D/g, ""); // remove non-digits
-            if (!phone.startsWith("549") && phone.length === 10) {
-                // e.g. 11 1234 5678 -> 549 11 1234 5678
+            if (!features.whatsappNotifications) {
+                featureDisabledCount++;
+                continue;
+            }
+
+            // Check and increment quota
+            const hasQuota = await incrementWhatsAppUsage(tenantId);
+            if (!hasQuota) {
+                quotaSkippedCount++;
+                console.warn(`[Cron:Reminders] Tenant ${tenantId} skipped due to quota limit.`);
+                continue;
+            }
+
+            // Format phone number
+            let phone = patient.phoneNumber.replace(/\D/g, "");
+            if (!phone.startsWith("549") && !phone.startsWith("54")) {
                 phone = `549${phone}`;
-            } else if (!phone.startsWith("54")) {
-                // If just local number without 54 or 9, assuming Argentina mobile
-                phone = `549${phone}`;
+            } else if (phone.startsWith("54") && !phone.startsWith("549") && phone.length === 12) {
+                // Typical case: 54 11 ... -> 54 9 11 ...
+                phone = `549${phone.substring(2)}`;
             }
 
             // Send the message
             const sent = await sendWhatsAppReminder(
-                appointment,
+                appointment as any,
                 phone
             );
 
@@ -99,6 +115,9 @@ export async function GET(req: Request) {
                 sentCount++;
             } else {
                 errors.push({ appointmentId: appointment.id, error: "Failed to send WhatsApp" });
+                // Note: We already decremented the quota. 
+                // In a perfect world we might want to "refund" it, or just accept the loss 
+                // if the failure was after the attempt.
             }
         }
 
@@ -106,6 +125,8 @@ export async function GET(req: Request) {
             success: true,
             processed: appointments.length,
             sent: sentCount,
+            quotaSkipped: quotaSkippedCount,
+            featureDisabled: featureDisabledCount,
             errors: errors.length > 0 ? errors : undefined,
         });
     } catch (error) {
@@ -113,3 +134,4 @@ export async function GET(req: Request) {
         return new NextResponse("Internal Server Error", { status: 500 });
     }
 }
+

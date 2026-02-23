@@ -85,46 +85,48 @@ export default function AnalyticsPageClient() {
           <Spinner size="lg" />
         </div>
       ) : (
-        <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <RevenueMetricCard
-              totalMonth={metrics?.revenue?.totalMonth ?? 0}
-              totalYear={metrics?.revenue?.totalYear ?? 0}
-              byMonth={metrics?.revenue?.byMonth ?? []}
-            />
-            <AppointmentsMetricCard
-              totalMonth={metrics?.appointments?.totalMonth ?? 0}
-              totalYear={metrics?.appointments?.totalYear ?? 0}
-              byMonth={metrics?.appointments?.byMonth ?? []}
-            />
-            <CancellationsMetricCard
-              totalMonth={metrics?.cancellations?.totalMonth ?? 0}
-              totalYear={metrics?.cancellations?.totalYear ?? 0}
-              byMonth={metrics?.cancellations?.byMonth ?? []}
-            />
-            <TimeSlotMetricCard
-              morning={metrics?.timeSlots?.morning ?? 0}
-              afternoon={metrics?.timeSlots?.afternoon ?? 0}
-              night={metrics?.timeSlots?.night ?? 0}
-              mostConsumed={metrics?.timeSlots?.mostConsumed ?? "N/A"}
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="col-span-2">
-              <PatientsTable
-                patientsData={patientsData}
-                loading={patientsLoading}
-                currentPage={1}
-                sortBy="totalAppointments"
-                onPageChange={() => { }}
-                onSortChange={() => { }}
-                patientLabel={patientLabel}
-                top10Only
+        <>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+          <div className="md:col-span-2 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start content-start auto-rows-max">
+              <RevenueMetricCard
+                totalMonth={metrics?.revenue?.totalMonth ?? 0}
+                totalYear={metrics?.revenue?.totalYear ?? 0}
+                byMonth={metrics?.revenue?.byMonth ?? []}
+              />
+              <AppointmentsMetricCard
+                totalMonth={metrics?.appointments?.totalMonth ?? 0}
+                totalYear={metrics?.appointments?.totalYear ?? 0}
+                byMonth={metrics?.appointments?.byMonth ?? []}
+              />
+              <CancellationsMetricCard
+                totalMonth={metrics?.cancellations?.totalMonth ?? 0}
+                totalYear={metrics?.cancellations?.totalYear ?? 0}
+                byMonth={metrics?.cancellations?.byMonth ?? []}
+              />
+              <TimeSlotMetricCard
+                morning={metrics?.timeSlots?.morning ?? 0}
+                afternoon={metrics?.timeSlots?.afternoon ?? 0}
+                night={metrics?.timeSlots?.night ?? 0}
+                mostConsumed={metrics?.timeSlots?.mostConsumed ?? "N/A"}
               />
             </div>
+            <PatientsTable
+              patientsData={patientsData}
+              loading={patientsLoading}
+              currentPage={1}
+              sortBy="totalAppointments"
+              onPageChange={() => { }}
+              onSortChange={() => { }}
+              patientLabel={patientLabel}
+              top10Only
+            />
+          </div>
+          <div className="md:col-span-1">
             <RevenueChart metrics={metrics} />
           </div>
         </div>
+        </>
       )}
     </div>
   );

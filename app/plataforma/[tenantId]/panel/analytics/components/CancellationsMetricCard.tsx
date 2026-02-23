@@ -119,7 +119,7 @@ export function CancellationsMetricCard({
   );
 
   return (
-    <Card className="bg-white shadow-sm border border-gray-100 h-full">
+    <Card className="bg-white shadow-sm border border-gray-100 h-fit">
       <CardBody className="p-6 flex flex-row items-end justify-between">
         {/* Left Side: Metric Info */}
         <div className="flex flex-col gap-1 w-1/2">
