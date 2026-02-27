@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { sendWhatsAppReminder } from "@/lib/whatsapp";
 import { getTenantFeatures, incrementWhatsAppUsage } from "@/lib/tenant-features";
 import { toZonedTime } from "date-fns-tz";
-import { Appointment, User, Location, Specialty } from "@prisma/client";
 
 // Authenticate via cron secret
 const CRON_SECRET = process.env.CRON_SECRET;
