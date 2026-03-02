@@ -5,7 +5,6 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { findUserByEmail, createUser, findUserById } from "@/lib/db";
 import { verifyPassword, hashPassword } from "@/lib/auth";
 import { Role } from "@/lib/types";
-import { isSupportAdminEmail } from "@/lib/constants";
 import { randomUUID } from "crypto";
 
 export const getAuthOptions = (tenantId: string): NextAuthOptions => ({
@@ -60,10 +59,10 @@ export const getAuthOptions = (tenantId: string): NextAuthOptions => ({
                     return true;
                 }
 
-                // New user: Create account automatically. Solo seba.furfaro@gmail.com es ADMIN; el resto PROFESSIONAL (clientes).
+                // New user: Create account automatically as PATIENT.
                 const name = user.name || "Usuario Google";
                 const passwordHash = `PENDING_GOOGLE_${randomUUID()}`; // Placeholder
-                const role = isSupportAdminEmail(email) ? Role.ADMIN : Role.PROFESSIONAL;
+                const role = Role.PATIENT;
 
                 const newUser = await createUser({
                     id: randomUUID(),

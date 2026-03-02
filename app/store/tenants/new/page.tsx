@@ -20,6 +20,8 @@ export default function StoreTenantCreatePage() {
       payment_enabled: boolean;
     };
     limits?: { maxUsers: number; whatsappRemindersLimit: number };
+    adminEmail?: string;
+    adminPassword?: string;
   }) => {
     const res = await fetch(`/api/store/tenants`, {
       method: "POST",
@@ -30,6 +32,8 @@ export default function StoreTenantCreatePage() {
         logoUrl: data.logoUrl,
         features: data.features,
         limits: data.limits,
+        adminEmail: data.adminEmail,
+        adminPassword: data.adminPassword,
       }),
     });
     if (!res.ok) {

@@ -10,6 +10,8 @@ import {
   Alert,
   Divider,
 } from "@heroui/react";
+import { Eye, EyeOff } from "lucide-react";
+import { useTenantAdminCredentialsStore } from "@/lib/tenant-admin-credentials-store";
 
 export interface TenantFormFeatures {
   show_specialties: boolean;
@@ -30,6 +32,8 @@ interface TenantFormData {
   logoUrl?: string;
   features?: TenantFormFeatures;
   limits?: TenantFormLimits;
+  adminEmail?: string;
+  adminPassword?: string;
 }
 
 interface TenantFormSectionProps {
@@ -58,11 +62,15 @@ export function TenantFormSection({ onSubmit }: TenantFormSectionProps) {
   const [errors, setErrors] = React.useState<Partial<Record<keyof TenantFormData, string>>>({});
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [showAdminPassword, setShowAdminPassword] = React.useState(false);
+  const { adminEmail, adminPassword, setAdminEmail, setAdminPassword } = useTenantAdminCredentialsStore();
 
   const resetForm = () => {
     setFormData(defaultFormData);
     setErrors({});
     setSubmitError(null);
+    setAdminEmail("");
+    setAdminPassword("");
   };
 
   const validate = (): boolean => {
@@ -109,6 +117,8 @@ export function TenantFormSection({ onSubmit }: TenantFormSectionProps) {
         logoUrl: formData.logoUrl?.trim() || undefined,
         features: formData.features,
         limits: formData.limits,
+        adminEmail: adminEmail.trim() || undefined,
+        adminPassword: adminPassword || undefined,
       };
       await onSubmit(submitData);
       resetForm();
@@ -195,6 +205,43 @@ export function TenantFormSection({ onSubmit }: TenantFormSectionProps) {
               inputWrapper: "text-slate-800",
             }}
           />
+
+          <Divider className="my-2" />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Input
+              type="email"
+              label="Correo administrador"
+              value={adminEmail}
+              onValueChange={setAdminEmail}
+              isDisabled={loading}
+              placeholder="admin@tu-dominio.com"
+              autoComplete="off"
+              classNames={{ input: "text-slate-800", inputWrapper: "text-slate-800" }}
+            />
+            <Input
+              type={showAdminPassword ? "text" : "password"}
+              label="Contraseña administrador"
+              value={adminPassword}
+              onValueChange={setAdminPassword}
+              isDisabled={loading}
+              autoComplete="new-password"
+              classNames={{ input: "text-slate-800", inputWrapper: "text-slate-800" }}
+              endContent={
+                <button
+                  type="button"
+                  className="focus:outline-none"
+                  onClick={() => setShowAdminPassword((prev) => !prev)}
+                >
+                  {showAdminPassword ? (
+                    <EyeOff className="w-4 h-4 text-gray-400" />
+                  ) : (
+                    <Eye className="w-4 h-4 text-gray-400" />
+                  )}
+                </button>
+              }
+            />
+          </div>
 
           <Divider className="my-2" />
 

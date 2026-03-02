@@ -460,7 +460,7 @@ export async function countProfessionals(tenantId: string): Promise<number> {
 }
 
 export async function findUsersWithProfessionalProfile(tenantId: string): Promise<(User & { professional: (ProfessionalProfile & { specialty: Specialty | null; specialties: Specialty[] }) | null })[]> {
-  // First get all professionals with their profiles
+  // Users with a professional profile (any role: ADMIN, PROFESSIONAL, SUPERVISOR can have a profile)
   const [profileRows] = await mysql.execute(
     `SELECT 
       u.*,
@@ -478,8 +478,8 @@ export async function findUsersWithProfessionalProfile(tenantId: string): Promis
       pp.createdAt as pp_createdAt,
       pp.updatedAt as pp_updatedAt
     FROM users u
-    LEFT JOIN professional_profiles pp ON u.id = pp.userId AND u.tenantId = pp.tenantId
-    WHERE u.role = 'PROFESSIONAL' AND u.tenantId = ?
+    INNER JOIN professional_profiles pp ON u.id = pp.userId AND u.tenantId = pp.tenantId
+    WHERE u.tenantId = ?
     ORDER BY u.createdAt DESC`,
     [tenantId]
   );

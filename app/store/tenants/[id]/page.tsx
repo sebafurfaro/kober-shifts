@@ -90,8 +90,10 @@ export default function StoreTenantEditPage() {
     features: TenantFeatureFlags;
     limits: TenantLimits;
     translations: TenantTranslations;
+    adminEmail?: string;
+    adminPassword?: string;
   }) => {
-    const [featuresRes, settingsRes] = await Promise.all([
+    const requests: Promise<Response>[] = [
       fetch(`/api/store/tenants/${tenantId}/features`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -107,7 +109,21 @@ export default function StoreTenantEditPage() {
           professionalLabel: data.translations.professionalLabel,
         }),
       }),
-    ]);
+    ];
+    if (data.adminEmail || data.adminPassword) {
+      requests.push(
+        fetch(`/api/store/tenants/${tenantId}/admin`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            email: data.adminEmail,
+            password: data.adminPassword,
+          }),
+        })
+      );
+    }
+    const [featuresRes, settingsRes, adminRes] = await Promise.all(requests);
     if (!featuresRes.ok) {
       const err = await featuresRes.json().catch(() => ({}));
       const msg = err.detail ? `${err.error}: ${err.detail}` : (err.error || "Error al guardar configuración");
@@ -116,6 +132,11 @@ export default function StoreTenantEditPage() {
     if (!settingsRes.ok) {
       const err = await settingsRes.json().catch(() => ({}));
       const msg = err.error || "Error al guardar traducciones";
+      throw new Error(msg);
+    }
+    if (adminRes && !adminRes.ok) {
+      const err = await adminRes.json().catch(() => ({}));
+      const msg = err.error || "Error al guardar credenciales admin";
       throw new Error(msg);
     }
     await loadTenant();

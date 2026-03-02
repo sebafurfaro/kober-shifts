@@ -5,8 +5,8 @@ import { Spinner, Alert } from "@heroui/react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PanelHeader } from "../../../components/PanelHeader";
-import { ProfessionalForm } from "../components/ProfessionalForm";
-import { Specialty } from "../components/types";
+import { ProfessionalForm } from "../../profesionales/components/ProfessionalForm";
+import { Specialty } from "../../profesionales/components/types";
 
 export default function ProfessionalAddPage() {
     const router = useRouter();
@@ -50,7 +50,7 @@ export default function ProfessionalAddPage() {
 
     React.useEffect(() => {
         if (limitReached) {
-            router.replace(`/plataforma/${tenantId}/panel/admin/professionals`);
+            router.replace(`/plataforma/${tenantId}/panel/admin/collaborators`);
         }
     }, [limitReached, router, tenantId]);
 
@@ -88,7 +88,7 @@ export default function ProfessionalAddPage() {
             }
 
             const data = await res.json();
-            router.push(`/plataforma/${tenantId}/panel/admin/professionals/${data.id}/edit`);
+            router.push(`/plataforma/${tenantId}/panel/admin/collaborators/${data.id}/edit`);
             router.refresh();
         } catch (error: any) {
             setSubmitError(error.message);
@@ -106,7 +106,7 @@ export default function ProfessionalAddPage() {
     }
 
     const returnBack = () => {
-        router.push(`/plataforma/${tenantId}/panel/admin/professionals`);
+        router.push(`/plataforma/${tenantId}/panel/admin/collaborators`);
     };
 
     return (

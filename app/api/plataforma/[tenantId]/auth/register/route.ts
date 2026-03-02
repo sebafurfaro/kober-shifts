@@ -3,7 +3,6 @@ import { createUser, findUserByEmail, updateUser } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
 import { createSessionCookieValue, getSessionCookieOptions, SESSION_COOKIE } from "@/lib/session";
 import { Role } from "@/lib/types";
-import { isSupportAdminEmail } from "@/lib/constants";
 import { randomUUID } from "crypto";
 
 export async function POST(
@@ -30,14 +29,14 @@ export async function POST(
         name,
         // We don't update email as it matches
         passwordHash: hashPassword(password),
-        // Role remains PATIENT or whatever was set
+        role: Role.PATIENT,
       });
     } else {
       return NextResponse.json({ error: "Email already in use" }, { status: 409 });
     }
   } else {
-    // Create new user. Solo seba.furfaro@gmail.com es ADMIN; el resto PROFESSIONAL (clientes).
-    const role = isSupportAdminEmail(email) ? Role.ADMIN : Role.PROFESSIONAL;
+    // Create new user as PATIENT
+    const role = Role.PATIENT;
     user = await createUser({
       id: randomUUID(),
       tenantId,

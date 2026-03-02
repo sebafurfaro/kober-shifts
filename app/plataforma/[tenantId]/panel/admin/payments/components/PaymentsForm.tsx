@@ -4,6 +4,7 @@ import { Button, Alert, Card } from "@heroui/react";
 import { useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import * as React from "react";
+import Typography from "@/app/components/Typography";
 
 const MP_ERROR_MESSAGES: Record<string, string> = {
     missing_code_or_state: "Faltó código o estado en la respuesta de MercadoPago.",
@@ -71,8 +72,7 @@ export function PaymentsForm() {
 
     return (
         <div className="flex w-full flex-col">
-            <h2 className="text-2xl font-bold mb-4">Integraciones</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="">
                 {searchParams.get("mp_error") && (
                     <Alert color="danger" variant="flat" className="mb-4">
                         {MP_ERROR_MESSAGES[searchParams.get("mp_error") || ""] || "Error al vincular con MercadoPago."}
@@ -92,8 +92,8 @@ export function PaymentsForm() {
                 ) : (
                     <Card className="p-4 flex flex-col items-start space-y-4 shadow-none border border-gray-200">
                         <Image src="/logo_mp.png" alt="Mercado Pago" width={80} height={60} />
-                        <h2 className="text-2xl font-bold mb-4 mt-8">Mercado Pago</h2>
-                        <p>Conecta tu cuenta de Mercado Pago para comenzar a recibir pagos de tus clientes.</p>
+                        <Typography variant="h4" color="black">Mercado Pago</Typography>
+                        <Typography variant="p" color="gray">Conecta tu cuenta de Mercado Pago para comenzar a recibir pagos de tus clientes.</Typography>
                         {mpLinked ? (
                             <Button
                                 variant="solid"

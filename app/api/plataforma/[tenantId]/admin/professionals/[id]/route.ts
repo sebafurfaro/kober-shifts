@@ -19,17 +19,22 @@ export async function GET(
   const { id, tenantId } = await params;
   const session = await getSession();
   if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL" && session.role !== "SUPERVISOR") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const user = await findUserById(id, tenantId);
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   const profile = await findProfessionalProfileByUserId(id, tenantId);
-  if (!profile) return NextResponse.json({ error: "Professional profile not found" }, { status: 404 });
+  const basePayload = {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    dni: user.dni ?? undefined,
+    role: user.role,
+  };
+  if (!profile) return NextResponse.json(basePayload);
 
   // Get all specialties for this professional
-  // Note: professional_specialties table doesn't have tenantId column
-  // We filter by joining with specialties table which has tenantId
   const [specialtyRows] = await mysql.execute(
     `SELECT ps.specialtyId 
      FROM professional_specialties ps
@@ -40,10 +45,7 @@ export async function GET(
   const specialtyIds = (specialtyRows as any[]).map(row => row.specialtyId);
 
   return NextResponse.json({
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    dni: user.dni ?? undefined,
+    ...basePayload,
     specialtyId: profile.specialtyId,
     specialtyIds: specialtyIds.length > 0 ? specialtyIds : [profile.specialtyId],
     color: profile.color,
@@ -63,7 +65,7 @@ export async function PUT(
   const { id, tenantId } = await params;
   const session = await getSession();
   if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL" && session.role !== "SUPERVISOR") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
 
@@ -79,6 +81,9 @@ export async function PUT(
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     const name = typeof body.name === "string" ? body.name.trim() : "";
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : undefined;
+    const dni = body.hasOwnProperty("dni") ? (typeof body.dni === "string" ? body.dni.trim() || null : null) : undefined;
+    const role = body.role === "ADMIN" || body.role === "PROFESSIONAL" || body.role === "SUPERVISOR" ? body.role : undefined;
     const specialtyId = typeof body.specialtyId === "string" ? body.specialtyId : "";
     const specialtyIds = Array.isArray(body.specialtyIds) ? body.specialtyIds.filter((id): id is string => typeof id === "string") : (specialtyId ? [specialtyId] : []);
     const color = typeof body.color === "string" ? body.color.trim() : "#2196f3";
@@ -107,23 +112,25 @@ export async function PUT(
       : undefined;
 
     if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
-    if (specialtyIds.length === 0) return NextResponse.json({ error: "At least one specialty is required" }, { status: 400 });
 
-    const updateData: { name: string; passwordHash?: string } = { name };
+    const profile = await findProfessionalProfileByUserId(id, tenantId);
+    const hasProfileFields = body.specialtyIds !== undefined || body.specialtyId !== undefined || body.color !== undefined || body.availabilityConfig !== undefined || body.availableDays !== undefined || body.availableHours !== undefined;
+    if (profile && hasProfileFields && specialtyIds.length === 0) return NextResponse.json({ error: "At least one specialty is required" }, { status: 400 });
 
-    // Only update password if provided
+    const updateData: { name: string; email?: string; dni?: string | null; role?: string; passwordHash?: string } = { name };
+    if (email !== undefined) updateData.email = email;
+    if (dni !== undefined) updateData.dni = dni;
+    if (role !== undefined) updateData.role = role;
     if (tempPassword) {
-      if (tempPassword.length < 6) {
-        return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
-      }
+      if (tempPassword.length < 6) return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
       updateData.passwordHash = hashPassword(tempPassword);
     }
+    if (email !== undefined) {
+      const existing = await findUserByEmail(email, tenantId);
+      if (existing && existing.id !== id) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
+    }
 
-    // Update user
     const updatedUser = await updateUser(id, tenantId, updateData);
-
-    // Update professional profile
-    const profile = await findProfessionalProfileByUserId(id, tenantId);
     const profileUpdateData: { specialtyId?: string; specialtyIds?: string[]; color?: string; availableDays?: number[] | null; availableHours?: { start: string; end: string } | null } = {};
 
     if (profile) {
@@ -158,10 +165,12 @@ export async function PUT(
     }
 
     const updatedProfile = await findProfessionalProfileByUserId(id, tenantId);
-    return NextResponse.json({
+    const responsePayload = {
       id: updatedUser.id,
       email: updatedUser.email,
       name: updatedUser.name,
+      dni: updatedUser.dni ?? undefined,
+      role: updatedUser.role,
       specialtyId: specialtyIds[0] || "",
       specialtyIds,
       color: updatedProfile?.color || color,
@@ -171,7 +180,8 @@ export async function PUT(
       holidays: updatedProfile?.availabilityConfig?.holidays || [],
       availableDays: updatedProfile?.availableDays,
       availableHours: updatedProfile?.availableHours,
-    });
+    };
+    return NextResponse.json(responsePayload);
   } catch (error: any) {
     console.error("Error updating professional:", error);
     return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
@@ -185,7 +195,7 @@ export async function DELETE(
   const { id, tenantId } = await params;
   const session = await getSession();
   if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL" && session.role !== "SUPERVISOR") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const user = await findUserById(id, tenantId);
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });

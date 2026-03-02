@@ -65,6 +65,7 @@ export default function ProfessionalEditPage() {
             const res = await fetch(`/api/plataforma/${tenantId}/admin/professionals/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify(formData),
             });
 
@@ -96,7 +97,7 @@ export default function ProfessionalEditPage() {
                 subtitle={`Modificando el perfil de ${initialData?.name}`}
                 action={{
                     label: "Volver",
-                    onClick: () => router.push(`/plataforma/${tenantId}/panel/admin/professionals`),
+                    onClick: () => router.push(`/plataforma/${tenantId}/panel/admin/profesionales`),
                     variant: "bordered",
                     startIcon: <ArrowLeft className="w-4 h-4" />
                 }}

@@ -179,9 +179,18 @@ export async function POST(
     const mpClient = new MercadoPagoConfig({ accessToken });
     const payment = new Payment(mpClient);
     const paymentData = await payment.get({ id: String(dataId) });
-    const paymentId = paymentData.id ? String(paymentData.id) : null;
-    const preferenceId = paymentData.preference_id ? String(paymentData.preference_id) : null;
-    const externalReference = paymentData.external_reference ? String(paymentData.external_reference) : null;
+    console.log("Mercado Pago paymentData:", paymentData);
+    const paymentDataAny = paymentData as {
+      id?: unknown;
+      preference_id?: unknown;
+      external_reference?: unknown;
+      status?: unknown;
+      status_detail?: unknown;
+      transaction_amount?: unknown;
+    };
+    const paymentId = paymentDataAny.id ? String(paymentDataAny.id) : null;
+    const preferenceId = paymentDataAny.preference_id ? String(paymentDataAny.preference_id) : null;
+    const externalReference = paymentDataAny.external_reference ? String(paymentDataAny.external_reference) : null;
 
     const paymentsCollection = (await mongoClientPromise)
       .db()
@@ -196,13 +205,13 @@ export async function POST(
     });
 
     if (paymentRow?.paymentId && paymentId && paymentRow.paymentId === paymentId) {
-      if (paymentRow.status === paymentData.status || paymentRow.status === "approved") {
+      if (paymentRow.status === paymentDataAny.status || paymentRow.status === "approved") {
         return NextResponse.json({ received: true });
       }
     }
 
     const expectedAmount = normalizeAmount(paymentRow?.amount);
-    const receivedAmount = normalizeAmount((paymentData as { transaction_amount?: unknown }).transaction_amount);
+    const receivedAmount = normalizeAmount(paymentDataAny.transaction_amount);
     if (expectedAmount !== null && receivedAmount !== null && expectedAmount !== receivedAmount) {
       console.warn(
         "Webhook payment amount mismatch",
@@ -220,16 +229,16 @@ export async function POST(
       }
     }
 
-    if (paymentData.preference_id) {
+    if (preferenceId) {
       await mysql.execute(
         `UPDATE appointment_payments
          SET status = ?, paymentId = ?
          WHERE tenantId = ? AND preferenceId = ?`,
         [
-          paymentData.status,
-          paymentData.id,
+          paymentDataAny.status,
+          paymentDataAny.id,
           tenantId,
-          paymentData.preference_id,
+          preferenceId,
         ]
       );
     } else if (appointmentId) {
@@ -238,8 +247,8 @@ export async function POST(
          SET status = ?, paymentId = ?
          WHERE tenantId = ? AND appointmentId = ?`,
         [
-          paymentData.status,
-          paymentData.id,
+          paymentDataAny.status,
+          paymentDataAny.id,
           tenantId,
           appointmentId,
         ]
@@ -247,23 +256,24 @@ export async function POST(
     }
 
     await paymentsCollection.updateOne(
-      { tenantId, "mercadoPago.preferenceId": paymentData.preference_id },
+      { tenantId, "mercadoPago.preferenceId": preferenceId },
       {
         $set: {
-          status: paymentData.status,
+          status: paymentDataAny.status,
           mercadoPago: {
-            preferenceId: paymentData.preference_id,
-            paymentId: paymentData.id,
-            status: paymentData.status,
-            statusDetail: paymentData.status_detail,
+            preferenceId: preferenceId,
+            paymentId: paymentDataAny.id ?? null,
+            status: paymentDataAny.status,
+            statusDetail: paymentDataAny.status_detail,
           },
+          mercadoPagoRaw: paymentData,
           updatedAt: new Date(),
         },
       }
     );
 
     if (
-      paymentData.status === "approved" &&
+      paymentDataAny.status === "approved" &&
       appointmentId &&
       typeof appointmentId === "string"
     ) {

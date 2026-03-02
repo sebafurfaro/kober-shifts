@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Avatar, Chip, Button, Spinner, Card } from "@heroui/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Avatar, Button, Spinner, Card } from "@heroui/react";
 import { Edit, Trash2 } from "lucide-react";
 import { PanelHeader } from "../../components/PanelHeader";
 import { useRouter, useParams } from "next/navigation";
 import { ConfirmationDialog } from "../../components/alerts/ConfirmationDialog";
 import { AlertDialog } from "../../components/alerts/AlertDialog";
+import { EditUserAside, type EditUserFormData } from "./components/EditUserAside";
 import { useTenantLabels } from "@/lib/use-tenant-labels";
 import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
 
@@ -14,6 +15,8 @@ interface Professional {
   id: string;
   name: string;
   email: string;
+  role: string;
+  dni?: string | null;
   color?: string | null;
   professional?: {
     specialty?: {
@@ -34,8 +37,7 @@ export default function AdminProfessionalsPage() {
   const tenantId = params.tenantId as string;
   const [professionals, setProfessionals] = React.useState<Professional[]>([]);
   const [maxUsers, setMaxUsers] = React.useState<number | null>(null);
-  const [showSpecialties, setShowSpecialties] = React.useState(true);
-  const { professionalLabel } = useTenantLabels();
+  const pageTitle = "Colaboradores";
   const loadTranslations = useTenantSettingsStore((state) => state.loadTranslations);
   const [loading, setLoading] = React.useState(true);
   const [deleteDialog, setDeleteDialog] = React.useState<{
@@ -47,6 +49,8 @@ export default function AdminProfessionalsPage() {
     message: string;
     type: "error" | "info" | "success" | "warning";
   }>({ open: false, message: "", type: "error" });
+  const [editAsideOpen, setEditAsideOpen] = React.useState(false);
+  const [editUser, setEditUser] = React.useState<Professional | null>(null);
 
   const loadData = React.useCallback(async () => {
     try {
@@ -73,7 +77,6 @@ export default function AdminProfessionalsPage() {
         if (res.ok && !cancelled) {
           const data = await res.json();
           setMaxUsers(typeof data.maxUsers === "number" ? data.maxUsers : null);
-          setShowSpecialties(data.show_specialties ?? true);
         }
       } catch {
         if (!cancelled) setMaxUsers(null);
@@ -93,11 +96,50 @@ export default function AdminProfessionalsPage() {
 
   const handleCreate = () => {
     if (atUserLimit) return;
-    router.push(`/plataforma/${tenantId}/panel/admin/professionals/add-new`);
+    setEditUser(null);
+    setEditAsideOpen(true);
   };
 
   const handleEdit = (professional: Professional) => {
-    router.push(`/plataforma/${tenantId}/panel/admin/professionals/${professional.id}/edit`);
+    setEditUser(professional);
+    setEditAsideOpen(true);
+  };
+
+  const handleEditUserSubmit = async (data: EditUserFormData) => {
+    if (editUser) {
+      const res = await fetch(`/api/plataforma/${tenantId}/admin/professionals/${editUser.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          dni: data.dni || null,
+          role: data.role,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Error al actualizar");
+      }
+    } else {
+      const res = await fetch(`/api/plataforma/${tenantId}/admin/professionals`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          dni: data.dni || null,
+          role: data.role,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Error al crear usuario");
+      }
+    }
+    await loadData();
   };
 
   const handleDelete = (professional: Professional) => {
@@ -136,13 +178,13 @@ export default function AdminProfessionalsPage() {
     <div className="max-w-7xl mx-auto mt-8">
       <div className="py-8">
         <PanelHeader
-          title={professionalLabel}
+          title={pageTitle}
           subtitle={atUserLimit ? `Límite de ${maxUsers} usuario(s) alcanzado. No se pueden agregar más.` : undefined}
           action={
             atUserLimit
               ? undefined
               : {
-                  label: "Crear Perfil",
+                  label: "Agregar colaborador",
                   color: "primary",
                   onClick: handleCreate,
                 }
@@ -150,22 +192,18 @@ export default function AdminProfessionalsPage() {
         />
 
         <Card className="card">
-          <Table aria-label="Tabla de profesionales">
+          <Table aria-label="Tabla de colaboradores">
             <TableHeader>
-              {[
-                <TableColumn key="color" className="rounded-tl-lg rounded-bl-lg text-slate-800 text-base">Color</TableColumn>,
-                <TableColumn key="name" className="text-slate-800 text-base">Nombre</TableColumn>,
-                <TableColumn key="email" className="text-slate-800 text-base">Email</TableColumn>,
-                ...(showSpecialties
-                  ? [<TableColumn key="specialties" className="text-slate-800 text-base">Especialidades</TableColumn>]
-                  : []),
-                <TableColumn key="actions" className="text-right rounded-tr-lg rounded-br-lg text-slate-800 text-base">Acciones</TableColumn>,
-              ]}
+              <TableColumn key="color" className="rounded-tl-lg rounded-bl-lg text-slate-800 text-base">Color</TableColumn>
+              <TableColumn key="name" className="text-slate-800 text-base">Nombre</TableColumn>
+              <TableColumn key="email" className="text-slate-800 text-base">Email</TableColumn>
+              <TableColumn key="role" className="text-slate-800 text-base">Rol</TableColumn>
+              <TableColumn key="actions" className="text-right rounded-tr-lg rounded-br-lg text-slate-800 text-base">Acciones</TableColumn>
             </TableHeader>
             <TableBody
               isLoading={loading}
               loadingContent={<Spinner label="Cargando..." />}
-              emptyContent={loading ? null : `No hay ${professionalLabel.toLowerCase()} registrados`}
+              emptyContent={loading ? null : "No hay colaboradores registrados"}
             >
               {professionals.map((professional) => {
                 const color = professional.color || professional.professional?.color || "#2196f3";
@@ -222,29 +260,15 @@ export default function AdminProfessionalsPage() {
                         {professional.email}
                       </p>
                     </TableCell>
-                    {...(showSpecialties
-                      ? [
-                          <TableCell key="specialties">
-                            <div className="flex flex-wrap gap-2">
-                              {professional.professional?.specialties && professional.professional.specialties.length > 0 ? (
-                                professional.professional.specialties.map((specialty) => (
-                                  <Chip
-                                    key={specialty.id}
-                                    variant="flat"
-                                    color="secondary"
-                                    size="sm"
-                                    className="text-xs"
-                                  >
-                                    {specialty.name}
-                                  </Chip>
-                                ))
-                              ) : (
-                                <span className="text-xs text-gray-500">Sin especialidad</span>
-                              )}
-                            </div>
-                          </TableCell>,
-                        ]
-                      : [])}
+                    <TableCell>
+                      <p className="text-sm text-gray-700">
+                        {professional.role === "ADMIN"
+                          ? "Administrador"
+                          : professional.role === "SUPERVISOR"
+                            ? "Recepcionista"
+                            : "Profesional"}
+                      </p>
+                    </TableCell>
                     {actionCell}
                   </TableRow>
                 );
@@ -258,10 +282,10 @@ export default function AdminProfessionalsPage() {
         open={deleteDialog.open}
         onClose={() => setDeleteDialog({ open: false, professional: null })}
         onConfirm={confirmDelete}
-        title={`Eliminar ${professionalLabel.slice(0, -1)}`}
+        title="Eliminar colaborador"
         message={
           deleteDialog.professional
-            ? `¿Estás seguro de que deseas eliminar al ${professionalLabel.slice(0, -1).toLowerCase()} ${deleteDialog.professional.name}? Esta acción no se puede deshacer.`
+            ? `¿Estás seguro de que deseas eliminar a ${deleteDialog.professional.name}? Esta acción no se puede deshacer.`
             : ""
         }
         confirmText="Eliminar"
@@ -274,6 +298,14 @@ export default function AdminProfessionalsPage() {
         onClose={() => setAlertDialog({ open: false, message: "", type: "error" })}
         message={alertDialog.message}
         type={alertDialog.type}
+      />
+
+      <EditUserAside
+        open={editAsideOpen}
+        onClose={() => { setEditAsideOpen(false); setEditUser(null); }}
+        mode={editUser ? "edit" : "create"}
+        initialData={editUser ? { name: editUser.name, email: editUser.email, dni: editUser.dni ?? "", role: editUser.role } : null}
+        onSubmit={handleEditUserSubmit}
       />
     </div>
   );

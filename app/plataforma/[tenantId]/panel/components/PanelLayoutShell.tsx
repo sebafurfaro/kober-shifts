@@ -14,7 +14,7 @@ import { Aside } from "./layout/Aside";
 import { useTenantLabels } from "@/lib/use-tenant-labels";
 import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
 
-type Role = "PATIENT" | "PROFESSIONAL" | "ADMIN";
+type Role = "PATIENT" | "PROFESSIONAL" | "ADMIN" | "SUPERVISOR";
 
 const DRAWER_WIDTH = 260;
 
@@ -114,8 +114,8 @@ export function PanelLayoutShell({
 
   const colaboradoresItems = [
     {
-      label: professionalLabel,
-      href: `${base}/admin/professionals`,
+      label: "Colaboradores",
+      href: `${base}/admin/collaborators`,
       icon: <Hospital className="w-5 h-5" />,
       show: true,
     },

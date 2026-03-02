@@ -20,7 +20,7 @@ import { Alert } from "@heroui/react";
 import Logo from "@/app/branding/Logo";
 import { Dispatch, SetStateAction } from "react";
 
-type Role = "PATIENT" | "PROFESSIONAL" | "ADMIN";
+type Role = "PATIENT" | "PROFESSIONAL" | "ADMIN" | "SUPERVISOR";
 
 const DRAWER_WIDTH = 210;
 const DRAWER_COLLAPSED_WIDTH = 64;
@@ -135,7 +135,7 @@ export function Aside({
   };
 
   const effectiveIsCollapsed = isCollapsed && !isHovered;
-  const canManage = role === "ADMIN" || role === "PROFESSIONAL";
+  const canManage = role === "ADMIN" || role === "PROFESSIONAL" || role === "SUPERVISOR";
   const base = `/plataforma/${currentTenantId}/panel`;
 
   return (
@@ -212,7 +212,7 @@ export function Aside({
               isCollapsed={effectiveIsCollapsed}
             />
           )}
-          {(role === "PROFESSIONAL" || role === "ADMIN") && (
+          {(role === "PROFESSIONAL" || role === "ADMIN" || role === "SUPERVISOR") && (
             <NavItem
               href={`${base}/professional`}
               label="Profesionales"
@@ -286,6 +286,24 @@ export function Aside({
                   isCollapsed={effectiveIsCollapsed}
                 />
               ))}
+            </>
+          )}
+          {role === "ADMIN" && (
+              <NavItem
+                href={`${base}/admin/roles`}
+                label="Roles"
+                icon={<User className="w-5 h-5" />}
+                isCollapsed={effectiveIsCollapsed}
+              />
+          )}
+          {canManage && (
+            <>
+              <NavItem
+                href={`${base}/admin/profesionales`}
+                label="Profesionales"
+                icon={<User className="w-5 h-5" />}
+                isCollapsed={effectiveIsCollapsed}
+              />
             </>
           )}
 

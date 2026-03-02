@@ -4,6 +4,7 @@ export enum Role {
   PATIENT = 'PATIENT',
   PROFESSIONAL = 'PROFESSIONAL',
   ADMIN = 'ADMIN',
+  SUPERVISOR = 'SUPERVISOR',
 }
 
 export enum AppointmentStatus {

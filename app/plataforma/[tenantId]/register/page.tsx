@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Button, Input, Card, CardBody } from "@heroui/react";
 import { useParams, useRouter } from "next/navigation";
 import { Eye, EyeOff, CheckCircle2, XCircle } from "lucide-react";
+import { Role } from "@/lib/types";
 
 function ValidationItem({ isValid, text }: { isValid: boolean; text: string }) {
   return (
@@ -61,7 +62,15 @@ export default function RegisterPage() {
         setError(json.error ?? "Error");
         return;
       }
-      router.push(`/plataforma/${tenantId}/panel`);
+      const data = (await res.json().catch(() => ({}))) as { role?: Role };
+      const role = data.role;
+      if (role === Role.ADMIN || role === Role.SUPERVISOR) {
+        router.push(`/plataforma/${tenantId}/panel/admin`);
+      } else if (role === Role.PROFESSIONAL) {
+        router.push(`/plataforma/${tenantId}/panel/professional`);
+      } else {
+        router.push(`/plataforma/${tenantId}/panel/patient`);
+      }
     } finally {
       setLoading(false);
     }

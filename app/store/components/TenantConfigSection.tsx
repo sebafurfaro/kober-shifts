@@ -11,6 +11,9 @@ import {
   Alert,
 } from "@heroui/react";
 import { TenantFeatureFlags, TenantLimits, TenantTranslations } from "./TenantConfigDialog";
+import { Eye, EyeOff } from "lucide-react";
+import { useTenantAdminCredentialsStore } from "@/lib/tenant-admin-credentials-store";
+import Typography from "@/app/components/Typography";
 
 interface TenantConfigSectionProps {
   tenantId: string;
@@ -21,6 +24,8 @@ interface TenantConfigSectionProps {
     features: TenantFeatureFlags;
     limits: TenantLimits;
     translations: TenantTranslations;
+    adminEmail?: string;
+    adminPassword?: string;
   }) => Promise<void>;
 }
 
@@ -64,6 +69,8 @@ export function TenantConfigSection({
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [errors, setErrors] = React.useState<{ maxUsers?: string; whatsappRemindersLimit?: string }>({});
+  const [showAdminPassword, setShowAdminPassword] = React.useState(false);
+  const { adminEmail, adminPassword, setAdminEmail, setAdminPassword } = useTenantAdminCredentialsStore();
 
   React.useEffect(() => {
     setFeatures({
@@ -87,6 +94,18 @@ export function TenantConfigSection({
         }
       })
       .catch(() => setTranslations({ ...defaultTranslations }));
+
+    fetch(`/api/store/tenants/${tenantId}/admin`, { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && typeof data.email === "string") {
+          setAdminEmail(data.email);
+        }
+        if (typeof data?.password === "string") {
+          setAdminPassword(data.password);
+        }
+      })
+      .catch(() => undefined);
   }, [tenantId, initialFeatures, initialLimits]);
 
   const validate = (): boolean => {
@@ -107,7 +126,13 @@ export function TenantConfigSection({
     setSubmitError(null);
     setLoading(true);
     try {
-      await onSave({ features, limits, translations });
+      await onSave({
+        features,
+        limits,
+        translations,
+        adminEmail: adminEmail.trim() || undefined,
+        adminPassword: adminPassword || undefined,
+      });
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : "Error al guardar");
     } finally {
@@ -121,7 +146,9 @@ export function TenantConfigSection({
 
   return (
     <Card className="shadow-lg card">
-      <CardHeader className="text-slate-800">Configuración: {tenantName}</CardHeader>
+      <CardHeader className="text-slate-800">
+        <Typography variant="h4" color="black">Configuración para: {tenantName}</Typography>
+      </CardHeader>
       <CardBody>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {submitError && (
@@ -131,8 +158,45 @@ export function TenantConfigSection({
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Límites por tenant</h3>
+            <Input
+                type="email"
+                label="Correo administrador"
+                value={adminEmail}
+                onValueChange={setAdminEmail}
+                isDisabled={loading}
+                placeholder="admin@tu-dominio.com"
+                autoComplete="off"
+                classNames={{ input: "text-slate-800", inputWrapper: "text-slate-800" }}
+              />
+              <Input
+                type={showAdminPassword ? "text" : "password"}
+                label="Contraseña administrador"
+                value={adminPassword}
+                onValueChange={setAdminPassword}
+                isDisabled={loading}
+                autoComplete="new-password"
+                classNames={{ input: "text-slate-800", inputWrapper: "text-slate-800" }}
+                endContent={
+                  <button
+                    type="button"
+                    className="focus:outline-none"
+                    onClick={() => setShowAdminPassword((prev) => !prev)}
+                  >
+                    {showAdminPassword ? (
+                      <EyeOff className="w-4 h-4 text-gray-400" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-gray-400" />
+                    )}
+                  </button>
+                }
+              />
+          </div>
+
+          <Divider className="my-2" />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="space-y-5">
+              <Typography variant="h6" color="black">Limites por tenant</Typography>
               <div className="flex flex-col gap-3">
                 <Input
                   type="number"
@@ -163,9 +227,8 @@ export function TenantConfigSection({
               </div>
             </div>
 
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Traducciones</h3>
-              <p className="text-xs text-gray-500 mb-2">Etiquetas que verán los usuarios del panel.</p>
+            <div className="space-y-5">
+              <Typography variant="h6" color="black">Traducciones</Typography>
               <div className="flex flex-col gap-3">
                 <Input
                   type="text"

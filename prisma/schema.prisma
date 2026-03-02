@@ -11,6 +11,7 @@ enum Role {
   PATIENT
   PROFESSIONAL
   ADMIN
+  SUPERVISOR
 }
 
 enum AppointmentStatus {

@@ -1,6 +1,7 @@
 import { Button } from "@heroui/react";
 import { CircleArrowRight } from "lucide-react";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import Link from "next/link";
 
 export const Hero = () => {
     return (
@@ -16,11 +17,10 @@ export const Hero = () => {
               <h1 className="text-4xl font-bold text-primary">Nunca fue tan fácil gestionar tus turnos</h1>
             </div>
             <div className="max-w-xl w-full mr-auto">
-              <p className="text-base font-medium text-slate-900">En NODO App, creemos que la agenda es el corazon del negocio, no una funcion premium. Por eso, todos los planes incluyen sin restricciones las herramientas fundamentales para organizarte y crecer. </p>
+              <p className="text-base font-medium text-slate-900">En NODO App, creemos que la agenda es el corazón del negocio, no una función premium. Por eso, nuestro plan incluye sin restricciones las herramientas fundamentales para organizarte y crecer. </p>
             </div>
             <div className="max-w-md w-full mr-auto gap-8">
-              
-              <Button variant="solid" color="primary" startContent={<CircleArrowRight />}>Ver Demo</Button>
+              <Button as={Link} href="https://wa.me/5491173740338?text=Hola, quiero saber más sobre NODO App Turnos" variant="solid" color="primary" startContent={<CircleArrowRight />}>Comenzar ahora</Button>
             </div>
           </div>
           <div className="col-span-1">

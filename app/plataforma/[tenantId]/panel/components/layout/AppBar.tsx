@@ -28,7 +28,12 @@ export default function AppBar({
     const [notifications, setNotifications] = useState<Array<{ id: string; message: string }>>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const lastCheckRef = useRef(new Date(Date.now() - 5 * 60 * 1000).toISOString());
-    const canNotify = role === "ADMIN" || role === "PROFESSIONAL";
+    const [mounted, setMounted] = useState(false);
+    const canNotify = role === "ADMIN" || role === "PROFESSIONAL" || role === "SUPERVISOR";
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     useEffect(() => {
         if (!canNotify || !tenantId) return;
@@ -95,7 +100,7 @@ export default function AppBar({
             </div>
 
             <div className="flex items-center gap-4">
-                {canNotify && (
+                {mounted && canNotify && (
                     <Dropdown onOpenChange={(open) => open && setUnreadCount(0)}>
                         <DropdownTrigger>
                             <Button variant="bordered" isIconOnly aria-label="Notificaciones">

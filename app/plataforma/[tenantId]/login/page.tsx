@@ -5,6 +5,9 @@ import { Button, Input, Card, CardBody, CardHeader, Divider } from "@heroui/reac
 import { useParams, useRouter } from "next/navigation";
 import Logo from "@/app/branding/Logo";
 import { GoogleIcon } from "@/app/branding/GoogleIcon";
+import { Typography } from "@/app/components/Typography";
+import Link from "next/link";
+import { Role } from "@/lib/types";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,7 +34,15 @@ export default function LoginPage() {
         setError(json.error ?? "Error");
         return;
       }
-      router.push(`/plataforma/${tenantId}/panel`);
+      const data = (await res.json().catch(() => ({}))) as { role?: Role };
+      const role = data.role;
+      if (role === Role.ADMIN || role === Role.SUPERVISOR) {
+        router.push(`/plataforma/${tenantId}/panel/admin`);
+      } else if (role === Role.PROFESSIONAL) {
+        router.push(`/plataforma/${tenantId}/panel/professional`);
+      } else {
+        router.push(`/plataforma/${tenantId}/panel/patient`);
+      }
     } finally {
       setLoading(false);
     }
@@ -81,22 +92,22 @@ export default function LoginPage() {
                 Entrar
               </Button>
 
-              <div className="flex items-center my-4">
-                <div className="flex-1 h-px bg-gray-300" />
-                <span className="px-2 text-sm text-gray-500">O</span>
-                <div className="flex-1 h-px bg-gray-300" />
-              </div>
-
               <Button
                 variant="flat"
                 onPress={() => window.location.href = `/api/plataforma/${tenantId}/auth/google`}
                 isDisabled={loading}
-                className="w-full bg-white text-black hover:bg-gray-100"
+                className="w-full bg-white text-black hover:bg-gray-100 border border-gray-300"
                 radius="none"
               >
                 <GoogleIcon />
                 Ingresar con Google
               </Button>
+
+            <Divider className="my-4" />
+            <div className="flex items-center justify-center gap-2">
+              <Typography variant="p" size="sm" color="gray">No estas registrado?</Typography>
+              <Link href={`/plataforma/${tenantId}/register`} className="text-primary underline">Registrarse</Link>
+              </div>
             </form>
           </CardBody>
         </Card>

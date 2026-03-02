@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { getStoreSession } from "@/lib/store-session";
-import { findAllTenants, createTenant } from "@/lib/db";
+import { findAllTenants, createTenant, createUser, findUserByEmail } from "@/lib/db";
 import { mongoClientPromise } from "@/lib/mongo";
 import { randomUUID } from "crypto";
+import { hashPassword } from "@/lib/auth";
+import { Role } from "@/lib/types";
 
 const ALLOWED_EMAILS = ["seba.furfaro@gmail.com", "caourisaldana@gmail.com"].map((e) => e.toLowerCase());
 
@@ -49,6 +51,8 @@ export async function POST(req: Request) {
     maxUsers?: number;
     whatsappRemindersLimit?: number;
   } | undefined;
+  const adminEmail = typeof body.adminEmail === "string" ? body.adminEmail.trim().toLowerCase() : "";
+  const adminPassword = typeof body.adminPassword === "string" ? body.adminPassword : "";
 
   if (!name) return NextResponse.json({ error: "Invalid input: name is required" }, { status: 400 });
 
@@ -87,6 +91,20 @@ export async function POST(req: Request) {
       });
     } catch (mongoError) {
       console.error("Error saving tenant config:", mongoError);
+    }
+
+    if (adminEmail && adminPassword) {
+      const existingAdmin = await findUserByEmail(adminEmail, id);
+      if (!existingAdmin) {
+        await createUser({
+          id: randomUUID(),
+          tenantId: id,
+          email: adminEmail,
+          name: adminEmail.split("@")[0] || "Admin",
+          passwordHash: hashPassword(adminPassword),
+          role: Role.ADMIN,
+        });
+      }
     }
 
     return NextResponse.json(created);

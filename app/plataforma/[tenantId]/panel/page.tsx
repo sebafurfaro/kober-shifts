@@ -25,8 +25,7 @@ export default async function PanelPage({
   // Check if calendar feature is enabled
   const features = await getTenantFeatures(tenantId);
   if (!features.calendar) {
-    // Redirect to admin page if calendar is disabled
-    if (user.role === Role.ADMIN) {
+    if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
       redirect(`/plataforma/${tenantId}/panel/admin`);
     } else if (user.role === Role.PROFESSIONAL) {
       redirect(`/plataforma/${tenantId}/panel/professional`);
