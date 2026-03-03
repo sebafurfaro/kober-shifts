@@ -29,6 +29,7 @@ export async function GET(
 
     // Return default settings if none exist
     const defaultSettings = {
+      isActive: true,
       notifications: {
         whatsapp: false,
         sms: false,
@@ -39,6 +40,12 @@ export async function GET(
       professionalLabel: "Profesionales",
       cancellationPolicy: "",
       whatsappReminderOption: "48",
+      // Booking / seña (globales: % seña, política reembolso, confirmación manual, anticipación)
+      depositPercent: 0,
+      refundPolicyMessage: "",
+      manualTurnConfirmation: false,
+      minAnticipation: 0,
+      maxAnticipation: 30,
     };
 
     const merged = { ...defaultSettings, ...settings?.settings };
@@ -71,62 +78,87 @@ export async function PUT(
 
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-    const notifications = body.notifications as {
-      whatsapp?: boolean;
-      sms?: boolean;
-      email?: boolean;
-    } | undefined;
-
-    if (!notifications) {
-      return NextResponse.json(
-        { error: "Invalid settings format" },
-        { status: 400 }
-      );
-    }
-
     const client = await mongoClientPromise;
     const db = client.db();
     const collection = db.collection("tenant_settings");
+    const existing = await collection.findOne({ tenantId });
+    const existingSettings = (existing?.settings && typeof existing.settings === "object") ? existing.settings : {} as Record<string, unknown>;
 
-    const cancelationLimit = typeof body.cancelationLimit === "number" 
-      ? body.cancelationLimit 
-      : typeof body.cancelationLimit === "string" 
+    const notificationsFromBody = body.notifications as { whatsapp?: boolean; sms?: boolean; email?: boolean } | undefined;
+    const notifications = {
+      whatsapp: notificationsFromBody?.whatsapp ?? (existingSettings.notifications as { whatsapp?: boolean })?.whatsapp ?? false,
+      sms: notificationsFromBody?.sms ?? (existingSettings.notifications as { sms?: boolean })?.sms ?? false,
+      email: notificationsFromBody?.email ?? (existingSettings.notifications as { email?: boolean })?.email ?? false,
+    };
+
+    const cancelationLimit = typeof body.cancelationLimit === "number"
+      ? body.cancelationLimit
+      : typeof body.cancelationLimit === "string"
         ? parseInt(body.cancelationLimit, 10) || 0
-        : 0;
+        : (typeof existingSettings.cancelationLimit === "number" ? existingSettings.cancelationLimit : 0);
 
     const patientLabel = typeof body.patientLabel === "string" && body.patientLabel.trim()
       ? body.patientLabel.trim()
-      : "Pacientes";
+      : (typeof existingSettings.patientLabel === "string" && existingSettings.patientLabel.trim() ? existingSettings.patientLabel : "Pacientes");
 
     const professionalLabel = typeof body.professionalLabel === "string" && body.professionalLabel.trim()
       ? body.professionalLabel.trim()
-      : "Profesionales";
+      : (typeof existingSettings.professionalLabel === "string" && existingSettings.professionalLabel.trim() ? existingSettings.professionalLabel : "Profesionales");
 
     const cancellationPolicy = typeof body.cancellationPolicy === "string"
       ? body.cancellationPolicy.trim()
-      : "";
+      : (typeof existingSettings.cancellationPolicy === "string" ? existingSettings.cancellationPolicy : "");
 
-    const existing = await collection.findOne({ tenantId });
-    const existingSettings = (existing?.settings && typeof existing.settings === "object") ? existing.settings : {};
+    const isActive = typeof body.isActive === "boolean"
+      ? body.isActive
+      : (typeof existingSettings.isActive === "boolean" ? existingSettings.isActive : true);
 
     const validReminderOptions = ["48", "24", "48_and_24"] as const;
     const rawReminder = body.whatsappReminderOption;
     const whatsappReminderOption =
       typeof rawReminder === "string" && validReminderOptions.includes(rawReminder as (typeof validReminderOptions)[number])
         ? (rawReminder as (typeof validReminderOptions)[number])
-        : ((existingSettings as { whatsappReminderOption?: string })?.whatsappReminderOption as (typeof validReminderOptions)[number]) || "48";
+        : ((existingSettings.whatsappReminderOption as (typeof validReminderOptions)[number]) || "48");
+
+    const depositPercent = typeof body.depositPercent === "number" && body.depositPercent >= 0 && body.depositPercent <= 1
+      ? body.depositPercent
+      : typeof body.depositPercent === "string"
+        ? Math.min(1, Math.max(0, parseFloat(body.depositPercent) || 0) / 100)
+        : (typeof existingSettings.depositPercent === "number" ? existingSettings.depositPercent : 0);
+
+    const refundPolicyMessage = typeof body.refundPolicyMessage === "string"
+      ? body.refundPolicyMessage.trim()
+      : (typeof existingSettings.refundPolicyMessage === "string" ? existingSettings.refundPolicyMessage : "");
+
+    const manualTurnConfirmation = typeof body.manualTurnConfirmation === "boolean"
+      ? body.manualTurnConfirmation
+      : (typeof existingSettings.manualTurnConfirmation === "boolean" ? existingSettings.manualTurnConfirmation : false);
+
+    const minAnticipation = typeof body.minAnticipation === "number" && body.minAnticipation >= 0
+      ? body.minAnticipation
+      : typeof body.minAnticipation === "string"
+        ? Math.max(0, parseInt(body.minAnticipation, 10) || 0)
+        : (typeof existingSettings.minAnticipation === "number" ? existingSettings.minAnticipation : 0);
+
+    const maxAnticipation = typeof body.maxAnticipation === "number"
+      ? body.maxAnticipation
+      : typeof body.maxAnticipation === "string"
+        ? (body.maxAnticipation === "-1" ? -1 : parseInt(body.maxAnticipation, 10) || 30)
+        : (typeof existingSettings.maxAnticipation === "number" ? existingSettings.maxAnticipation : 30);
 
     const settings = {
-      notifications: {
-        whatsapp: notifications.whatsapp ?? false,
-        sms: notifications.sms ?? false,
-        email: notifications.email ?? false,
-      },
+      isActive,
+      notifications,
       cancelationLimit,
       patientLabel,
       professionalLabel,
-      cancellationPolicy: cancellationPolicy || (existingSettings as { cancellationPolicy?: string }).cancellationPolicy || "",
+      cancellationPolicy,
       whatsappReminderOption,
+      depositPercent,
+      refundPolicyMessage,
+      manualTurnConfirmation,
+      minAnticipation,
+      maxAnticipation,
     };
 
     await collection.updateOne(

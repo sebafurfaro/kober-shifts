@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { getTenantFeatures, getTenantFeatureFlagsAndLimits } from "@/lib/tenant-features";
-import { countProfessionals } from "@/lib/db";
+import { countStaffUsers } from "@/lib/db";
 
 /**
  * GET /api/plataforma/[tenantId]/features
@@ -22,7 +22,7 @@ export async function GET(
     const [legacyFeatures, flagsAndLimits, usedUsers] = await Promise.all([
       getTenantFeatures(tenantId),
       getTenantFeatureFlagsAndLimits(tenantId),
-      countProfessionals(tenantId),
+      countStaffUsers(tenantId),
     ]);
     return NextResponse.json({
       ...legacyFeatures,

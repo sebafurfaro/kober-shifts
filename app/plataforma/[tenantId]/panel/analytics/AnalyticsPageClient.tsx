@@ -79,7 +79,6 @@ export default function AnalyticsPageClient() {
 
   return (
     <div className="lg:max-w-7xl w-full mx-auto mt-8 px-4">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Métricas</h1>
       {metricsLoading ? (
         <div className="flex justify-center items-center py-16">
           <Spinner size="lg" />

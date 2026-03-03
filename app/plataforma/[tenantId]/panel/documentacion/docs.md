@@ -18,52 +18,7 @@ Una vez abierto el formulario, deberás completar los siguientes campos:
 
 Luego, hacé clic en **Crear**. ¡Y listo! Ya tenés tu negocio creado en Empreturnos.
 
-# Configuración básica para comenzar a recibir reservas
-
-{% stepper %}
-{% step %}
-
-### Agregá una sucursal
-
-Una sucursal es la **ubicación física donde vas a brindar tus servicios presenciales**. Necesitas al menos una sucursal para agregar profesionales.
-{% endstep %}
-
-{% step %}
-
-### Agregá un profesional
-
-El siguiente paso es agregar un profesional, quien **será la persona que brinde los servicios** y tenga **su propia agenda de turnos**. Si trabajas de forma independiente, agregate a vos como profesional. Si tenés un equipo, podes agregar a todos.
-{% endstep %}
-
-{% step %}
-
-### Configurá el horario de atención
-
-Una vez creado el profesional, configurá su horario semanal de atención, este es **el horario regular en el cual se van a brindar los turnos**, por ejemplo: De Lunes a Viernes de 10:00 a 20:00 horas. Cada profesional tiene su propio horario de atención.
-{% endstep %}
-
-{% step %}
-
-### Agregá un servicio
-
-Una vez agregado el profesional y configurado su horario de atención, **creá un servicio**. Los servicios son aquellos que **se van a mostrar disponibles para reservar dentro de la agenda de turnos del profesional**, en el horario que configuraste previamente.
-{% endstep %}
-
-{% step %}
-
-### Activá el negocio
-
-Una vez que tenemos la sucursal, profesional y su horario de atención y un servicio, el siguiente paso es **asegurarse que el negocio se encuentre activo**, cuando un negocio esta activo significa que esta **disponible para recibir reservas**.
-{% endstep %}
-
-{% step %}
-
-### Compartí tu link de reservas
-
-Finalmente, **copia y compartí tu link de reservas** en tu **bio de Instagram**, en tu respuesta automática de **WhatsApp**, o compartilo con tus clientes para que puedan consultar tus servicios, horarios de atención y sacar turnos.
-{% endstep %}
-{% endstepper %}
-
+U
 A continuación vas a ver **en detalle cada uno de los pasos** con imágenes para que **puedas replicarlo en tu negocio** :tada:.\
 \
 Hace click en el botón de abajo para navegar a la siguiente sección: "**Primer paso: agregá una sucursal**".

@@ -459,6 +459,16 @@ export async function countProfessionals(tenantId: string): Promise<number> {
   return result.length > 0 ? Number(result[0].count) : 0;
 }
 
+/** Cuenta colaboradores del tenant (ADMIN, PROFESSIONAL, SUPERVISOR) que consumen el límite de usuarios. */
+export async function countStaffUsers(tenantId: string): Promise<number> {
+  const [rows] = await mysql.execute(
+    "SELECT COUNT(*) as count FROM users WHERE role IN ('ADMIN','PROFESSIONAL','SUPERVISOR') AND tenantId = ?",
+    [tenantId]
+  );
+  const result = rows as { count: number }[];
+  return result.length > 0 ? Number(result[0].count) : 0;
+}
+
 export async function findUsersWithProfessionalProfile(tenantId: string): Promise<(User & { professional: (ProfessionalProfile & { specialty: Specialty | null; specialties: Specialty[] }) | null })[]> {
   // Users with a professional profile (any role: ADMIN, PROFESSIONAL, SUPERVISOR can have a profile)
   const [profileRows] = await mysql.execute(

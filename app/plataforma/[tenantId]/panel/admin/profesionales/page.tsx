@@ -211,10 +211,11 @@ export default function AdminProfesionalesPage() {
             >
               {professionalsWithProfile.map((professional) => {
                 const color = professional.color || professional.professional?.color || "#2196f3";
-                const initials = professional.name
+                const name = professional.name ?? "";
+                const initials = name
                   .split(" ")
-                  .filter(n => n.length > 0)
-                  .map((n) => n[0])
+                  .filter((n: string) => n.length > 0)
+                  .map((n: string) => n[0])
                   .join("")
                   .toUpperCase()
                   .slice(0, 2);
@@ -256,12 +257,12 @@ export default function AdminProfesionalesPage() {
                     </TableCell>
                     <TableCell>
                       <p className="text-sm font-medium text-gray-900">
-                        {professional.name}
+                        {name}
                       </p>
                     </TableCell>
                     <TableCell>
                       <p className="text-sm text-gray-600">
-                        {professional.email}
+                        {professional.email ?? ""}
                       </p>
                     </TableCell>
                     <TableCell>

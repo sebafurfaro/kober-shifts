@@ -89,10 +89,15 @@ export default function ProfessionalAddPage() {
             }
 
             const data = await res.json();
-            router.push(`/plataforma/${tenantId}/panel/admin/profesionales/${data.id}/edit`);
+            const id = data?.id ?? data?.userId;
+            if (!id) {
+                setSubmitError("La respuesta del servidor no incluyó el ID del profesional. Volvé a la lista y verificá que se haya creado.");
+                return;
+            }
+            router.push(`/plataforma/${tenantId}/panel/admin/profesionales/${id}/edit`);
             router.refresh();
         } catch (error: any) {
-            setSubmitError(error.message);
+            setSubmitError(error?.message ?? "Error al crear el profesional");
         } finally {
             setSubmitting(false);
         }
