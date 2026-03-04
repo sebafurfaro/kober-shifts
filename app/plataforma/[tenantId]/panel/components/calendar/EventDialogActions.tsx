@@ -7,7 +7,6 @@ interface EventDialogData {
   patientId?: string;
   professionalId?: string;
   locationId?: string;
-  specialtyId?: string;
   notes?: string;
 }
 

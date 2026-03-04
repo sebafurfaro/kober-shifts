@@ -35,7 +35,6 @@ interface AppointmentRow {
   patient: { id: string; name: string; firstName?: string | null; lastName?: string | null; email: string; phone?: string | null };
   professional: { id: string; name: string; email: string };
   location: { id: string; name: string; address: string };
-  specialty: { id: string; name: string };
   service: { id: string; name: string; price: number; seniaPercent: number; seniaAmount: number | null } | null;
 }
 

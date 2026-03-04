@@ -25,6 +25,7 @@ import { ConfirmationDialog } from "./alerts/ConfirmationDialog";
 import { AlertDialog } from "./alerts/AlertDialog";
 import { useCreateAppointment } from "@/lib/use-create-appointment";
 import { useAppointmentsInvalidationStore } from "@/lib/appointments-invalidation-store";
+import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
 
 type ViewType = "dayGridMonth" | "timeGridWeek" | "timeGridDay";
 
@@ -43,8 +44,6 @@ interface CalendarEvent {
     locationId?: string;
     locationName?: string;
     locationAddress?: string;
-    specialtyId?: string;
-    specialtyName?: string;
     status?: string;
     notes?: string | null;
     googleEventId?: string | null;
@@ -70,7 +69,6 @@ interface EventDialogData {
   patientId?: string;
   professionalId?: string;
   locationId?: string;
-  specialtyId?: string;
   notes?: string;
 }
 
@@ -81,6 +79,7 @@ export function Calendar() {
   const tenantId = params.tenantId as string;
   const { createAppointment: createAppointmentApi } = useCreateAppointment(tenantId);
   const invalidateAppointments = useAppointmentsInvalidationStore((s) => s.invalidate);
+  const defaultSlotDurationMinutes = useTenantSettingsStore((s) => s.bookingSettings.defaultSlotDurationMinutes) ?? 30;
   const calendarRef = useRef<FullCalendar>(null);
   const [currentView, setCurrentView] = useState<ViewType>("dayGridMonth");
   const [timezone, setTimezone] = useState<string>(BUENOS_AIRES_TIMEZONE);
@@ -96,7 +95,6 @@ export function Calendar() {
   const [patients, setPatients] = useState<any[]>([]);
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
-  const [specialties, setSpecialties] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -224,11 +222,10 @@ export function Calendar() {
   async function loadInitialData() {
     if (!tenantId) return;
     try {
-      const [patientsRes, professionalsRes, locationsRes, specialtiesRes] = await Promise.all([
+      const [patientsRes, professionalsRes, locationsRes] = await Promise.all([
         fetch(`/api/plataforma/${tenantId}/admin/patients`).catch(() => null),
         fetch(`/api/plataforma/${tenantId}/admin/professionals`).catch(() => null),
         fetch(`/api/plataforma/${tenantId}/admin/locations`).catch(() => null),
-        fetch(`/api/plataforma/${tenantId}/admin/specialties`).catch(() => null),
       ]);
 
       if (patientsRes?.ok) {
@@ -245,9 +242,6 @@ export function Calendar() {
             email: p.email,
             // Only store holidays from availabilityConfig, not the entire config
             holidays: p.professional?.availabilityConfig?.holidays || [],
-            specialtyId: p.professional?.specialtyId || null,
-            specialty: p.professional?.specialty || null,
-            specialtyIds: p.professional?.specialtyIds || (p.professional?.specialtyId ? [p.professional.specialtyId] : []),
             availableDays: p.professional?.availableDays || null,
             availableHours: p.professional?.availableHours || null,
             availabilityConfig: p.professional?.availabilityConfig || null,
@@ -258,10 +252,6 @@ export function Calendar() {
       if (locationsRes?.ok) {
         const data = await locationsRes.json();
         setLocations(Array.isArray(data) ? data : []);
-      }
-      if (specialtiesRes?.ok) {
-        const data = await specialtiesRes.json();
-        setSpecialties(Array.isArray(data) ? data : []);
       }
     } catch (error) {
       console.error("Error loading initial data:", error);
@@ -439,7 +429,6 @@ export function Calendar() {
       patientId: event.extendedProps?.patientId,
       professionalId: event.extendedProps?.professionalId,
       locationId: event.extendedProps?.locationId,
-      specialtyId: event.extendedProps?.specialtyId,
       notes: event.extendedProps?.notes || undefined,
     });
     setEventDialogOpen(true);
@@ -476,9 +465,8 @@ export function Calendar() {
     }
 
     const startDate = fullCalendarDateToLocal(baseDate);
-    const defaultDurationMinutes = 30;
     const endDate = new Date(startDate);
-    endDate.setUTCMinutes(endDate.getUTCMinutes() + defaultDurationMinutes);
+    endDate.setUTCMinutes(endDate.getUTCMinutes() + defaultSlotDurationMinutes);
 
     setEventDialogData({
       start: startDate,
@@ -516,11 +504,9 @@ export function Calendar() {
         startDate.setUTCHours(9, 0, 0, 0);
       }
 
-      // Set default duration (30 minutes)
-      // The end date is created from the start date to maintain timezone consistency
-      const defaultDurationMinutes = 30;
+      // Set default duration from tenant settings
       const endDate = new Date(startDate);
-      endDate.setUTCMinutes(endDate.getUTCMinutes() + defaultDurationMinutes);
+      endDate.setUTCMinutes(endDate.getUTCMinutes() + defaultSlotDurationMinutes);
 
       // Set event dialog data with the captured times
       // These dates will be displayed in the modal using formatForDateTimeLocal
@@ -796,7 +782,6 @@ export function Calendar() {
                 patients={patients}
                 professionals={professionals}
                 locations={locations}
-                specialties={specialties}
                 timezone={timezone}
                 statusColors={statusColors}
                 statusLabels={statusLabels}
@@ -850,8 +835,6 @@ export function Calendar() {
 
                   // Default section visibility
                   const showLocations = true;
-                  const showSpecialties = true;
-
                   // Validate required fields (only those that are visible)
                   if (!eventDialogData.patientId || !eventDialogData.professionalId) {
                     setAlertDialog({
@@ -866,15 +849,6 @@ export function Calendar() {
                     setAlertDialog({
                       open: true,
                       message: "Por favor seleccione una ubicación",
-                      type: "warning",
-                    });
-                    return;
-                  }
-
-                  if (showSpecialties && !eventDialogData.specialtyId) {
-                    setAlertDialog({
-                      open: true,
-                      message: "Por favor seleccione una especialidad",
                       type: "warning",
                     });
                     return;
@@ -978,7 +952,6 @@ export function Calendar() {
                           patientId: eventDialogData.patientId!,
                           professionalId: eventDialogData.professionalId!,
                           locationId: showLocations ? eventDialogData.locationId ?? null : null,
-                          specialtyId: showSpecialties ? eventDialogData.specialtyId ?? null : null,
                           startAt: serializeBATimeAsUTC(eventDialogData.start),
                           endAt: serializeBATimeAsUTC(eventDialogData.end),
                           notes: eventDialogData.notes || null,
@@ -1006,7 +979,6 @@ export function Calendar() {
                             patientId: eventDialogData.patientId,
                             professionalId: eventDialogData.professionalId,
                             locationId: showLocations ? eventDialogData.locationId : null,
-                            specialtyId: showSpecialties ? eventDialogData.specialtyId : null,
                             startAt: serializeBATimeAsUTC(eventDialogData.start),
                             endAt: serializeBATimeAsUTC(eventDialogData.end),
                             notes: eventDialogData.notes || null,

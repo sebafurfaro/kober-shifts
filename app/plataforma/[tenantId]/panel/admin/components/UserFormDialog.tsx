@@ -20,8 +20,6 @@ import { ColorPicker } from "./ColorPicker";
 interface UserFormData {
   name: string;
   email: string;
-  specialtyId?: string;
-  specialtyIds?: string[];
   tempPassword?: string;
   color?: string;
   availableDays?: number[];
@@ -38,13 +36,10 @@ interface UserFormDialogProps {
     id?: string;
     name?: string;
     email?: string;
-    specialtyId?: string;
-    specialtyIds?: string[];
     color?: string | null;
     availableDays?: number[];
     availableHours?: { start: string; end: string } | null;
   };
-  specialties?: Array<{ id: string; name: string }>;
   loading?: boolean;
 }
 
@@ -55,14 +50,11 @@ export function UserFormDialog({
   mode,
   userType,
   initialData,
-  specialties = [],
   loading = false,
 }: UserFormDialogProps) {
   const [formData, setFormData] = React.useState<UserFormData>({
     name: initialData?.name || "",
     email: initialData?.email || "",
-    specialtyId: initialData?.specialtyId || "",
-    specialtyIds: initialData?.specialtyIds || (initialData?.specialtyId ? [initialData.specialtyId] : []),
     tempPassword: "",
     color: initialData?.color || "#2196f3",
     availableDays: initialData?.availableDays || [],
@@ -78,8 +70,6 @@ export function UserFormDialog({
       setFormData({
         name: initialData?.name || "",
         email: initialData?.email || "",
-        specialtyId: initialData?.specialtyId || "",
-        specialtyIds: initialData?.specialtyIds || (initialData?.specialtyId ? [initialData.specialtyId] : []),
         tempPassword: "",
         color: initialData?.color || "#2196f3",
         availableDays: initialData?.availableDays || [],
@@ -107,10 +97,6 @@ export function UserFormDialog({
     }
 
     if (userType === "professional") {
-      if (!formData.specialtyIds || formData.specialtyIds.length === 0) {
-        newErrors.specialtyIds = "Al menos una especialidad es requerida";
-      }
-
       // Password required only on create, or if provided on edit
       if (mode === "create" && !formData.tempPassword) {
         newErrors.tempPassword = "La contraseña temporal es requerida";
@@ -139,8 +125,6 @@ export function UserFormDialog({
       };
 
       if (userType === "professional") {
-        submitData.specialtyIds = formData.specialtyIds || [];
-        submitData.specialtyId = formData.specialtyIds && formData.specialtyIds.length > 0 ? formData.specialtyIds[0] : "";
         submitData.color = formData.color || "#2196f3";
         submitData.availableDays = formData.availableDays && formData.availableDays.length > 0 ? formData.availableDays : undefined;
         submitData.availableHours = formData.availableHours || undefined;
@@ -231,34 +215,6 @@ export function UserFormDialog({
 
               {userType === "professional" && (
                 <>
-                  <Select
-                    label="Especialidades"
-                    selectionMode="multiple"
-                    selectedKeys={formData.specialtyIds || []}
-                    onSelectionChange={(keys) => {
-                      const selected = Array.from(keys) as string[];
-                      setFormData((prev) => ({ ...prev, specialtyIds: selected }));
-                      if (errors.specialtyIds) {
-                        setErrors((prev) => ({ ...prev, specialtyIds: undefined }));
-                      }
-                      setSubmitError(null);
-                    }}
-                    isInvalid={!!errors.specialtyIds}
-                    errorMessage={errors.specialtyIds}
-                    isRequired
-                    isDisabled={loading}
-                    classNames={{
-                      value: "text-slate-800",
-                      popoverContent: "text-slate-800",
-                    }}
-                  >
-                    {specialties.map((specialty) => (
-                      <SelectItem key={specialty.id} value={specialty.id} className="text-slate-800">
-                        {specialty.name}
-                      </SelectItem>
-                    ))}
-                  </Select>
-
                   <div>
                     <p className="text-sm font-medium mb-2 text-gray-700">
                       Color para Calendario

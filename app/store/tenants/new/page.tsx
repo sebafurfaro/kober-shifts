@@ -13,7 +13,6 @@ export default function StoreTenantCreatePage() {
     id?: string;
     logoUrl?: string;
     features?: {
-      show_specialties: boolean;
       show_coverage: boolean;
       show_mercado_pago: boolean;
       calendar: boolean;

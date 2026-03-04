@@ -31,7 +31,6 @@ interface Appointment {
   patientName: string;
   patientEmail: string;
   locationName: string;
-  specialtyName: string;
   startAt: string;
   endAt: string;
   status: string;

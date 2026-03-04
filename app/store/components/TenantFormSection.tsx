@@ -14,7 +14,6 @@ import { Eye, EyeOff } from "lucide-react";
 import { useTenantAdminCredentialsStore } from "@/lib/tenant-admin-credentials-store";
 
 export interface TenantFormFeatures {
-  show_specialties: boolean;
   show_coverage: boolean;
   show_mercado_pago: boolean;
   calendar: boolean;
@@ -45,7 +44,6 @@ const defaultFormData: TenantFormData = {
   id: "",
   logoUrl: "",
   features: {
-    show_specialties: true,
     show_coverage: true,
     show_mercado_pago: true,
     calendar: true,
@@ -293,29 +291,6 @@ export function TenantFormSection({ onSubmit }: TenantFormSectionProps) {
           <div>
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Feature flags</h3>
             <div className="space-y-3 flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-slate-800">Mostrar especialidades</span>
-                <Button
-                  variant={formData.features?.show_specialties ?? true ? "solid" : "bordered"}
-                  color={
-                    formData.features?.show_specialties ?? true
-                      ? "success"
-                      : ("info" as "primary")
-                  }
-                  isDisabled={loading}
-                  onPress={() =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      features: {
-                        ...prev.features!,
-                        show_specialties: !(prev.features?.show_specialties ?? true),
-                      },
-                    }))
-                  }
-                >
-                  {formData.features?.show_specialties ?? true ? "Habilitado" : "Deshabilitado"}
-                </Button>
-              </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-slate-800">Mostrar coberturas</span>
                 <Button

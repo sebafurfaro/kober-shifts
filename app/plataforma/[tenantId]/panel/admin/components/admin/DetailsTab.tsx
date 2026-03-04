@@ -12,7 +12,7 @@ export const DetailsTab = () => {
   const [copied, setCopied] = useState(false);
   const [baseUrl, setBaseUrl] = useState("");
   const [alertOpen, setAlertOpen] = useState(false);
-  const [isActive, setIsActive] = useState(true);
+  const [isActive, setIsActive] = useState(false);
   const [saving, setSaving] = useState(false);
   const params = useParams();
   const tenantId = params.tenantId as string;

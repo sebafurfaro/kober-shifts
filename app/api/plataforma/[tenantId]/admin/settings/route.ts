@@ -46,6 +46,8 @@ export async function GET(
       manualTurnConfirmation: false,
       minAnticipation: 0,
       maxAnticipation: 30,
+      defaultSlotDurationMinutes: 30,
+      defaultSlotMarginMinutes: 0,
     };
 
     const merged = { ...defaultSettings, ...settings?.settings };
@@ -146,6 +148,18 @@ export async function PUT(
         ? (body.maxAnticipation === "-1" ? -1 : parseInt(body.maxAnticipation, 10) || 30)
         : (typeof existingSettings.maxAnticipation === "number" ? existingSettings.maxAnticipation : 30);
 
+    const defaultSlotDurationMinutes = typeof body.defaultSlotDurationMinutes === "number" && body.defaultSlotDurationMinutes > 0
+      ? body.defaultSlotDurationMinutes
+      : typeof body.defaultSlotDurationMinutes === "string"
+        ? Math.max(1, parseInt(body.defaultSlotDurationMinutes, 10) || 30)
+        : (typeof existingSettings.defaultSlotDurationMinutes === "number" ? existingSettings.defaultSlotDurationMinutes : 30);
+
+    const defaultSlotMarginMinutes = typeof body.defaultSlotMarginMinutes === "number" && body.defaultSlotMarginMinutes >= 0
+      ? body.defaultSlotMarginMinutes
+      : typeof body.defaultSlotMarginMinutes === "string"
+        ? Math.max(0, parseInt(body.defaultSlotMarginMinutes, 10) || 0)
+        : (typeof existingSettings.defaultSlotMarginMinutes === "number" ? existingSettings.defaultSlotMarginMinutes : 0);
+
     const settings = {
       isActive,
       notifications,
@@ -159,6 +173,8 @@ export async function PUT(
       manualTurnConfirmation,
       minAnticipation,
       maxAnticipation,
+      defaultSlotDurationMinutes,
+      defaultSlotMarginMinutes,
     };
 
     await collection.updateOne(

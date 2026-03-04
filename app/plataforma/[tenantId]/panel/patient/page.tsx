@@ -30,7 +30,6 @@ interface Appointment {
   id: string;
   professionalName: string;
   locationName: string;
-  specialtyName: string;
   startAt: string;
   endAt: string;
   status: string;

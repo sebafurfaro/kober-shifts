@@ -35,8 +35,8 @@ export function PanelLayoutShell({
   const [isMobile, setIsMobile] = React.useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false);
   const [calendarEnabled, setCalendarEnabled] = React.useState(true);
-  const [showSpecialties, setShowSpecialties] = React.useState(true);
   const [showCoverage, setShowCoverage] = React.useState(true);
+  const [usage, setUsage] = React.useState<{ used: number; max: number } | null>(null);
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [asideWidth, setAsideWidth] = React.useState(DRAWER_WIDTH);
   const { patientLabel, professionalLabel } = useTenantLabels();
@@ -59,28 +59,35 @@ export function PanelLayoutShell({
   }, [mounted]);
 
   React.useEffect(() => {
+    let cancelled = false;
     async function loadFeatures() {
       try {
         const res = await fetch(`/api/plataforma/${currentTenantId}/features`, {
           credentials: "include",
         });
+        if (cancelled) return;
         if (res.ok) {
           const features = await res.json();
           setCalendarEnabled(features.calendar ?? true);
-          setShowSpecialties(features.show_specialties ?? true);
           setShowCoverage(features.show_coverage ?? true);
+          const used = typeof features.usedUsers === "number" ? features.usedUsers : 0;
+          const max = typeof features.maxUsers === "number" ? features.maxUsers : 0;
+          setUsage({ used, max });
         } else {
           setCalendarEnabled(true);
-          setShowSpecialties(true);
           setShowCoverage(true);
+          setUsage(null);
         }
       } catch (error) {
-        setCalendarEnabled(true);
-        setShowSpecialties(true);
-        setShowCoverage(true);
+        if (!cancelled) {
+          setCalendarEnabled(true);
+          setShowCoverage(true);
+          setUsage(null);
+        }
       }
     }
     loadFeatures();
+    return () => { cancelled = true; };
   }, [currentTenantId]);
 
   // Load translations when component mounts
@@ -92,12 +99,6 @@ export function PanelLayoutShell({
   const base = `/plataforma/${currentTenantId}/panel`;
 
   const gestionItems = [
-    {
-      label: "Especialidades",
-      href: `${base}/admin/specialties`,
-      icon: <FolderTree className="w-5 h-5" />,
-      show: showSpecialties,
-    },
     {
       label: "Sedes",
       href: `${base}/admin/locations`,
@@ -166,6 +167,7 @@ export function PanelLayoutShell({
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
         onWidthChange={setAsideWidth}
+        usage={usage}
       />
 
       {/* Main Content */}

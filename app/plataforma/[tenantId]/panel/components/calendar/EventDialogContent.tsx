@@ -45,8 +45,6 @@ interface CalendarEvent {
     locationId?: string;
     locationName?: string;
     locationAddress?: string;
-    specialtyId?: string;
-    specialtyName?: string;
     status?: string;
     notes?: string | null;
     googleEventId?: string | null;
@@ -70,7 +68,6 @@ interface EventDialogData {
   patientId?: string;
   professionalId?: string;
   locationId?: string;
-  specialtyId?: string;
   notes?: string;
 }
 
@@ -82,7 +79,6 @@ interface EventDialogContentProps {
   patients: any[];
   professionals: any[];
   locations: any[];
-  specialties: any[];
   timezone: string;
   statusColors: Record<string, string>;
   statusLabels: Record<string, string>;
@@ -96,22 +92,11 @@ export function EventDialogContent({
   patients,
   professionals,
   locations,
-  specialties,
   timezone,
   statusColors,
   statusLabels,
 }: EventDialogContentProps) {
   const showLocations = true;
-  const showSpecialties = true;
-
-  // Filter specialties based on selected professional
-  const selectedProfessional = professionals.find(p => String(p.id) === String(eventDialogData?.professionalId));
-  // Get specialty IDs from professional (support both single and multiple specialties)
-  const professionalSpecialtyIds = selectedProfessional?.specialtyIds ||
-    (selectedProfessional?.specialtyId ? [selectedProfessional.specialtyId] : []);
-  const availableSpecialties = professionalSpecialtyIds.length > 0
-    ? specialties.filter(s => professionalSpecialtyIds.some((id: string | number) => String(id) === String(s.id)))
-    : specialties;
 
   // Memoize selectedKeys to prevent unnecessary re-renders
   const patientSelectedKeys = useMemo(() => {
@@ -121,10 +106,6 @@ export function EventDialogContent({
   const professionalSelectedKeys = useMemo(() => {
     return eventDialogData?.professionalId ? [String(eventDialogData.professionalId)] : [];
   }, [eventDialogData?.professionalId]);
-
-  const specialtySelectedKeys = useMemo(() => {
-    return eventDialogData?.specialtyId ? [String(eventDialogData.specialtyId)] : [];
-  }, [eventDialogData?.specialtyId]);
 
   const locationSelectedKeys = useMemo(() => {
     return eventDialogData?.locationId ? [String(eventDialogData.locationId)] : [];
@@ -256,10 +237,6 @@ export function EventDialogContent({
           )}
         </div>
         <div>
-          <p className="text-xs text-gray-500 mb-1">Especialidad</p>
-          <p className="text-sm font-medium">{selectedEvent.extendedProps?.specialtyName || "N/A"}</p>
-        </div>
-        <div>
           <p className="text-xs text-gray-500 mb-1">Ubicación</p>
           <p className="text-sm font-medium">{selectedEvent.extendedProps?.locationName || "N/A"}</p>
           {selectedEvent.extendedProps?.locationAddress && (
@@ -370,20 +347,14 @@ export function EventDialogContent({
         onSelectionChange={(keys) => {
           const selected = Array.from(keys)[0] as string;
           if (selected) {
-            const newProfessional = professionals.find(p => String(p.id) === String(selected));
-            const professionalSpecialtyIds = newProfessional?.specialtyIds ||
-              (newProfessional?.specialtyId ? [newProfessional.specialtyId] : []);
-            const newSpecialtyId = professionalSpecialtyIds.length > 0 ? String(professionalSpecialtyIds[0]) : "";
             onDataChange({
               ...eventDialogData!,
               professionalId: selected,
-              specialtyId: newSpecialtyId,
             });
           } else {
             onDataChange({
               ...eventDialogData!,
               professionalId: undefined,
-              specialtyId: undefined,
             });
           }
         }}
@@ -395,29 +366,6 @@ export function EventDialogContent({
           </SelectItem>
         ))}
       </Select>
-      {showSpecialties && (
-        <Select
-          key={`specialty-${eventDialogData?.specialtyId || 'none'}`}
-          label="Especialidad"
-          selectedKeys={specialtySelectedKeys}
-          onSelectionChange={(keys) => {
-            const selected = Array.from(keys)[0] as string;
-            if (selected) {
-              onDataChange({ ...eventDialogData!, specialtyId: selected });
-            } else {
-              onDataChange({ ...eventDialogData!, specialtyId: undefined });
-            }
-          }}
-          isDisabled={!selectedProfessional || availableSpecialties.length === 0}
-          autoComplete="off"
-        >
-          {availableSpecialties.map((s) => (
-            <SelectItem key={String(s.id)}>
-              {s.name}
-            </SelectItem>
-          ))}
-        </Select>
-      )}
       {showLocations && (
         <Select
           key={`location-${eventDialogData?.locationId || 'none'}`}

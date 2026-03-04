@@ -9,7 +9,6 @@ import {
   Button,
   Card,
   CardBody,
-  Chip,
   Pagination,
   Modal,
   ModalContent,
@@ -43,8 +42,6 @@ interface Professional {
   id: string;
   name: string;
   email: string;
-  specialty?: { id: string; name: string } | null;
-  specialties: Array<{ id: string; name: string }>;
   color?: string | null;
 }
 
@@ -91,11 +88,8 @@ export default function NewAppointment() {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [specialties, setSpecialties] = useState<Specialty[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
-  const [selectedSpecialty, setSelectedSpecialty] = useState<string>("");
   const [loadingLocations, setLoadingLocations] = useState(false);
-  const [loadingSpecialties, setLoadingSpecialties] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [successDialog, setSuccessDialog] = useState<{ open: boolean; message: string }>({
     open: false,
@@ -118,7 +112,11 @@ export default function NewAppointment() {
         const res = await fetch(`/api/plataforma/${tenantId}/admin/services`, { credentials: "include" });
         if (!res.ok) throw new Error("Error al cargar servicios");
         const data = await res.json();
-        if (!cancelled) setServices(Array.isArray(data) ? data : []);
+        const list = Array.isArray(data) ? data : [];
+        if (!cancelled) {
+          setServices(list);
+          if (list.length === 0) setCurrentStep(2);
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Error al cargar servicios");
       } finally {
@@ -128,9 +126,10 @@ export default function NewAppointment() {
     return () => { cancelled = true; };
   }, [tenantId]);
 
-  // Load professionals when step 2 is active or when step 1 is complete (for enabling next)
+  // Load professionals when step 2 is active and step 1 is complete (service selected or no services)
   useEffect(() => {
-    if (currentStep < 2 || !selectedService) return;
+    if (currentStep < 2) return;
+    if (selectedService == null && services.length > 0) return;
     let cancelled = false;
     (async () => {
       try {
@@ -146,10 +145,10 @@ export default function NewAppointment() {
       }
     })();
     return () => { cancelled = true; };
-  }, [tenantId, currentStep, selectedService]);
+  }, [tenantId, currentStep, selectedService, services.length]);
 
   // Load slots when step 3 is active and professional is selected
-  const loadAvailableSlots = useCallback(async (professionalId: string) => {
+  const loadAvailableSlots = useCallback(async (professionalId: string, serviceId?: string) => {
     try {
       setLoadingSlots(true);
       setError(null);
@@ -157,8 +156,9 @@ export default function NewAppointment() {
       const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 30);
       const startDateStr = now.toISOString().split("T")[0];
       const endDateStr = endDate.toISOString().split("T")[0];
+      const serviceParam = serviceId ? `&serviceId=${encodeURIComponent(serviceId)}` : "";
       const res = await fetch(
-        `/api/plataforma/${tenantId}/appointments/available-slots?professionalId=${professionalId}&startDate=${startDateStr}&endDate=${endDateStr}`,
+        `/api/plataforma/${tenantId}/appointments/available-slots?professionalId=${professionalId}&startDate=${startDateStr}&endDate=${endDateStr}${serviceParam}`,
         { credentials: "include" }
       );
       if (!res.ok) {
@@ -176,34 +176,25 @@ export default function NewAppointment() {
   }, [tenantId]);
 
   useEffect(() => {
-    if (currentStep === 3 && professional) loadAvailableSlots(professional);
+    if (currentStep === 3 && professional) loadAvailableSlots(professional, selectedService?.id);
     else if (currentStep !== 3) setAvailableSlots([]);
-  }, [currentStep, professional, loadAvailableSlots]);
+  }, [currentStep, professional, selectedService?.id, loadAvailableSlots]);
 
-  // Load locations and specialties for confirm dialog
+  // Load locations for confirm dialog
   useEffect(() => {
     if (!tenantId) return;
     (async () => {
       try {
         setLoadingLocations(true);
-        setLoadingSpecialties(true);
-        const [locationsRes, specialtiesRes] = await Promise.all([
-          fetch(`/api/plataforma/${tenantId}/locations`, { credentials: "include" }),
-          fetch(`/api/plataforma/${tenantId}/specialties`, { credentials: "include" }),
-        ]);
+        const locationsRes = await fetch(`/api/plataforma/${tenantId}/locations`, { credentials: "include" });
         if (locationsRes.ok) {
           const data = await locationsRes.json();
           setLocations(Array.isArray(data) ? data.map((l: { id: string; name: string }) => ({ id: l.id, name: l.name })) : []);
-        }
-        if (specialtiesRes.ok) {
-          const data = await specialtiesRes.json();
-          setSpecialties(Array.isArray(data) ? data.map((s: { id: string; name: string }) => ({ id: s.id, name: s.name })) : []);
         }
       } catch {
         // ignore
       } finally {
         setLoadingLocations(false);
-        setLoadingSpecialties(false);
       }
     })();
   }, [tenantId]);
@@ -211,25 +202,19 @@ export default function NewAppointment() {
   const handleProfessionalChange = (professionalId: string) => {
     setProfessional(professionalId);
     setCurrentPage(1);
-    if (professionalId) loadAvailableSlots(professionalId);
+    if (professionalId) loadAvailableSlots(professionalId, selectedService?.id);
     else setAvailableSlots([]);
   };
 
   const handleSlotClick = (slot: AvailableSlot) => {
     setSelectedSlot(slot);
-    const selectedProfessionalObj = professionals.find((p) => p.id === professional);
-    if (selectedProfessionalObj?.specialties?.length === 1) {
-      setSelectedSpecialty(selectedProfessionalObj.specialties[0].id);
-    } else {
-      setSelectedSpecialty("");
-    }
     if (locations.length === 1) setSelectedLocation(locations[0].id);
     else setSelectedLocation("");
     setConfirmDialogOpen(true);
   };
 
   const handleConfirmAppointment = async () => {
-    if (!selectedSlot || !professional || !selectedLocation || !selectedSpecialty) {
+    if (!selectedSlot || !professional || !selectedLocation) {
       setError("Por favor completa todos los campos");
       return;
     }
@@ -239,13 +224,16 @@ export default function NewAppointment() {
     try {
       setConfirming(true);
       setError(null);
-      // Slot datetime is in local (e.g. "2025-02-02T09:00:00"). Backend expects BA time as UTC
-      // components (same as FullCalendar), so we send Date.UTC(...) so getUTCHours() = 9.
+      // Slot datetime is in local time (e.g. "2025-02-02T13:00:00" = 1pm local). Interpret as local
+      // so that toISOString() produces the correct UTC instant (e.g. 13:00 Argentina → 16:00 UTC).
       const [datePart, timePart] = selectedSlot.datetime.split("T");
       const [year, month, day] = datePart.split("-").map(Number);
-      const [hours, minutes] = timePart.split(":").map(Number);
-      const startAt = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
-      const endAt = new Date(startAt.getTime() + 45 * 60 * 1000);
+      const [hours, minutes] = (timePart || "00:00").split(":").map(Number);
+      const startAt = new Date(year, month - 1, day, hours, minutes, 0);
+      const durationMinutes = selectedService?.durationMinutes && selectedService.durationMinutes > 0
+        ? selectedService.durationMinutes
+        : 30;
+      const endAt = new Date(startAt.getTime() + durationMinutes * 60 * 1000);
 
       const response = await fetch(`/api/plataforma/${tenantId}/appointments/request`, {
         method: "POST",
@@ -254,7 +242,6 @@ export default function NewAppointment() {
         body: JSON.stringify({
           professionalId: selectedProfessionalObj.id,
           locationId: selectedLocation,
-          specialtyId: selectedSpecialty,
           startAt: startAt.toISOString(),
           endAt: endAt.toISOString(),
           ...(selectedService?.id && { serviceId: selectedService.id }),
@@ -272,8 +259,7 @@ export default function NewAppointment() {
       setConfirmDialogOpen(false);
       setSelectedSlot(null);
       setSelectedLocation("");
-      setSelectedSpecialty("");
-      if (professional) await loadAvailableSlots(professional);
+      if (professional) await loadAvailableSlots(professional, selectedService?.id);
       setError(null);
 
       if (selectedService && selectedService.price > 0 && appointmentId) {
@@ -288,7 +274,7 @@ export default function NewAppointment() {
     }
   };
 
-  const step1Complete = selectedService != null;
+  const step1Complete = selectedService != null || services.length === 0;
   const step2Complete = professional != null;
   const canGoToStep2 = step1Complete;
   const canGoToStep3 = step2Complete;
@@ -305,7 +291,7 @@ export default function NewAppointment() {
   };
 
   const goBack = () => {
-    if (currentStep === 2) {
+    if (currentStep === 2 && services.length > 0) {
       setProfessional("");
       setAvailableSlots([]);
       setCurrentStep(1);
@@ -467,10 +453,7 @@ export default function NewAppointment() {
                 >
                   {professionals.map((prof) => (
                     <SelectItem key={prof.id} textValue={prof.name}>
-                      <div className="flex items-center gap-2">
-                        <span>{prof.name}</span>
-                        {prof.specialty && <Chip size="sm">{prof.specialty.name}</Chip>}
-                      </div>
+                      {prof.name}
                     </SelectItem>
                   ))}
                 </Select>
@@ -574,20 +557,6 @@ export default function NewAppointment() {
                 </div>
                 <div className="mb-4">
                   <Select
-                    label="Especialidad"
-                    selectedKeys={selectedSpecialty ? [selectedSpecialty] : []}
-                    onSelectionChange={(keys) => setSelectedSpecialty((Array.from(keys)[0] as string) || "")}
-                    isRequired
-                    isDisabled={confirming || loadingSpecialties}
-                    classNames={{ value: "text-slate-800" }}
-                  >
-                    {(selectedProfessional.specialties?.length ? selectedProfessional.specialties : specialties).map((spec) => (
-                      <SelectItem key={spec.id} value={spec.id}>{spec.name}</SelectItem>
-                    ))}
-                  </Select>
-                </div>
-                <div className="mb-4">
-                  <Select
                     label="Ubicación"
                     selectedKeys={selectedLocation ? [selectedLocation] : []}
                     onSelectionChange={(keys) => setSelectedLocation((Array.from(keys)[0] as string) || "")}
@@ -610,7 +579,7 @@ export default function NewAppointment() {
             <Button
               color="primary"
               onPress={handleConfirmAppointment}
-              isDisabled={confirming || !selectedLocation || !selectedSpecialty}
+              isDisabled={confirming || !selectedLocation}
               isLoading={confirming}
             >
               Confirmar Turno

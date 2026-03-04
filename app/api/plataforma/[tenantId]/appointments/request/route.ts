@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { findUserById, findLocationById, findSpecialtyById, findProfessionalProfileByUserId, findGoogleOAuthTokenByUserId, createAppointment, findServiceById } from "@/lib/db";
+import { findUserById, findLocationById, findProfessionalProfileByUserId, findGoogleOAuthTokenByUserId, createAppointment, findServiceById } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { createAppointmentEvent } from "@/lib/googleCalendar";
 import { renderBasicTemplate, sendMail } from "@/lib/email";
 import { AppointmentStatus, Role } from "@/lib/types";
 import { randomUUID } from "crypto";
-import { utcToMySQLDate } from "@/lib/timezone";
+import { realUTCToMySQLDate, mysqlDateToUTC, formatInBuenosAires } from "@/lib/timezone";
 
 export async function POST(
   req: Request,
@@ -36,14 +36,13 @@ export async function POST(
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const professionalId = typeof body.professionalId === "string" ? body.professionalId : "";
   const locationId = typeof body.locationId === "string" ? body.locationId : "";
-  const specialtyId = typeof body.specialtyId === "string" ? body.specialtyId : "";
   const serviceId = typeof body.serviceId === "string" ? body.serviceId : null;
 
-  // Parse dates from ISO string and convert to MySQL format
-  const startAt = typeof body.startAt === "string" ? utcToMySQLDate(new Date(body.startAt)) : null;
-  const endAt = typeof body.endAt === "string" ? utcToMySQLDate(new Date(body.endAt)) : null;
+  // Parse dates: patient sends real UTC (e.g. 17:00 UTC = 14:00 Argentina). Store BA time in MySQL.
+  const startAt = typeof body.startAt === "string" ? realUTCToMySQLDate(new Date(body.startAt)) : null;
+  const endAt = typeof body.endAt === "string" ? realUTCToMySQLDate(new Date(body.endAt)) : null;
 
-  if (!professionalId || !locationId || !specialtyId || !startAt || !endAt) {
+  if (!professionalId || !locationId || !startAt || !endAt) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
   if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime()) || endAt <= startAt) {
@@ -54,18 +53,17 @@ export async function POST(
   if (!patient) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const professional = await findUserById(professionalId, tenantId);
-  if (!professional || professional.role !== Role.PROFESSIONAL) {
+  const professionalProfile = await findProfessionalProfileByUserId(professionalId, tenantId);
+  if (!professional || !professionalProfile) {
     return NextResponse.json({ error: "Invalid professional" }, { status: 400 });
   }
 
-  const [professionalProfile, googleOAuth, location, specialty] = await Promise.all([
-    findProfessionalProfileByUserId(professionalId, tenantId),
+  const [googleOAuth, location] = await Promise.all([
     findGoogleOAuthTokenByUserId(professionalId, tenantId),
     findLocationById(locationId, tenantId),
-    findSpecialtyById(specialtyId, tenantId),
   ]);
 
-  if (!location || !specialty) return NextResponse.json({ error: "Invalid location/specialty" }, { status: 400 });
+  if (!location) return NextResponse.json({ error: "Invalid location" }, { status: 400 });
 
   // Si el servicio tiene costo, el turno queda pendiente de seña hasta que pague
   let initialStatus = AppointmentStatus.REQUESTED;
@@ -85,7 +83,7 @@ export async function POST(
         accessToken: googleOAuth.accessToken,
         refreshToken: googleOAuth.refreshToken,
         calendarId,
-        summary: `Turno - ${specialty.name}`,
+        summary: "Turno",
         description: `Sede: ${location.name}\nPaciente: ${patient.name} (${patient.email})`,
         startAt,
         endAt,
@@ -104,7 +102,6 @@ export async function POST(
     patientId: patient.id,
     professionalId: professional.id,
     locationId: location.id,
-    specialtyId: specialty.id,
     serviceId: serviceId ?? null,
     startAt,
     endAt,
@@ -114,32 +111,30 @@ export async function POST(
     patientLastName: patient.lastName ?? null,
   });
 
-  const startIso = startAt.toISOString();
+  const startFormatted = formatInBuenosAires(mysqlDateToUTC(startAt), "dd/MM/yyyy HH:mm");
   await sendMail({
     to: patient.email,
     subject: "Turno solicitado",
-    text: `Tu turno fue solicitado.\n\nEspecialidad: ${specialty.name}\nSede: ${location.name}\nInicio: ${startIso}`,
+    text: `Tu turno fue solicitado.\n\nSede: ${location.name}\nInicio: ${startFormatted}`,
     html: renderBasicTemplate({
       title: "Turno solicitado",
       preview: "Tu turno fue solicitado.",
       body: `<p>Tu turno fue solicitado.</p>
-             <p><strong>Especialidad:</strong> ${specialty.name}<br/>
-             <strong>Sede:</strong> ${location.name}<br/>
-             <strong>Inicio:</strong> ${startIso}</p>`,
+             <p><strong>Sede:</strong> ${location.name}<br/>
+             <strong>Inicio:</strong> ${startFormatted}</p>`,
     }),
   });
   await sendMail({
     to: professional.email,
     subject: "Nuevo turno solicitado",
-    text: `Tenés un turno solicitado.\n\nPaciente: ${patient.name} (${patient.email})\nEspecialidad: ${specialty.name}\nSede: ${location.name}\nInicio: ${startIso}`,
+    text: `Tenés un turno solicitado.\n\nPaciente: ${patient.name} (${patient.email})\nSede: ${location.name}\nInicio: ${startFormatted}`,
     html: renderBasicTemplate({
       title: "Nuevo turno solicitado",
       preview: "Tenes un turno solicitado.",
       body: `<p>Tenes un turno solicitado.</p>
              <p><strong>Paciente:</strong> ${patient.name} (${patient.email})<br/>
-             <strong>Especialidad:</strong> ${specialty.name}<br/>
              <strong>Sede:</strong> ${location.name}<br/>
-             <strong>Inicio:</strong> ${startIso}</p>`,
+             <strong>Inicio:</strong> ${startFormatted}</p>`,
     }),
   });
 

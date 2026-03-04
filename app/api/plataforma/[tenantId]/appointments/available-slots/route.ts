@@ -5,7 +5,9 @@ import {
   findAppointmentsByDateRange,
   findGoogleOAuthTokenByUserId,
   findUsersWithRoleIn,
+  findServiceById,
 } from "@/lib/db";
+import { mongoClientPromise } from "@/lib/mongo";
 import { getCalendarClient } from "@/lib/googleOAuth";
 import { AppointmentStatus } from "@/lib/types";
 
@@ -30,6 +32,7 @@ export async function GET(
 
     const url = new URL(req.url);
     const professionalId = url.searchParams.get("professionalId");
+    const serviceId = url.searchParams.get("serviceId");
     const startDateStr = url.searchParams.get("startDate");
     const endDateStr = url.searchParams.get("endDate");
 
@@ -68,6 +71,31 @@ export async function GET(
       { error: "Professional not found or inactive" },
       { status: 404 }
     );
+  }
+
+  // Resolve slot duration and margin: service overrides tenant defaults
+  let appointmentDurationMinutes = 30;
+  let slotMarginMinutes = 0;
+  try {
+    const client = await mongoClientPromise;
+    const db = client.db();
+    const settingsDoc = await db.collection("tenant_settings").findOne({ tenantId });
+    const settings = (settingsDoc?.settings && typeof settingsDoc.settings === "object") ? settingsDoc.settings as Record<string, unknown> : {};
+    appointmentDurationMinutes = typeof settings.defaultSlotDurationMinutes === "number" && settings.defaultSlotDurationMinutes > 0
+      ? settings.defaultSlotDurationMinutes
+      : 30;
+    slotMarginMinutes = typeof settings.defaultSlotMarginMinutes === "number" && settings.defaultSlotMarginMinutes >= 0
+      ? settings.defaultSlotMarginMinutes
+      : 0;
+  } catch {
+    // keep defaults
+  }
+  if (serviceId) {
+    const service = await findServiceById(serviceId, tenantId);
+    if (service) {
+      if (service.durationMinutes > 0) appointmentDurationMinutes = service.durationMinutes;
+      if (service.marginMinutes >= 0) slotMarginMinutes = service.marginMinutes;
+    }
   }
 
   // Get existing appointments (both REQUESTED and CONFIRMED are considered occupied)
@@ -169,7 +197,9 @@ export async function GET(
     endDate,
     existingAppointments,
     googleEvents,
-    now
+    now,
+    appointmentDurationMinutes,
+    slotMarginMinutes
   );
 
   console.log("Generated slots count:", slots.length);
@@ -228,10 +258,13 @@ function generateAvailableSlots(
   endDate: Date,
   existingAppointments: any[],
   googleEvents: Array<{ start: Date; end: Date }>,
-  now: Date
+  now: Date,
+  appointmentDurationMinutes: number,
+  slotMarginMinutes: number
 ): Array<{ date: string; time: string; datetime: string }> {
   const slots: Array<{ date: string; time: string; datetime: string }> = [];
-  const appointmentDuration = 45; // minutes
+  const appointmentDuration = Math.max(1, appointmentDurationMinutes);
+  const slotStepMinutes = appointmentDuration + Math.max(0, slotMarginMinutes); // siguiente slot empieza después de duración + margen
   const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
   // Get holidays from availabilityConfig
@@ -357,24 +390,25 @@ function generateAvailableSlots(
             // Date is outside the slot's range, skip
             slotApplies = false;
           } else {
-            // Date is within range, check repeat pattern
+            // Date is within range, check repeat pattern.
+            // We're already in dayConfig[dayOfWeek], so currentDate is the right weekday.
             const daysDiff = Math.floor(
               (currentDateOnly.getTime() - slotFromDate.getTime()) /
                 (24 * 60 * 60 * 1000)
             );
             
             if (slot.repeat === "weekly") {
-              // For weekly: slot applies if daysDiff is a multiple of 7 (same day of week)
-              // Since we're already iterating only over the correct day of week, we just need to check the interval
-              slotApplies = daysDiff >= 0 && daysDiff % 7 === 0;
+              // Weekly: this slot (for this weekday) applies every week in range. We already
+              // filtered by day of week via dayConfig[dayOfWeek], so any date in range applies.
+              slotApplies = true;
             } else if (slot.repeat === "biweekly") {
-              // For biweekly: slot applies if daysDiff is a multiple of 14
+              // Biweekly: slot applies every 2 weeks (daysDiff multiple of 14)
               slotApplies = daysDiff >= 0 && daysDiff % 14 === 0;
             } else if (slot.repeat === "monthly") {
-              // For monthly: slot applies if the day of month matches (same day number each month)
+              // Monthly: same day number each month
               slotApplies = currentDateOnly.getDate() === slotFromDate.getDate();
             } else {
-              // No repeat or unknown repeat type: only applies on the exact fromDate
+              // No repeat or unknown: only on the exact fromDate
               slotApplies = daysDiff === 0;
             }
           }
@@ -465,7 +499,7 @@ function generateAvailableSlots(
                 slotsGeneratedForThisDate++;
               }
 
-              slotTime = new Date(slotTime.getTime() + appointmentDuration * 60 * 1000);
+              slotTime = new Date(slotTime.getTime() + slotStepMinutes * 60 * 1000);
             }
             
             const formatLocalDate = (date: Date) => {
@@ -544,7 +578,7 @@ function generateAvailableSlots(
             });
           }
 
-          slotTime = new Date(slotTime.getTime() + appointmentDuration * 60 * 1000);
+          slotTime = new Date(slotTime.getTime() + slotStepMinutes * 60 * 1000);
         }
       }
       currentDate.setDate(currentDate.getDate() + 1);

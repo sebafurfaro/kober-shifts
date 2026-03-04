@@ -27,8 +27,6 @@ export async function GET(
       id: p.id,
       name: p.name,
       email: p.email,
-      specialty: p.professional?.specialty,
-      specialties: p.professional?.specialties || [],
       color: p.professional?.color,
     }));
 
@@ -42,8 +40,6 @@ export async function GET(
           id: u.id,
           name: u.name,
           email: u.email,
-          specialty: null,
-          specialties: [],
           color: null,
         },
       ];

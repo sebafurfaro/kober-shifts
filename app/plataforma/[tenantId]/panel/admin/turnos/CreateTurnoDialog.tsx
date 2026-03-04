@@ -22,6 +22,7 @@ import {
   createIsDateUnavailableForProfessional,
   type ProfessionalAvailabilitySource,
 } from "@/lib/professional-availability";
+import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
 
 function datetimeLocalToCalendarDateTime(s: string): CalendarDateTime | null {
   if (!s || !s.trim()) return null;
@@ -46,14 +47,11 @@ type Patient = { id: string; name: string };
 type Professional = {
   id: string;
   name: string;
-  specialtyId?: string | null;
-  specialtyIds?: (string | number)[];
   availableDays?: number[] | null;
   availabilityConfig?: ProfessionalAvailabilitySource["availabilityConfig"];
 };
 type Location = { id: string; name: string; address: string };
-type Specialty = { id: string; name: string };
-type Service = { id: string; name: string };
+type Service = { id: string; name: string; durationMinutes?: number; marginMinutes?: number };
 
 interface CreateTurnoDialogProps {
   tenantId: string;
@@ -69,6 +67,7 @@ export function CreateTurnoDialog({
   onSuccess,
 }: CreateTurnoDialogProps) {
   const { createAppointment } = useCreateAppointment(tenantId);
+  const defaultSlotDurationMinutes = useTenantSettingsStore((s) => s.bookingSettings.defaultSlotDurationMinutes) ?? 30;
   const [loadingData, setLoadingData] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -76,12 +75,10 @@ export function CreateTurnoDialog({
   const [patients, setPatients] = React.useState<Patient[]>([]);
   const [professionals, setProfessionals] = React.useState<Professional[]>([]);
   const [locations, setLocations] = React.useState<Location[]>([]);
-  const [specialties, setSpecialties] = React.useState<Specialty[]>([]);
   const [services, setServices] = React.useState<Service[]>([]);
 
   const [patientId, setPatientId] = React.useState<string>("");
   const [professionalId, setProfessionalId] = React.useState<string>("");
-  const [specialtyId, setSpecialtyId] = React.useState<string>("");
   const [locationId, setLocationId] = React.useState<string>("");
   const [serviceId, setServiceId] = React.useState<string>("");
   const [startLocal, setStartLocal] = React.useState("");
@@ -89,15 +86,29 @@ export function CreateTurnoDialog({
   const [notes, setNotes] = React.useState("");
 
   const selectedProfessional = professionals.find((p) => String(p.id) === String(professionalId));
-  const professionalSpecialtyIds =
-    selectedProfessional?.specialtyIds ||
-    (selectedProfessional?.specialtyId ? [selectedProfessional.specialtyId] : []);
-  const availableSpecialties =
-    professionalSpecialtyIds.length > 0
-      ? specialties.filter((s) =>
-          professionalSpecialtyIds.some((id: string | number) => String(id) === String(s.id))
-        )
-      : specialties;
+  const selectedService = services.find((s) => String(s.id) === String(serviceId));
+  const durationMinutes = selectedService?.durationMinutes && selectedService.durationMinutes > 0
+    ? selectedService.durationMinutes
+    : defaultSlotDurationMinutes;
+
+  const addMinutesToDatetimeLocal = React.useCallback((datetimeLocal: string, minutes: number): string => {
+    const parsed = datetimeLocalToCalendarDateTime(datetimeLocal);
+    if (!parsed) return "";
+    const d = new Date(parsed.year, parsed.month - 1, parsed.day, parsed.hour, parsed.minute, 0, 0);
+    d.setMinutes(d.getMinutes() + minutes);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const hr = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    return `${y}-${m}-${day}T${hr}:${min}`;
+  }, []);
+
+  React.useEffect(() => {
+    if (startLocal && durationMinutes > 0) {
+      setEndLocal(addMinutesToDatetimeLocal(startLocal, durationMinutes));
+    }
+  }, [durationMinutes, startLocal, addMinutesToDatetimeLocal]);
 
   const availableDayNumbers = React.useMemo(
     () => getProfessionalAvailableDayNumbers(selectedProfessional ?? undefined),
@@ -125,15 +136,13 @@ export function CreateTurnoDialog({
       fetch(`/api/plataforma/${tenantId}/admin/patients`, { credentials: "include" }),
       fetch(`/api/plataforma/${tenantId}/admin/professionals`, { credentials: "include" }),
       fetch(`/api/plataforma/${tenantId}/admin/locations`, { credentials: "include" }),
-      fetch(`/api/plataforma/${tenantId}/admin/specialties`, { credentials: "include" }),
       fetch(`/api/plataforma/${tenantId}/admin/services`, { credentials: "include" }),
     ])
-      .then(async ([pRes, profRes, locRes, specRes, servRes]) => {
-        const [pData, profData, locData, specData, servData] = await Promise.all([
+      .then(async ([pRes, profRes, locRes, servRes]) => {
+        const [pData, profData, locData, servData] = await Promise.all([
           pRes.ok ? pRes.json() : [],
           profRes.ok ? profRes.json() : [],
           locRes.ok ? locRes.json() : [],
-          specRes.ok ? specRes.json() : [],
           servRes.ok ? servRes.json() : [],
         ]);
         setPatients(Array.isArray(pData) ? pData : []);
@@ -141,15 +150,12 @@ export function CreateTurnoDialog({
           ? profData.map((p: any) => ({
               id: p.id,
               name: p.name,
-              specialtyId: p.professional?.specialtyId ?? p.specialtyId ?? null,
-              specialtyIds: p.professional?.specialtyIds ?? (p.professional?.specialtyId ? [p.professional.specialtyId] : p.specialtyId ? [p.specialtyId] : []),
               availableDays: p.professional?.availableDays ?? p.availableDays ?? null,
               availabilityConfig: p.professional?.availabilityConfig ?? p.availabilityConfig ?? null,
             }))
           : [];
         setProfessionals(normalizedProfessionals);
         setLocations(Array.isArray(locData) ? locData : []);
-        setSpecialties(Array.isArray(specData) ? specData : []);
         setServices(Array.isArray(servData) ? servData : []);
       })
       .catch((e) => {
@@ -162,13 +168,6 @@ export function CreateTurnoDialog({
   const handleProfessionalChange = (keys: "all" | Set<string | number>) => {
     const selected = typeof keys === "string" ? "" : Array.from(keys)[0] as string;
     setProfessionalId(selected || "");
-    if (selected) {
-      const prof = professionals.find((p) => String(p.id) === selected);
-      const ids = prof?.specialtyIds || (prof?.specialtyId ? [prof.specialtyId] : []);
-      setSpecialtyId(ids.length ? String(ids[0]) : "");
-    } else {
-      setSpecialtyId("");
-    }
   };
 
   const handleSubmit = async () => {
@@ -190,7 +189,6 @@ export function CreateTurnoDialog({
           patientId,
           professionalId,
           locationId,
-          specialtyId: specialtyId || null,
           serviceId: serviceId || null,
           startAt: serializeBATimeAsUTC(startDate),
           endAt: serializeBATimeAsUTC(endDate),
@@ -202,7 +200,6 @@ export function CreateTurnoDialog({
             onClose();
             setPatientId("");
             setProfessionalId("");
-            setSpecialtyId("");
             setLocationId("");
             setServiceId("");
             setStartLocal("");
@@ -262,17 +259,6 @@ export function CreateTurnoDialog({
                 ))}
               </Select>
               <Select
-                label="Especialidad"
-                selectedKeys={specialtyId ? [specialtyId] : []}
-                onSelectionChange={(keys) => setSpecialtyId((Array.from(keys)[0] as string) || "")}
-                isDisabled={!selectedProfessional || availableSpecialties.length === 0}
-                autoComplete="off"
-              >
-                {availableSpecialties.map((s) => (
-                  <SelectItem key={String(s.id)}>{s.name}</SelectItem>
-                ))}
-              </Select>
-              <Select
                 label="Ubicación"
                 selectedKeys={locationId ? [locationId] : []}
                 onSelectionChange={(keys) => setLocationId((Array.from(keys)[0] as string) || "")}
@@ -306,7 +292,11 @@ export function CreateTurnoDialog({
                 label="Inicio"
                 granularity="minute"
                 value={startValue ?? undefined}
-                onChange={(value) => setStartLocal(value ? calendarDateTimeToDatetimeLocal(value as CalendarDateTime) : "")}
+                onChange={(value) => {
+                  const nextStart = value ? calendarDateTimeToDatetimeLocal(value as CalendarDateTime) : "";
+                  setStartLocal(nextStart);
+                  if (nextStart) setEndLocal(addMinutesToDatetimeLocal(nextStart, durationMinutes));
+                }}
                 isDateUnavailable={isDateUnavailable}
                 hideTimeZone
               />
@@ -314,7 +304,9 @@ export function CreateTurnoDialog({
                 label="Fin"
                 granularity="minute"
                 value={endValue ?? undefined}
-                onChange={(value) => setEndLocal(value ? calendarDateTimeToDatetimeLocal(value as CalendarDateTime) : "")}
+                onChange={(value) => {
+                  setEndLocal(value ? calendarDateTimeToDatetimeLocal(value as CalendarDateTime) : "");
+                }}
                 isDateUnavailable={isDateUnavailable}
                 hideTimeZone
               />

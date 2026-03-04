@@ -14,7 +14,6 @@ import {
 } from "@heroui/react";
 
 export interface TenantFeatureFlags {
-  show_specialties: boolean;
   show_coverage: boolean;
   show_mercado_pago: boolean;
   calendar: boolean;
@@ -48,7 +47,6 @@ interface TenantConfigDialogProps {
 }
 
 const defaultFeatures: TenantFeatureFlags = {
-  show_specialties: true,
   show_coverage: true,
   show_mercado_pago: true,
   calendar: true,
@@ -236,17 +234,6 @@ export function TenantConfigDialog({
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">Feature flags</h3>
                 <div className="space-y-3 flex flex-col gap-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm text-slate-800">Mostrar especialidades</span>
-                    <Button
-                      variant={features.show_specialties ? "solid" : "bordered"}
-                      color={features.show_specialties ? "success" : ("info" as "primary")}
-                      isDisabled={loading}
-                      onPress={() => setFeature("show_specialties", !features.show_specialties)}
-                    >
-                      {features.show_specialties ? "Habilitado" : "Deshabilitado"}
-                    </Button>
-                  </div>
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-sm text-slate-800">Mostrar coberturas</span>
                     <Button

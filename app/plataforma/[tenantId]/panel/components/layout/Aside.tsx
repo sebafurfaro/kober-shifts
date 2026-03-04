@@ -75,6 +75,8 @@ interface AsideProps {
   isCollapsed: boolean;
   setIsCollapsed: Dispatch<SetStateAction<boolean>>;
   onWidthChange: (width: number) => void;
+  /** Si se pasa, evita una segunda llamada a /features (viene del shell). */
+  usage?: { used: number; max: number } | null;
 }
 
 export function Aside({
@@ -90,13 +92,14 @@ export function Aside({
   isCollapsed,
   setIsCollapsed,
   onWidthChange,
+  usage: usageFromProp,
 }: AsideProps) {
   const [isHovered, setIsHovered] = React.useState(false);
   const [isManuallyToggled, setIsManuallyToggled] = React.useState(false);
-  const [usage, setUsage] = React.useState<{ used: number; max: number } | null>(null);
+  const [usageLocal, setUsageLocal] = React.useState<{ used: number; max: number } | null>(null);
 
   React.useEffect(() => {
-    if (!currentTenantId || role === "PATIENT") return;
+    if (usageFromProp !== undefined || !currentTenantId || role === "PATIENT") return;
     let cancelled = false;
     fetch(`/api/plataforma/${currentTenantId}/features`, { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
@@ -104,11 +107,13 @@ export function Aside({
         if (cancelled || !data) return;
         const used = typeof data.usedUsers === "number" ? data.usedUsers : 0;
         const max = typeof data.maxUsers === "number" ? data.maxUsers : 0;
-        setUsage({ used, max });
+        setUsageLocal({ used, max });
       })
-      .catch(() => { });
+      .catch(() => {});
     return () => { cancelled = true; };
-  }, [currentTenantId, role]);
+  }, [currentTenantId, role, usageFromProp]);
+
+  const usage = usageFromProp !== undefined ? usageFromProp : usageLocal;
 
   const currentWidth = React.useMemo(() => {
     if (isMobile) return mobileDrawerOpen ? DRAWER_WIDTH : 0;

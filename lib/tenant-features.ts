@@ -13,7 +13,6 @@ export interface TenantFeatures {
 
 /** Store feature flags and limits (from Store Manager) */
 export interface TenantFeatureFlagsAndLimits {
-  show_specialties: boolean;
   show_coverage: boolean;
   maxUsers: number;
 }
@@ -29,7 +28,6 @@ const defaultFeatures: TenantFeatures = {
 };
 
 const defaultFlagsAndLimits: TenantFeatureFlagsAndLimits = {
-  show_specialties: true,
   show_coverage: true,
   maxUsers: 1,
 };
@@ -125,7 +123,7 @@ export async function incrementWhatsAppUsage(tenantId: string): Promise<boolean>
 
 
 /**
- * Get store feature flags and limits from MongoDB (maxUsers, show_specialties, show_coverage)
+ * Get store feature flags and limits from MongoDB (maxUsers, show_coverage)
  */
 export async function getTenantFeatureFlagsAndLimits(tenantId: string): Promise<TenantFeatureFlagsAndLimits> {
   try {
@@ -135,13 +133,12 @@ export async function getTenantFeatureFlagsAndLimits(tenantId: string): Promise<
     const doc = await collection.findOne({ tenantId });
     const features = doc?.features && typeof doc.features === "object" ? doc.features : {};
     const limits = doc?.limits && typeof doc.limits === "object" ? doc.limits : {};
-    const raw = features as { show_specialties?: boolean; show_coverage?: boolean; disabled_payment?: boolean; payment_enabled?: boolean };
-    const show_specialties = raw.show_specialties ?? true;
+    const raw = features as { show_coverage?: boolean; disabled_payment?: boolean; payment_enabled?: boolean };
     const show_coverage = raw.show_coverage ?? true;
     const maxUsers = typeof (limits as { maxUsers?: number }).maxUsers === "number" && (limits as { maxUsers: number }).maxUsers >= 0
       ? (limits as { maxUsers: number }).maxUsers
       : defaultFlagsAndLimits.maxUsers;
-    return { show_specialties, show_coverage, maxUsers };
+    return { show_coverage, maxUsers };
   } catch (error) {
     console.error("Error fetching tenant feature flags and limits:", error);
     return defaultFlagsAndLimits;

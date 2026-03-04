@@ -140,6 +140,25 @@ export function utcToMySQLDate(utcDate: Date): Date {
 }
 
 /**
+ * Converts a real UTC Date (e.g. from patient booking with toISOString()) to a Date
+ * that stores Buenos Aires local time for MySQL. Use this when the client sends
+ * actual UTC (e.g. 17:00 UTC = 14:00 Argentina).
+ *
+ * @param utcDate - Real UTC Date (e.g. from new Date(isoString) where isoString has Z)
+ * @returns Date with BA local components as UTC components for mysql2 storage
+ */
+export function realUTCToMySQLDate(utcDate: Date): Date {
+  const baTime = toZonedTime(utcDate, BUENOS_AIRES_TIMEZONE);
+  const year = baTime.getFullYear();
+  const month = baTime.getMonth();
+  const day = baTime.getDate();
+  const hours = baTime.getHours();
+  const minutes = baTime.getMinutes();
+  const seconds = baTime.getSeconds();
+  return new Date(Date.UTC(year, month, day, hours, minutes, seconds));
+}
+
+/**
  * Converts a FullCalendar Date to a Date that represents the displayed BA time.
  * 
  * IMPORTANT: When FullCalendar has timeZone configured, the Date object returned

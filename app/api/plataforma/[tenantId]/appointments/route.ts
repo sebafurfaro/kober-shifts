@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { findAppointmentsByDateRange, findUserById, findLocationById, findSpecialtyById, findProfessionalProfileByUserId, findGoogleOAuthTokenByUserId, createAppointment } from "@/lib/db";
+import { findAppointmentsByDateRange, findUserById, findLocationById, findProfessionalProfileByUserId, findGoogleOAuthTokenByUserId, createAppointment } from "@/lib/db";
 import { createAppointmentEvent } from "@/lib/googleCalendar";
 import { AppointmentStatus, Role } from "@/lib/types";
 import { randomUUID } from "crypto";
@@ -81,7 +81,7 @@ export async function GET(
 
     return {
       id: apt.id,
-      title: `${apt.specialty.name} - ${apt.patient.name}`,
+      title: apt.patient.name,
       start: startISO,
       end: endISO,
       extendedProps: {
@@ -94,8 +94,6 @@ export async function GET(
         locationId: apt.locationId,
         locationName: apt.location.name,
         locationAddress: apt.location.address,
-        specialtyId: apt.specialtyId,
-        specialtyName: apt.specialty.name,
         status: apt.status,
         notes: apt.notes,
         googleEventId: apt.googleEventId,
@@ -123,11 +121,8 @@ export async function POST(
   const patientId = typeof body.patientId === "string" ? body.patientId : "";
   const professionalId = typeof body.professionalId === "string" ? body.professionalId : "";
   const locationId = typeof body.locationId === "string" ? body.locationId : (body.locationId === null ? null : "");
-  const specialtyId = typeof body.specialtyId === "string" ? body.specialtyId : (body.specialtyId === null ? null : "");
 
-  // Default section visibility
   const showLocations = true;
-  const showSpecialties = true;
 
   // Parse dates from ISO string and convert to MySQL format
   let startAt: Date | null = null;
@@ -154,19 +149,14 @@ export async function POST(
     return NextResponse.json({ error: "Location is required" }, { status: 400 });
   }
 
-  if (showSpecialties && !specialtyId) {
-    return NextResponse.json({ error: "Specialty is required" }, { status: 400 });
-  }
   if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime()) || endAt <= startAt) {
     return NextResponse.json({ error: "Invalid dates" }, { status: 400 });
   }
 
-  // Only fetch location and specialty if they are required
-  const [patient, professional, location, specialty, professionalProfile, googleOAuth] = await Promise.all([
+  const [patient, professional, location, professionalProfile, googleOAuth] = await Promise.all([
     findUserById(patientId, tenantId),
     findUserById(professionalId, tenantId),
     showLocations && locationId ? findLocationById(locationId, tenantId) : Promise.resolve(null),
-    showSpecialties && specialtyId ? findSpecialtyById(specialtyId, tenantId) : Promise.resolve(null),
     findProfessionalProfileByUserId(professionalId, tenantId),
     findGoogleOAuthTokenByUserId(professionalId, tenantId),
   ]);
@@ -174,14 +164,12 @@ export async function POST(
   if (!patient || patient.role !== Role.PATIENT) {
     return NextResponse.json({ error: "Invalid patient" }, { status: 400 });
   }
-  if (!professional || professional.role !== Role.PROFESSIONAL) {
+  // Aceptar cualquier usuario con perfil profesional (incl. ADMIN/SUPERVISOR con perfil), coherente con la lista del calendario
+  if (!professional || !professionalProfile) {
     return NextResponse.json({ error: "Invalid professional" }, { status: 400 });
   }
   if (showLocations && (!locationId || !location)) {
     return NextResponse.json({ error: "Invalid location" }, { status: 400 });
-  }
-  if (showSpecialties && (!specialtyId || !specialty)) {
-    return NextResponse.json({ error: "Invalid specialty" }, { status: 400 });
   }
 
   // Check for duplicate appointments (same patient, professional, date and time)
@@ -225,7 +213,7 @@ export async function POST(
         accessToken: googleOAuth.accessToken,
         refreshToken: googleOAuth.refreshToken,
         calendarId,
-        summary: `Turno${specialty ? ` - ${specialty.name}` : ""}`,
+        summary: "Turno",
         description: `${location ? `Sede: ${location.name}\n` : ""}Paciente: ${patient.name} (${patient.email})${notes ? `\nNotas: ${notes}` : ""}`,
         startAt,
         endAt,
@@ -243,7 +231,6 @@ export async function POST(
     patientId: patient.id,
     professionalId: professional.id,
     locationId: showLocations && location ? location.id : null,
-    specialtyId: showSpecialties && specialty ? specialty.id : null,
     serviceId: serviceId ?? null,
     startAt,
     endAt,

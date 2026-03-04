@@ -22,11 +22,19 @@ export interface LinkCollaboratorFormData {
   email: string;
 }
 
+export interface LinkableCollaborator {
+  id: string;
+  name: string;
+  email: string;
+}
+
 interface LinkCollaboratorAsideProps {
   open: boolean;
   onClose: () => void;
   locations: Location[];
   services: Service[];
+  /** Colaboradores que aún no tienen perfil profesional (para seleccionar con quién vincular). */
+  linkableCollaborators: LinkableCollaborator[];
   onSubmit: (data: LinkCollaboratorFormData) => Promise<void>;
   loading?: boolean;
 }
@@ -36,6 +44,7 @@ export function LinkCollaboratorAside({
   onClose,
   locations,
   services,
+  linkableCollaborators,
   onSubmit,
   loading = false,
 }: LinkCollaboratorAsideProps) {
@@ -60,10 +69,12 @@ export function LinkCollaboratorAside({
 
   const validate = (): boolean => {
     const newErrors: Partial<Record<string, string>> = {};
-    if (!formData.name.trim()) newErrors.name = "El nombre es requerido";
-    if (!formData.locationId) newErrors.locationId = "La sucursal es requerida";
-    if (formData.linkEmail && !formData.email.trim()) newErrors.email = "El correo es requerido para vincular";
-    else if (formData.linkEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = "Correo no válido";
+    if (!formData.linkEmail) {
+      if (!formData.name.trim()) newErrors.name = "El nombre es requerido";
+      if (!formData.locationId) newErrors.locationId = "La sucursal es requerida";
+    } else {
+      if (!formData.email || !String(formData.email).trim()) newErrors.email = "Seleccioná un colaborador para vincular";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -106,16 +117,15 @@ export function LinkCollaboratorAside({
               <p className="text-sm text-danger" role="alert">{submitError}</p>
             )}
             <Input
-              label="Nombre y apellido"
+              label="Nombre y apellido (opcional si vinculás un colaborador)"
               value={formData.name}
               onValueChange={(v) => setFormData((prev) => ({ ...prev, name: v }))}
               isInvalid={!!errors.name}
               errorMessage={errors.name}
-              isRequired
               classNames={{ label: "text-slate-800" }}
             />
             <Select
-              label="Sucursal"
+              label="Sucursal (opcional si vinculás un colaborador)"
               selectedKeys={formData.locationId ? [formData.locationId] : []}
               onSelectionChange={(keys) => {
                 const v = Array.from(keys)[0] as string;
@@ -123,7 +133,6 @@ export function LinkCollaboratorAside({
               }}
               isInvalid={!!errors.locationId}
               errorMessage={errors.locationId}
-              isRequired
               classNames={{ label: "text-slate-800" }}
             >
               {locations.map((loc) => (
@@ -146,27 +155,52 @@ export function LinkCollaboratorAside({
             </Select>
             <Switch
               isSelected={formData.linkEmail}
-              onValueChange={(v) => setFormData((prev) => ({ ...prev, linkEmail: v }))}
+              onValueChange={(v) => setFormData((prev) => ({ ...prev, linkEmail: v, email: v ? prev.email : "" }))}
               classNames={{ label: "text-slate-800" }}
             >
-              Vincular correo
+              Vincular con colaborador existente
             </Switch>
             {formData.linkEmail && (
-              <Input
-                label="Correo electrónico"
-                type="email"
-                value={formData.email}
-                onValueChange={(v) => setFormData((prev) => ({ ...prev, email: v }))}
-                isInvalid={!!errors.email}
-                errorMessage={errors.email}
-                description="Si el correo existe en Colaboradores, ese usuario pasará a ser profesional."
-                classNames={{ label: "text-slate-800" }}
-              />
+              <>
+                {linkableCollaborators.length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    No hay colaboradores sin perfil profesional. Creá uno en <strong>Colaboradores</strong> y volvé a intentar.
+                  </p>
+                ) : (
+                  <Select
+                    label="Colaborador a vincular"
+                    placeholder="Seleccionar colaborador"
+                    selectedKeys={formData.email ? [formData.email] : []}
+                    onSelectionChange={(keys) => {
+                      const raw = Array.from(keys)[0];
+                      const email = raw != null ? String(raw).trim() : "";
+                      if (email) setFormData((prev) => ({ ...prev, email }));
+                    }}
+                    isInvalid={!!errors.email}
+                    errorMessage={errors.email}
+                    description="El usuario seleccionado pasará a ser profesional sin perder su rol."
+                    classNames={{ label: "text-slate-800" }}
+                  >
+                    {linkableCollaborators.map((c) => (
+                      <SelectItem key={c.email} textValue={`${c.name} (${c.email})`}>
+                        {c.name} — {c.email}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                )}
+              </>
             )}
           </div>
           <div className="p-4 border-t border-gray-200 flex gap-2 justify-end">
             <Button variant="bordered" onPress={onClose} isDisabled={submitting}>Cancelar</Button>
-            <Button type="submit" color="primary" isLoading={submitting || loading} isDisabled={submitting}>Vincular</Button>
+            <Button
+              type="submit"
+              color="primary"
+              isLoading={submitting || loading}
+              isDisabled={submitting || (formData.linkEmail && linkableCollaborators.length === 0)}
+            >
+              Vincular
+            </Button>
           </div>
         </form>
       </aside>

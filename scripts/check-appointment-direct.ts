@@ -14,7 +14,7 @@ async function checkAppointment() {
   
   try {
     const [rows] = await connection.execute(
-      "SELECT id, startAt, endAt, status, patientId, professionalId, locationId, specialtyId, notes FROM appointments WHERE id = ?",
+      "SELECT id, startAt, endAt, status, patientId, professionalId, locationId, notes FROM appointments WHERE id = ?",
       [appointmentId]
     );
     
@@ -48,7 +48,6 @@ async function checkAppointment() {
     console.log("Paciente ID:", appointment.patientId);
     console.log("Profesional ID:", appointment.professionalId);
     console.log("Ubicación ID:", appointment.locationId);
-    console.log("Especialidad ID:", appointment.specialtyId);
     if (appointment.notes) {
       console.log("Notas:", appointment.notes);
     }

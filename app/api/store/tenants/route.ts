@@ -41,7 +41,6 @@ export async function POST(req: Request) {
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const logoUrl = typeof body.logoUrl === "string" ? body.logoUrl.trim() : null;
   const features = body.features as {
-    show_specialties?: boolean;
     show_coverage?: boolean;
     show_mercado_pago?: boolean;
     calendar?: boolean;
@@ -69,7 +68,6 @@ export async function POST(req: Request) {
     const collection = db.collection("tenant_features");
 
     const featureFlags = {
-      show_specialties: features?.show_specialties ?? true,
       show_coverage: features?.show_coverage ?? true,
       show_mercado_pago: features?.show_mercado_pago ?? true,
       calendar: features?.calendar ?? true,

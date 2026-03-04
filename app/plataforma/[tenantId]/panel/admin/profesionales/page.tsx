@@ -19,14 +19,6 @@ interface Professional {
   dni?: string | null;
   color?: string | null;
   professional?: {
-    specialty?: {
-      id: string;
-      name: string;
-    } | null;
-    specialties?: Array<{
-      id: string;
-      name: string;
-    }>;
     color?: string | null;
   } | null;
 }
@@ -107,25 +99,32 @@ export default function AdminProfesionalesPage() {
   }, [tenantId]);
 
   const professionalsWithProfile = React.useMemo(() => professionals.filter((p) => p.professional), [professionals]);
+  const linkableCollaborators = React.useMemo(
+    () => professionals.filter((p) => !p.professional).map((p) => ({ id: p.id, name: p.name ?? "", email: p.email ?? "" })),
+    [professionals]
+  );
   const hasNoProfessionals = professionalsWithProfile.length === 0;
   const atUserLimit = maxUsers !== null && professionals.length >= maxUsers;
 
   const handleCreate = () => {
-    if (atUserLimit) return;
     if (hasNoProfessionals) {
       setLinkAsideOpen(true);
+    } else if (atUserLimit) {
+      return;
     } else {
       router.push(`/plataforma/${tenantId}/panel/admin/profesionales/add-new`);
     }
   };
 
   const handleLinkSubmit = async (data: LinkCollaboratorFormData) => {
-    if (!data.linkEmail || !data.email.trim()) return;
+    if (!data.linkEmail) return;
+    const email = data.email != null ? String(data.email).trim().toLowerCase() : "";
+    if (!email) return;
     const res = await fetch(`/api/plataforma/${tenantId}/admin/professionals/link`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ email: data.email.trim().toLowerCase() }),
+      body: JSON.stringify({ email }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -184,7 +183,7 @@ export default function AdminProfesionalesPage() {
                 : undefined
           }
           action={
-            atUserLimit ? undefined : { label: "Agregar profesional", color: "primary", onClick: handleCreate }
+            (atUserLimit && !hasNoProfessionals) ? undefined : { label: "Agregar profesional", color: "primary", onClick: handleCreate }
           }
         />
 
@@ -289,6 +288,7 @@ export default function AdminProfesionalesPage() {
         onClose={() => setLinkAsideOpen(false)}
         locations={locations}
         services={services}
+        linkableCollaborators={linkableCollaborators}
         onSubmit={handleLinkSubmit}
       />
 

@@ -10,7 +10,6 @@ import {
   deleteAppointmentsByProfessional,
 } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
-import mysql from "@/lib/mysql";
 
 export async function GET(
   req: Request,
@@ -34,20 +33,8 @@ export async function GET(
   };
   if (!profile) return NextResponse.json(basePayload);
 
-  // Get all specialties for this professional
-  const [specialtyRows] = await mysql.execute(
-    `SELECT ps.specialtyId 
-     FROM professional_specialties ps
-     INNER JOIN specialties s ON ps.specialtyId = s.id
-     WHERE ps.userId = ? AND s.tenantId = ?`,
-    [id, tenantId]
-  );
-  const specialtyIds = (specialtyRows as any[]).map(row => row.specialtyId);
-
   return NextResponse.json({
     ...basePayload,
-    specialtyId: profile.specialtyId,
-    specialtyIds: specialtyIds.length > 0 ? specialtyIds : [profile.specialtyId],
     color: profile.color,
     licenseNumber: profile.licenseNumber,
     medicalCoverages: profile.medicalCoverages,
@@ -84,8 +71,6 @@ export async function PUT(
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : undefined;
     const dni = body.hasOwnProperty("dni") ? (typeof body.dni === "string" ? body.dni.trim() || null : null) : undefined;
     const role = body.role === "ADMIN" || body.role === "PROFESSIONAL" || body.role === "SUPERVISOR" ? body.role : undefined;
-    const specialtyId = typeof body.specialtyId === "string" ? body.specialtyId : "";
-    const specialtyIds = Array.isArray(body.specialtyIds) ? body.specialtyIds.filter((id): id is string => typeof id === "string") : (specialtyId ? [specialtyId] : []);
     const color = typeof body.color === "string" ? body.color.trim() : "#2196f3";
     const tempPassword = typeof body.tempPassword === "string" ? body.tempPassword : "";
     const licenseNumber = typeof body.licenseNumber === "string" ? body.licenseNumber.trim() : null;
@@ -114,8 +99,6 @@ export async function PUT(
     if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
     const profile = await findProfessionalProfileByUserId(id, tenantId);
-    const hasProfileFields = body.specialtyIds !== undefined || body.specialtyId !== undefined || body.color !== undefined || body.availabilityConfig !== undefined || body.availableDays !== undefined || body.availableHours !== undefined;
-    if (profile && hasProfileFields && specialtyIds.length === 0) return NextResponse.json({ error: "At least one specialty is required" }, { status: 400 });
 
     const updateData: { name: string; email?: string; dni?: string | null; role?: string; passwordHash?: string } = { name };
     if (email !== undefined) updateData.email = email;
@@ -131,13 +114,9 @@ export async function PUT(
     }
 
     const updatedUser = await updateUser(id, tenantId, updateData);
-    const profileUpdateData: { specialtyId?: string; specialtyIds?: string[]; color?: string; availableDays?: number[] | null; availableHours?: { start: string; end: string } | null } = {};
+    const profileUpdateData: { color?: string; availableDays?: number[] | null; availableHours?: { start: string; end: string } | null } = {};
 
     if (profile) {
-      if (specialtyIds.length > 0) {
-        profileUpdateData.specialtyIds = specialtyIds;
-        profileUpdateData.specialtyId = specialtyIds[0];
-      }
       if (profile.color !== color) {
         profileUpdateData.color = color;
       }
@@ -171,8 +150,6 @@ export async function PUT(
       name: updatedUser.name,
       dni: updatedUser.dni ?? undefined,
       role: updatedUser.role,
-      specialtyId: specialtyIds[0] || "",
-      specialtyIds,
       color: updatedProfile?.color || color,
       licenseNumber: updatedProfile?.licenseNumber,
       medicalCoverages: updatedProfile?.medicalCoverages,

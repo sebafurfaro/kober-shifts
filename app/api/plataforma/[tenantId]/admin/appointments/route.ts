@@ -5,7 +5,6 @@ import {
   listAppointmentsForAdminRawWithSearch,
   findUsersByIds,
   findLocationsByIds,
-  findSpecialtiesByIds,
   findServicesByIds,
 } from "@/lib/db";
 import { AppointmentStatus } from "@/lib/types";
@@ -89,26 +88,22 @@ export async function GET(
   const patientIds = [...new Set(appointmentList.map((a) => a.patientId))];
   const professionalIds = [...new Set(appointmentList.map((a) => a.professionalId))];
   const locationIds = [...new Set(appointmentList.map((a) => a.locationId))];
-  const specialtyIds = [...new Set(appointmentList.map((a) => a.specialtyId))];
   const serviceIds = [...new Set(appointmentList.map((a) => a.serviceId).filter(Boolean) as string[])];
 
-  const [users, locations, specialties, services] = await Promise.all([
+  const [users, locations, services] = await Promise.all([
     findUsersByIds(tenantId, [...patientIds, ...professionalIds]),
     findLocationsByIds(tenantId, locationIds),
-    findSpecialtiesByIds(tenantId, specialtyIds),
     findServicesByIds(tenantId, serviceIds),
   ]);
 
   const userMap = new Map(users.map((u) => [u.id, u]));
   const locationMap = new Map(locations.map((l) => [l.id, l]));
-  const specialtyMap = new Map(specialties.map((s) => [s.id, s]));
   const serviceMap = new Map(services.map((s) => [s.id, s]));
 
   const appointments = appointmentList.map((apt) => {
     const patient = userMap.get(apt.patientId);
     const professional = userMap.get(apt.professionalId);
     const location = locationMap.get(apt.locationId);
-    const specialty = specialtyMap.get(apt.specialtyId);
     const service = apt.serviceId ? serviceMap.get(apt.serviceId) : null;
     const displayFirstName = apt.patientFirstName ?? patient?.firstName ?? null;
     const displayLastName = apt.patientLastName ?? patient?.lastName ?? null;
@@ -130,7 +125,6 @@ export async function GET(
       patientId: apt.patientId,
       professionalId: apt.professionalId,
       locationId: apt.locationId,
-      specialtyId: apt.specialtyId,
       serviceId: apt.serviceId ?? null,
       notes: apt.notes,
       cancellationReason: apt.cancellationReason,
@@ -158,9 +152,6 @@ export async function GET(
       location: location
         ? { id: location.id, name: location.name, address: location.address }
         : { id: apt.locationId, name: "—", address: "" },
-      specialty: specialty
-        ? { id: specialty.id, name: specialty.name }
-        : { id: apt.specialtyId, name: "—" },
       service: service
         ? {
             id: service.id,

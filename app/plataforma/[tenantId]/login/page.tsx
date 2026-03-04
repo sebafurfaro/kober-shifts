@@ -17,11 +17,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [correctTenantId, setCorrectTenantId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setCorrectTenantId(null);
     setLoading(true);
     try {
       const res = await fetch(`/api/plataforma/${tenantId}/auth/login`, {
@@ -30,8 +32,9 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
       if (!res.ok) {
-        const json = (await res.json().catch(() => ({}))) as { error?: string };
+        const json = (await res.json().catch(() => ({}))) as { error?: string; correctTenantId?: string };
         setError(json.error ?? "Error");
+        setCorrectTenantId(json.correctTenantId ?? null);
         return;
       }
       const data = (await res.json().catch(() => ({}))) as { role?: Role };
@@ -86,7 +89,17 @@ export default function LoginPage() {
                 }}
               />
               {error ? (
-                <p className="text-sm text-danger">{error}</p>
+                <div className="space-y-1">
+                  <p className="text-sm text-danger">{error}</p>
+                  {correctTenantId ? (
+                    <Link
+                      href={`/plataforma/${correctTenantId}/login`}
+                      className="text-sm text-primary underline block"
+                    >
+                      Ir a ingresar en este tenant: /plataforma/{correctTenantId}/login
+                    </Link>
+                  ) : null}
+                </div>
               ) : null}
               <Button type="submit" color="secondary" radius="none" size="lg" isDisabled={loading} className="w-full">
                 Entrar

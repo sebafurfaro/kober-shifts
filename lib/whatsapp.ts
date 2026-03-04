@@ -1,4 +1,4 @@
-import { Appointment, User, Location, Specialty } from "@prisma/client";
+import { Appointment, User, Location } from "@prisma/client";
 import { format } from "date-fns";
 import { es } from "date-fns/locale/es";
 
@@ -29,7 +29,6 @@ export async function sendWhatsAppReminder(
     patient: User;
     professional: User;
     location: Location;
-    specialty: Specialty;
   },
   patientPhoneNumber: string,
   customMessage?: string
@@ -69,7 +68,7 @@ export async function sendWhatsAppReminder(
             parameters: [
               { type: "text", text: appointment.patient.name }, // {{1}} nombre_cliente
               { type: "text", text: appointment.location.name }, // {{2}} lugar
-              { type: "text", text: appointment.specialty.name }, // {{3}} servicio
+              { type: "text", text: "Turno" }, // {{3}} servicio (antes especialidad)
               { type: "text", text: appointment.professional.name }, // {{4}} profesional
               { type: "text", text: dateStr }, // {{5}} fecha
               { type: "text", text: timeStr }, // {{6}} hora

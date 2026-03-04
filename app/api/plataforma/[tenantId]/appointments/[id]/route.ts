@@ -6,6 +6,7 @@ import { utcToMySQLDate } from "@/lib/timezone";
 import mysql from "@/lib/mysql";
 import { randomUUID } from "crypto";
 import { renderBasicTemplate, sendMail } from "@/lib/email";
+import { mysqlDateToUTC, formatInBuenosAires } from "@/lib/timezone";
 
 async function ensurePaymentsTable() {
   await mysql.execute(`
@@ -64,7 +65,6 @@ export async function PATCH(
   const patientId = typeof body.patientId === "string" ? body.patientId : undefined;
   const professionalId = typeof body.professionalId === "string" ? body.professionalId : undefined;
   const locationId = typeof body.locationId === "string" ? body.locationId : undefined;
-  const specialtyId = typeof body.specialtyId === "string" ? body.specialtyId : undefined;
 
   const updated = await updateAppointment({
     id,
@@ -76,7 +76,6 @@ export async function PATCH(
     ...(patientId && { patientId }),
     ...(professionalId && { professionalId }),
     ...(locationId && { locationId }),
-    ...(specialtyId && { specialtyId }),
   });
 
   if (status === AppointmentStatus.CONFIRMED && appointment.status === AppointmentStatus.PENDING_DEPOSIT) {
@@ -125,8 +124,8 @@ export async function PATCH(
         const startAt = data.appointment.startAt instanceof Date
           ? data.appointment.startAt
           : new Date(data.appointment.startAt);
-        const startIso = startAt.toISOString();
-        const text = `Tu turno fue confirmado.\n\nEspecialidad: ${data.specialty.name}\nSede: ${data.location.name}\nInicio: ${startIso}`;
+        const startFormatted = formatInBuenosAires(mysqlDateToUTC(startAt), "dd/MM/yyyy HH:mm");
+        const text = `Tu turno fue confirmado.\n\nSede: ${data.location.name}\nInicio: ${startFormatted}`;
         await sendMail({
           to: data.patient.email,
           subject: "Turno confirmado",
@@ -135,23 +134,21 @@ export async function PATCH(
             title: "Turno confirmado",
             preview: "Tu turno fue confirmado.",
             body: `<p>Tu turno fue confirmado.</p>
-                   <p><strong>Especialidad:</strong> ${data.specialty.name}<br/>
-                   <strong>Sede:</strong> ${data.location.name}<br/>
-                   <strong>Inicio:</strong> ${startIso}</p>`,
+                   <p><strong>Sede:</strong> ${data.location.name}<br/>
+                   <strong>Inicio:</strong> ${startFormatted}</p>`,
           }),
         });
         await sendMail({
           to: data.professional.email,
           subject: "Turno confirmado",
-          text: `Turno confirmado.\n\nPaciente: ${data.patient.name} (${data.patient.email})\nEspecialidad: ${data.specialty.name}\nSede: ${data.location.name}\nInicio: ${startIso}`,
+          text: `Turno confirmado.\n\nPaciente: ${data.patient.name} (${data.patient.email})\nSede: ${data.location.name}\nInicio: ${startFormatted}`,
           html: renderBasicTemplate({
             title: "Turno confirmado",
             preview: "Turno confirmado.",
             body: `<p>Turno confirmado.</p>
                    <p><strong>Paciente:</strong> ${data.patient.name} (${data.patient.email})<br/>
-                   <strong>Especialidad:</strong> ${data.specialty.name}<br/>
                    <strong>Sede:</strong> ${data.location.name}<br/>
-                   <strong>Inicio:</strong> ${startIso}</p>`,
+                   <strong>Inicio:</strong> ${startFormatted}</p>`,
           }),
         });
       }

@@ -7,7 +7,6 @@ export interface CreateAppointmentBody {
   patientId: string;
   professionalId: string;
   locationId: string | null;
-  specialtyId: string | null;
   serviceId?: string | null;
   startAt: string;
   endAt: string;
@@ -48,7 +47,6 @@ export function useCreateAppointment(tenantId: string) {
           patientId: body.patientId,
           professionalId: body.professionalId,
           locationId: body.locationId,
-          specialtyId: body.specialtyId,
           serviceId: body.serviceId ?? null,
           startAt: body.startAt,
           endAt: body.endAt,

@@ -5,7 +5,7 @@ async function checkAppointment() {
   
   try {
     const [rows] = await mysql.execute(
-      "SELECT id, startAt, endAt, status, patientId, professionalId, locationId, specialtyId FROM appointments WHERE id = ?",
+      "SELECT id, startAt, endAt, status, patientId, professionalId, locationId FROM appointments WHERE id = ?",
       [appointmentId]
     );
     
@@ -41,7 +41,6 @@ async function checkAppointment() {
     console.log("Paciente ID:", appointment.patientId);
     console.log("Profesional ID:", appointment.professionalId);
     console.log("Ubicación ID:", appointment.locationId);
-    console.log("Especialidad ID:", appointment.specialtyId);
     
   } catch (error) {
     console.error("❌ Error al consultar el turno:", error);

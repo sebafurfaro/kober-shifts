@@ -30,7 +30,6 @@ interface TenantConfigSectionProps {
 }
 
 const defaultFeatures: TenantFeatureFlags = {
-  show_specialties: true,
   show_coverage: true,
   show_mercado_pago: true,
   calendar: true,
@@ -263,18 +262,6 @@ export function TenantConfigSection({
               <h3 className="text-sm font-semibold text-gray-800">Feature flags</h3>
             </div>
             <div className="space-y-3 flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-slate-800">Mostrar especialidades</span>
-                <Button
-                  variant={features.show_specialties ? "solid" : "bordered"}
-                  color={features.show_specialties ? "success" : ("info" as "primary")}
-                  isDisabled={loading}
-                  onPress={() => setFeature("show_specialties", !features.show_specialties)}
-                >
-                  {features.show_specialties ? "Habilitado" : "Deshabilitado"}
-                </Button>
-              </div>
-              <Divider className="my-2" />
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-slate-800">Mostrar coberturas</span>
                 <Button

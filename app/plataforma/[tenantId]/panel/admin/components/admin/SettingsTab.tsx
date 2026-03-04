@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useParams } from "next/navigation";
 import Typography from "@/app/components/Typography";
-import { Divider, Input, Slider, Switch, Textarea, Button } from "@heroui/react";
+import { Divider, Input, Slider, Switch, Textarea, Button, Select } from "@heroui/react";
 import { useTenantSettingsStore, type TenantBookingSettings } from "@/lib/tenant-settings-store";
 
 const defaultBooking: TenantBookingSettings = {
@@ -12,6 +12,8 @@ const defaultBooking: TenantBookingSettings = {
   manualTurnConfirmation: false,
   minAnticipation: 0,
   maxAnticipation: 30,
+  defaultSlotDurationMinutes: 30,
+  defaultSlotMarginMinutes: 0,
 };
 
 export const SettingsTab = () => {
@@ -34,6 +36,8 @@ export const SettingsTab = () => {
           manualTurnConfirmation: typeof data.manualTurnConfirmation === "boolean" ? data.manualTurnConfirmation : defaultBooking.manualTurnConfirmation,
           minAnticipation: typeof data.minAnticipation === "number" ? data.minAnticipation : defaultBooking.minAnticipation,
           maxAnticipation: typeof data.maxAnticipation === "number" ? data.maxAnticipation : defaultBooking.maxAnticipation,
+          defaultSlotDurationMinutes: typeof data.defaultSlotDurationMinutes === "number" ? data.defaultSlotDurationMinutes : defaultBooking.defaultSlotDurationMinutes,
+          defaultSlotMarginMinutes: typeof data.defaultSlotMarginMinutes === "number" ? data.defaultSlotMarginMinutes : defaultBooking.defaultSlotMarginMinutes,
         });
       })
       .catch(() => {});
@@ -54,6 +58,8 @@ export const SettingsTab = () => {
           manualTurnConfirmation: form.manualTurnConfirmation,
           minAnticipation: form.minAnticipation,
           maxAnticipation: form.maxAnticipation,
+          defaultSlotDurationMinutes: form.defaultSlotDurationMinutes,
+          defaultSlotMarginMinutes: form.defaultSlotMarginMinutes,
         }),
       });
       if (res.ok) {
@@ -65,6 +71,8 @@ export const SettingsTab = () => {
             manualTurnConfirmation: data.settings.manualTurnConfirmation,
             minAnticipation: data.settings.minAnticipation,
             maxAnticipation: data.settings.maxAnticipation,
+            defaultSlotDurationMinutes: data.settings.defaultSlotDurationMinutes,
+            defaultSlotMarginMinutes: data.settings.defaultSlotMarginMinutes,
           });
         }
       }
@@ -149,10 +157,49 @@ export const SettingsTab = () => {
               isDisabled={saving}
             />
             <p className="text-sm text-slate-500">
-              Cantidad de días a futuro que se muestran turnos disponibles. Valor -1 = sin límite.
+              Cantidad de días a futuro que se muestran turnos disponibles.
             </p>
           </div>
         </div>
+      </div>
+      <Divider className="my-4" />
+      <div className="flex flex-col space-y-4">
+        <Typography variant="h6">Duracion de los turnos</Typography>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col space-y-4">
+            <Input
+              label="Duracion del turno"
+              name="defaultSlotDurationMinutes"
+              type="number"
+              min={1}
+              value={String(form.defaultSlotDurationMinutes)}
+              onValueChange={(v) => setForm((f) => ({ ...f, defaultSlotDurationMinutes: Math.max(1, parseInt(v, 10) || 30) }))}
+              endContent={<span className="text-sm text-slate-500">minutos</span>}
+              isDisabled={saving}
+            />
+            <Typography variant="p" size="sm" color="gray" opacity={70}>
+              Define la duración de los turnos. Por ejemplo, si la duración es 30 minutos, se podrán reservar turnos a las 15:00, 15:30, 16:00, etc.
+            </Typography>
+          </div>
+          <div className="flex flex-col space-y-4">
+            <Input
+              label="Margen de tiempo"
+              name="defaultSlotMarginMinutes"
+              type="number"
+              min={0}
+              value={String(form.defaultSlotMarginMinutes)}
+              onValueChange={(v) => setForm((f) => ({ ...f, defaultSlotMarginMinutes: Math.max(0, parseInt(v, 10) || 0) }))}
+              endContent={<span className="text-sm text-slate-500">minutos</span>}
+              isDisabled={saving}
+            />
+            <Typography variant="p" size="sm" color="gray" opacity={70}>
+              Define el margen de tiempo entre turnos. Para que tengas tiempo "libre" entre los turnos. Si el margen es 15 min, no se podrán seleccionar turnos consecutivos.
+            </Typography>
+          </div>
+        </div>
+        <Typography variant="p" size="sm" color="gray" opacity={70}>
+           Estos valores podra ser pisados por cada servicio que agregues. Pero, si no creas servicios o no defines estos valores en los servicios, se tomarán estos valores por defecto para todos los turnos.
+        </Typography>
       </div>
       <Divider className="my-4" />
       <Button variant="solid" color="primary" className="ml-auto w-fit" onPress={handleSave} isLoading={saving}>

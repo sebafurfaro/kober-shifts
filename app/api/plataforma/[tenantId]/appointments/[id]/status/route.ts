@@ -48,7 +48,7 @@ export async function PATCH(
         refreshToken: professional.googleOAuth.refreshToken,
         calendarId,
         eventId: appointment.googleEventId,
-        summary: `Turno - ${data.specialty.name}${suffix}`,
+        summary: `Turno${suffix}`,
         description: `Sede: ${data.location.name}\nPaciente: ${data.patient.name} (${data.patient.email})`,
       });
     }

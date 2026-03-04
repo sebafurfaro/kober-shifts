@@ -1,5 +1,5 @@
 import mysql from './mysql';
-import type { User, Specialty, Service, Location, ProfessionalProfile, GoogleOAuthToken, Appointment, Role, AppointmentStatus, MedicalCoverage, MedicalPlan, MedicalCoverageWithPlans, Tenant } from './types';
+import type { User, Service, Location, ProfessionalProfile, GoogleOAuthToken, Appointment, Role, AppointmentStatus, MedicalCoverage, MedicalPlan, MedicalCoverageWithPlans, Tenant } from './types';
 import { isSupportAdminEmail } from './constants';
 
 // Helper para convertir filas de MySQL a objetos tipados
@@ -23,16 +23,6 @@ function rowToUser(row: any): User {
     googleId: row.googleId || null,
     passwordHash: row.passwordHash,
     role: row.role as Role,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
-}
-
-function rowToSpecialty(row: any): Specialty {
-  return {
-    id: row.id,
-    tenantId: row.tenantId,
-    name: row.name,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -101,7 +91,6 @@ function rowToProfessionalProfile(row: any): ProfessionalProfile {
   return {
     userId: row.userId,
     tenantId: row.tenantId,
-    specialtyId: row.specialtyId,
     isActive: Boolean(row.isActive),
     googleCalendarId: row.googleCalendarId,
     color: (row.color && typeof row.color === 'string' && row.color.trim() !== '') ? row.color.trim() : null,
@@ -170,7 +159,6 @@ function rowToAppointment(row: any): Appointment {
     patientId: row.patientId,
     professionalId: row.professionalId,
     locationId: row.locationId,
-    specialtyId: row.specialtyId,
     serviceId: row.serviceId != null ? row.serviceId : null,
     googleEventId: row.googleEventId,
     notes: row.notes,
@@ -201,14 +189,21 @@ export async function deleteUser(id: string, tenantId: string): Promise<void> {
 }
 
 export async function findUserByEmail(email: string, tenantId: string): Promise<User | null> {
-  const [rows] = await mysql.execute('SELECT * FROM users WHERE email = ? AND tenantId = ?', [email, tenantId]);
+  // Comparación case-insensitive de email por si se guardó con distinta capitalización
+  const [rows] = await mysql.execute(
+    'SELECT * FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM(?)) AND tenantId = ?',
+    [email, tenantId]
+  );
   const result = rows as any[];
   return result.length > 0 ? rowToUser(result[0]) : null;
 }
 
 // Find user by email across all tenants (for store authentication)
 export async function findUserByEmailAnyTenant(email: string): Promise<User | null> {
-  const [rows] = await mysql.execute('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
+  const [rows] = await mysql.execute(
+    'SELECT * FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM(?)) LIMIT 1',
+    [email]
+  );
   const result = rows as any[];
   return result.length > 0 ? rowToUser(result[0]) : null;
 }
@@ -469,14 +464,12 @@ export async function countStaffUsers(tenantId: string): Promise<number> {
   return result.length > 0 ? Number(result[0].count) : 0;
 }
 
-export async function findUsersWithProfessionalProfile(tenantId: string): Promise<(User & { professional: (ProfessionalProfile & { specialty: Specialty | null; specialties: Specialty[] }) | null })[]> {
-  // Users with a professional profile (any role: ADMIN, PROFESSIONAL, SUPERVISOR can have a profile)
+export async function findUsersWithProfessionalProfile(tenantId: string): Promise<(User & { professional: ProfessionalProfile | null })[]> {
   const [profileRows] = await mysql.execute(
     `SELECT 
       u.*,
       pp.userId as pp_userId,
       pp.tenantId as pp_tenantId,
-      pp.specialtyId as pp_specialtyId,
       pp.isActive as pp_isActive,
       pp.googleCalendarId as pp_googleCalendarId,
       pp.color as pp_color,
@@ -494,150 +487,24 @@ export async function findUsersWithProfessionalProfile(tenantId: string): Promis
     [tenantId]
   );
 
-  // Then get all specialties for each professional from the many-to-many table
-  // Use LEFT JOIN in case the table doesn't exist yet or has no data
-  let specialtyRows: any[] = [];
-  try {
-    const [rows] = await mysql.execute(
-      `SELECT 
-        ps.userId,
-        s.id as s_id,
-        s.tenantId as s_tenantId,
-        s.name as s_name,
-        s.createdAt as s_createdAt,
-        s.updatedAt as s_updatedAt
-      FROM professional_specialties ps
-      INNER JOIN specialties s ON ps.specialtyId = s.id
-      WHERE s.tenantId = ?
-      ORDER BY ps.userId, s.name`,
-      [tenantId]
-    );
-    specialtyRows = rows as any[];
-  } catch (error: any) {
-    // If table doesn't exist, continue without specialties from many-to-many table
-    // Will fall back to single specialty from professional_profiles
-    if (error.code !== 'ER_NO_SUCH_TABLE') {
-      throw error;
-    }
-  }
-
   const profileResult = profileRows as any[];
-  const specialtyResult = specialtyRows as any[];
-
-  // Group specialties by userId
-  const specialtiesByUser = new Map<string, Specialty[]>();
-  for (const row of specialtyResult) {
-    if (!specialtiesByUser.has(row.userId)) {
-      specialtiesByUser.set(row.userId, []);
-    }
-    specialtiesByUser.get(row.userId)!.push(rowToSpecialty({
-      id: row.s_id,
-      tenantId: row.s_tenantId,
-      name: row.s_name,
-      createdAt: row.s_createdAt,
-      updatedAt: row.s_updatedAt,
-    }));
-  }
-
-  // Build result with specialties
-  const userMap = new Map<string, User & { professional: (ProfessionalProfile & { specialty: Specialty | null; specialties: Specialty[] }) | null }>();
-
-  for (const row of profileResult) {
-    if (!userMap.has(row.id)) {
-      const userSpecialties = specialtiesByUser.get(row.id) || [];
-      const primarySpecialty = userSpecialties.length > 0 ? userSpecialties[0] : null;
-
-      userMap.set(row.id, {
-        ...rowToUser(row),
-        professional: row.pp_userId ? {
-          ...rowToProfessionalProfile({
-            userId: row.pp_userId,
-            tenantId: row.pp_tenantId,
-            specialtyId: row.pp_specialtyId || (primarySpecialty?.id || ''),
-            isActive: row.pp_isActive,
-            googleCalendarId: row.pp_googleCalendarId,
-            color: (row.pp_color && row.pp_color.trim() !== '') ? row.pp_color.trim() : null,
-            licenseNumber: row.pp_licenseNumber,
-            medicalCoverages: row.pp_medicalCoverages,
-            availabilityConfig: row.pp_availabilityConfig,
-            availableDays: row.pp_availableDays,
-            availableHours: row.pp_availableHours,
-            createdAt: row.pp_createdAt,
-            updatedAt: row.pp_updatedAt,
-          }),
-          specialty: primarySpecialty,
-          specialties: userSpecialties,
-        } : null,
-      });
-    }
-  }
-
-  return Array.from(userMap.values());
-}
-
-// Specialty operations
-export async function findSpecialtyById(id: string, tenantId: string): Promise<Specialty | null> {
-  const [rows] = await mysql.execute('SELECT * FROM specialties WHERE id = ? AND tenantId = ?', [id, tenantId]);
-  const result = rows as any[];
-  return result.length > 0 ? rowToSpecialty(result[0]) : null;
-}
-
-export async function findSpecialtiesByIds(tenantId: string, ids: string[]): Promise<Specialty[]> {
-  if (ids.length === 0) return [];
-  const uniq = [...new Set(ids)];
-  const placeholders = uniq.map(() => "?").join(",");
-  const [rows] = await mysql.execute(
-    `SELECT * FROM specialties WHERE tenantId = ? AND id IN (${placeholders})`,
-    [tenantId, ...uniq]
-  );
-  return (rows as any[]).map(rowToSpecialty);
-}
-
-export async function deleteSpecialty(id: string, tenantId: string): Promise<void> {
-  await mysql.execute('DELETE FROM specialties WHERE id = ? AND tenantId = ?', [id, tenantId]);
-}
-
-export async function findAllSpecialties(tenantId: string): Promise<Specialty[]> {
-  const [rows] = await mysql.execute('SELECT * FROM specialties WHERE tenantId = ? ORDER BY name ASC', [tenantId]);
-  return (rows as any[]).map(rowToSpecialty);
-}
-
-export async function updateSpecialty(id: string, tenantId: string, data: Partial<Pick<Specialty, 'name'>>): Promise<Specialty> {
-  const updates: string[] = [];
-  const values: any[] = [];
-
-  if (data.name !== undefined) {
-    updates.push('name = ?');
-    values.push(data.name);
-  }
-
-  if (updates.length === 0) {
-    const specialty = await findSpecialtyById(id, tenantId);
-    if (!specialty) throw new Error('Specialty not found');
-    return specialty;
-  }
-
-  values.push(id, tenantId);
-  await mysql.execute(`UPDATE specialties SET ${updates.join(', ')} WHERE id = ? AND tenantId = ?`, values);
-  const specialty = await findSpecialtyById(id, tenantId);
-  if (!specialty) throw new Error('Failed to update specialty');
-  return specialty;
-}
-
-export async function countProfessionalsBySpecialty(specialtyId: string, tenantId: string): Promise<number> {
-  const [rows] = await mysql.execute(
-    'SELECT COUNT(*) as count FROM professional_profiles WHERE specialtyId = ? AND tenantId = ?',
-    [specialtyId, tenantId]
-  );
-  const result = rows as any[];
-  return result.length > 0 ? Number(result[0].count) : 0;
-}
-
-export async function createSpecialty(data: { id: string; tenantId: string; name: string }): Promise<Specialty> {
-  await mysql.execute('INSERT INTO specialties (id, tenantId, name) VALUES (?, ?, ?)', [data.id, data.tenantId, data.name]);
-  const specialty = await findSpecialtyById(data.id, data.tenantId);
-  if (!specialty) throw new Error('Failed to create specialty');
-  return specialty;
+  return profileResult.map((row) => ({
+    ...rowToUser(row),
+    professional: row.pp_userId ? rowToProfessionalProfile({
+      userId: row.pp_userId,
+      tenantId: row.pp_tenantId,
+      isActive: row.pp_isActive,
+      googleCalendarId: row.pp_googleCalendarId,
+      color: (row.pp_color && row.pp_color.trim() !== '') ? row.pp_color.trim() : null,
+      licenseNumber: row.pp_licenseNumber,
+      medicalCoverages: row.pp_medicalCoverages,
+      availabilityConfig: row.pp_availabilityConfig,
+      availableDays: row.pp_availableDays,
+      availableHours: row.pp_availableHours,
+      createdAt: row.pp_createdAt,
+      updatedAt: row.pp_updatedAt,
+    }) : null,
+  }));
 }
 
 // Service operations
@@ -924,8 +791,6 @@ export async function findProfessionalProfileByUserId(userId: string, tenantId: 
 export async function createProfessionalProfile(data: {
   userId: string;
   tenantId: string;
-  specialtyId: string;
-  specialtyIds?: string[];
   isActive?: boolean;
   googleCalendarId?: string | null;
   color?: string | null;
@@ -935,20 +800,16 @@ export async function createProfessionalProfile(data: {
   availableDays?: number[] | null;
   availableHours?: { start: string; end: string } | null;
 }): Promise<ProfessionalProfile> {
-  // Use first specialtyId as primary for backward compatibility
-  const primarySpecialtyId = data.specialtyId || (data.specialtyIds && data.specialtyIds.length > 0 ? data.specialtyIds[0] : '');
-
   const availableDaysJson = data.availableDays ? JSON.stringify(data.availableDays) : null;
   const availableHoursJson = data.availableHours ? JSON.stringify(data.availableHours) : null;
   const medicalCoveragesJson = data.medicalCoverages ? JSON.stringify(data.medicalCoverages) : null;
   const availabilityConfigJson = data.availabilityConfig ? JSON.stringify(data.availabilityConfig) : null;
 
   await mysql.execute(
-    'INSERT INTO professional_profiles (userId, tenantId, specialtyId, isActive, googleCalendarId, color, licenseNumber, medicalCoverages, availabilityConfig, availableDays, availableHours) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO professional_profiles (userId, tenantId, isActive, googleCalendarId, color, licenseNumber, medicalCoverages, availabilityConfig, availableDays, availableHours) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     [
       data.userId,
       data.tenantId,
-      primarySpecialtyId,
       data.isActive ?? true,
       data.googleCalendarId || null,
       data.color || null,
@@ -960,24 +821,6 @@ export async function createProfessionalProfile(data: {
     ]
   );
 
-  // Add specialties to the many-to-many table
-  const specialtyIds = data.specialtyIds || (data.specialtyId ? [data.specialtyId] : []);
-  if (specialtyIds.length > 0) {
-    try {
-      const placeholders = specialtyIds.map(() => '(?, ?)').join(', ');
-      const flattenedValues = specialtyIds.map(id => [data.userId, id]).flat();
-      await mysql.execute(
-        `INSERT INTO professional_specialties (userId, specialtyId) VALUES ${placeholders}`,
-        flattenedValues
-      );
-    } catch (error: any) {
-      // If table doesn't exist, continue (backward compatibility)
-      if (error.code !== 'ER_NO_SUCH_TABLE') {
-        throw error;
-      }
-    }
-  }
-
   const profile = await findProfessionalProfileByUserId(data.userId, data.tenantId);
   if (!profile) throw new Error('Failed to create professional profile');
   return profile;
@@ -986,15 +829,11 @@ export async function createProfessionalProfile(data: {
 export async function updateProfessionalProfile(
   userId: string,
   tenantId: string,
-  data: Partial<Pick<ProfessionalProfile, 'specialtyId' | 'isActive' | 'googleCalendarId' | 'color' | 'availableDays' | 'availableHours'>> & { specialtyIds?: string[] }
+  data: Partial<Pick<ProfessionalProfile, 'isActive' | 'googleCalendarId' | 'color' | 'availableDays' | 'availableHours'>>
 ): Promise<ProfessionalProfile> {
   const updates: string[] = [];
   const values: any[] = [];
 
-  if (data.specialtyId !== undefined) {
-    updates.push('specialtyId = ?');
-    values.push(data.specialtyId);
-  }
   if (data.isActive !== undefined) {
     updates.push('isActive = ?');
     values.push(data.isActive);
@@ -1032,42 +871,6 @@ export async function updateProfessionalProfile(
       configValue,
       stringified: configValue ? JSON.stringify(configValue) : null,
     });
-  }
-
-  // Update many-to-many specialties relationship if provided
-  if (data.specialtyIds !== undefined) {
-    // Delete existing specialties for this user
-    try {
-      await mysql.execute('DELETE FROM professional_specialties WHERE userId = ?', [userId]);
-    } catch (error: any) {
-      // If table doesn't exist, continue (backward compatibility)
-      if (error.code !== 'ER_NO_SUCH_TABLE') {
-        throw error;
-      }
-    }
-
-    // Insert new specialties
-    if (data.specialtyIds.length > 0) {
-      try {
-        const placeholders = data.specialtyIds.map(() => '(?, ?)').join(', ');
-        const flattenedValues = data.specialtyIds.map(id => [userId, id]).flat();
-        await mysql.execute(
-          `INSERT INTO professional_specialties (userId, specialtyId) VALUES ${placeholders}`,
-          flattenedValues
-        );
-      } catch (error: any) {
-        // If table doesn't exist, continue (backward compatibility)
-        if (error.code !== 'ER_NO_SUCH_TABLE') {
-          throw error;
-        }
-      }
-    }
-
-    // Update primary specialtyId if not explicitly set
-    if (data.specialtyId === undefined && data.specialtyIds.length > 0) {
-      updates.push('specialtyId = ?');
-      values.push(data.specialtyIds[0]);
-    }
   }
 
   if (updates.length === 0) {
@@ -1133,7 +936,6 @@ export async function createAppointment(data: {
   patientId: string;
   professionalId: string;
   locationId: string | null;
-  specialtyId: string | null;
   serviceId?: string | null;
   googleEventId?: string | null;
   notes?: string | null;
@@ -1149,14 +951,13 @@ export async function createAppointment(data: {
     data.patientId,
     data.professionalId,
     data.locationId || null,
-    data.specialtyId || null,
     data.googleEventId || null,
     data.notes || null,
   ];
   try {
     await mysql.execute(
-      `INSERT INTO appointments (id, tenantId, status, startAt, endAt, patientId, professionalId, locationId, specialtyId, serviceId, googleEventId, notes, patientFirstName, patientLastName)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO appointments (id, tenantId, status, startAt, endAt, patientId, professionalId, locationId, serviceId, googleEventId, notes, patientFirstName, patientLastName)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.id,
         data.tenantId,
@@ -1166,7 +967,6 @@ export async function createAppointment(data: {
         data.patientId,
         data.professionalId,
         data.locationId || null,
-        data.specialtyId || null,
         data.serviceId ?? null,
         data.googleEventId || null,
         data.notes || null,
@@ -1178,15 +978,15 @@ export async function createAppointment(data: {
     if (err?.code === 'ER_BAD_FIELD_ERROR') {
       try {
         await mysql.execute(
-          `INSERT INTO appointments (id, tenantId, status, startAt, endAt, patientId, professionalId, locationId, specialtyId, googleEventId, notes, patientFirstName, patientLastName)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO appointments (id, tenantId, status, startAt, endAt, patientId, professionalId, locationId, googleEventId, notes, patientFirstName, patientLastName)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [...baseParams, data.patientFirstName ?? null, data.patientLastName ?? null]
         );
       } catch (e2: any) {
         if (e2?.code === 'ER_BAD_FIELD_ERROR') {
           await mysql.execute(
-            `INSERT INTO appointments (id, tenantId, status, startAt, endAt, patientId, professionalId, locationId, specialtyId, googleEventId, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO appointments (id, tenantId, status, startAt, endAt, patientId, professionalId, locationId, googleEventId, notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             baseParams
           );
         } else {
@@ -1221,7 +1021,6 @@ export async function findAppointmentWithRelations(id: string, tenantId: string)
   patient: User;
   professional: User & { professional: ProfessionalProfile | null; googleOAuth: GoogleOAuthToken | null };
   location: Location;
-  specialty: Specialty;
 } | null> {
   const [rows] = await mysql.execute(
     `SELECT 
@@ -1230,22 +1029,20 @@ export async function findAppointmentWithRelations(id: string, tenantId: string)
       p.role as p_role, p.createdAt as p_createdAt, p.updatedAt as p_updatedAt,
       prof.id as prof_id, prof.tenantId as prof_tenantId, prof.email as prof_email, prof.name as prof_name, prof.passwordHash as prof_passwordHash,
       prof.role as prof_role, prof.createdAt as prof_createdAt, prof.updatedAt as prof_updatedAt,
-      pp.userId as pp_userId, pp.tenantId as pp_tenantId, pp.specialtyId as pp_specialtyId, pp.isActive as pp_isActive,
+      pp.userId as pp_userId, pp.tenantId as pp_tenantId, pp.isActive as pp_isActive,
       pp.googleCalendarId as pp_googleCalendarId, pp.color as pp_color,
       pp.createdAt as pp_createdAt, pp.updatedAt as pp_updatedAt,
       go.id as go_id, go.tenantId as go_tenantId, go.userId as go_userId, go.accessToken as go_accessToken, go.refreshToken as go_refreshToken,
       go.scope as go_scope, go.tokenType as go_tokenType, go.expiryDate as go_expiryDate,
       go.createdAt as go_createdAt, go.updatedAt as go_updatedAt,
       l.id as l_id, l.tenantId as l_tenantId, l.name as l_name, l.address as l_address, l.phone as l_phone,
-      l.createdAt as l_createdAt, l.updatedAt as l_updatedAt,
-      s.id as s_id, s.tenantId as s_tenantId, s.name as s_name, s.createdAt as s_createdAt, s.updatedAt as s_updatedAt
+      l.createdAt as l_createdAt, l.updatedAt as l_updatedAt
     FROM appointments a
     INNER JOIN users p ON a.patientId = p.id AND a.tenantId = p.tenantId
     INNER JOIN users prof ON a.professionalId = prof.id AND a.tenantId = prof.tenantId
     LEFT JOIN professional_profiles pp ON prof.id = pp.userId AND prof.tenantId = pp.tenantId
     LEFT JOIN google_oauth_tokens go ON prof.id = go.userId AND prof.tenantId = go.tenantId
     INNER JOIN locations l ON a.locationId = l.id AND a.tenantId = l.tenantId
-    INNER JOIN specialties s ON a.specialtyId = s.id AND a.tenantId = s.tenantId
     WHERE a.id = ? AND a.tenantId = ?`,
     [id, tenantId]
   );
@@ -1280,7 +1077,6 @@ export async function findAppointmentWithRelations(id: string, tenantId: string)
       professional: row.pp_userId ? rowToProfessionalProfile({
         userId: row.pp_userId,
         tenantId: row.pp_tenantId,
-        specialtyId: row.pp_specialtyId,
         isActive: row.pp_isActive,
         googleCalendarId: row.pp_googleCalendarId,
         color: (row.pp_color && row.pp_color.trim() !== '') ? row.pp_color.trim() : null,
@@ -1309,13 +1105,6 @@ export async function findAppointmentWithRelations(id: string, tenantId: string)
       createdAt: row.l_createdAt,
       updatedAt: row.l_updatedAt,
     }),
-    specialty: rowToSpecialty({
-      id: row.s_id,
-      tenantId: row.s_tenantId,
-      name: row.s_name,
-      createdAt: row.s_createdAt,
-      updatedAt: row.s_updatedAt,
-    }),
   };
 }
 
@@ -1328,7 +1117,7 @@ export async function findAppointmentsByDateRange(
     professionalId?: string;
     status?: AppointmentStatus;
   }
-): Promise<(Appointment & { patient: User; professional: User & { professional: ProfessionalProfile | null }; location: Location; specialty: Specialty })[]> {
+): Promise<(Appointment & { patient: User; professional: User & { professional: ProfessionalProfile | null }; location: Location })[]> {
   let query = `
     SELECT 
       a.*,
@@ -1336,18 +1125,16 @@ export async function findAppointmentsByDateRange(
       p.role as p_role, p.createdAt as p_createdAt, p.updatedAt as p_updatedAt,
       prof.id as prof_id, prof.email as prof_email, prof.name as prof_name, prof.passwordHash as prof_passwordHash,
       prof.role as prof_role, prof.createdAt as prof_createdAt, prof.updatedAt as prof_updatedAt,
-      pp.userId as pp_userId, pp.specialtyId as pp_specialtyId, pp.isActive as pp_isActive,
+      pp.userId as pp_userId, pp.isActive as pp_isActive,
       pp.googleCalendarId as pp_googleCalendarId, pp.color as pp_color,
       pp.createdAt as pp_createdAt, pp.updatedAt as pp_updatedAt,
       l.id as l_id, l.name as l_name, l.address as l_address, l.phone as l_phone,
-      l.createdAt as l_createdAt, l.updatedAt as l_updatedAt,
-      s.id as s_id, s.name as s_name, s.createdAt as s_createdAt, s.updatedAt as s_updatedAt
+      l.createdAt as l_createdAt, l.updatedAt as l_updatedAt
     FROM appointments a
     INNER JOIN users p ON a.patientId = p.id AND a.tenantId = p.tenantId
     INNER JOIN users prof ON a.professionalId = prof.id AND a.tenantId = prof.tenantId
     LEFT JOIN professional_profiles pp ON prof.id = pp.userId AND prof.tenantId = pp.tenantId
     INNER JOIN locations l ON a.locationId = l.id AND a.tenantId = l.tenantId
-    INNER JOIN specialties s ON a.specialtyId = s.id AND a.tenantId = s.tenantId
     WHERE a.startAt >= ? AND a.startAt <= ? AND a.tenantId = ?
   `;
 
@@ -1399,7 +1186,6 @@ export async function findAppointmentsByDateRange(
       professional: row.pp_userId ? rowToProfessionalProfile({
         userId: row.pp_userId,
         tenantId: row.pp_tenantId,
-        specialtyId: row.pp_specialtyId,
         isActive: row.pp_isActive,
         googleCalendarId: row.pp_googleCalendarId,
         color: (row.pp_color && row.pp_color.trim() !== '') ? row.pp_color.trim() : null,
@@ -1416,13 +1202,6 @@ export async function findAppointmentsByDateRange(
       createdAt: row.l_createdAt,
       updatedAt: row.l_updatedAt,
     }),
-    specialty: rowToSpecialty({
-      id: row.s_id,
-      tenantId: row.s_tenantId,
-      name: row.s_name,
-      createdAt: row.s_createdAt,
-      updatedAt: row.s_updatedAt,
-    }),
   }));
 }
 
@@ -1430,7 +1209,6 @@ export type AppointmentWithRelations = Appointment & {
   patient: User;
   professional: User & { professional: ProfessionalProfile | null };
   location: Location;
-  specialty: Specialty;
 };
 
 /** Lista solo filas de appointments con filtros y paginación (sin JOINs). Para reconstruir con datos de users/locations/specialties por separado. */
@@ -1493,8 +1271,8 @@ export async function listAppointmentsForAdminRawWithSearch(
 ): Promise<{ list: Appointment[]; total: number }> {
   const { search, startDate, endDate, statuses, limit, offset, orderBy } = options;
   const searchPattern = `%${search.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
-  let whereClause = `a.tenantId = ? AND (p.name LIKE ? OR prof.name LIKE ? OR l.name LIKE ? OR s.name LIKE ? OR srv.name LIKE ?)`;
-  const params: any[] = [tenantId, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern];
+  let whereClause = `a.tenantId = ? AND (p.name LIKE ? OR prof.name LIKE ? OR l.name LIKE ? OR srv.name LIKE ?)`;
+  const params: any[] = [tenantId, searchPattern, searchPattern, searchPattern, searchPattern];
   if (startDate != null) {
     whereClause += ' AND a.startAt >= ?';
     params.push(startDate);
@@ -1516,7 +1294,6 @@ export async function listAppointmentsForAdminRawWithSearch(
     INNER JOIN users p ON a.patientId = p.id AND a.tenantId = p.tenantId
     INNER JOIN users prof ON a.professionalId = prof.id AND a.tenantId = prof.tenantId
     INNER JOIN locations l ON a.locationId = l.id AND a.tenantId = l.tenantId
-    INNER JOIN specialties s ON a.specialtyId = s.id AND a.tenantId = s.tenantId
     LEFT JOIN services srv ON a.serviceId = srv.id AND a.tenantId = srv.tenantId
     WHERE ${whereClause}
   `;
@@ -1528,7 +1305,6 @@ export async function listAppointmentsForAdminRawWithSearch(
     INNER JOIN users p ON a.patientId = p.id AND a.tenantId = p.tenantId
     INNER JOIN users prof ON a.professionalId = prof.id AND a.tenantId = prof.tenantId
     INNER JOIN locations l ON a.locationId = l.id AND a.tenantId = l.tenantId
-    INNER JOIN specialties s ON a.specialtyId = s.id AND a.tenantId = s.tenantId
     LEFT JOIN services srv ON a.serviceId = srv.id AND a.tenantId = srv.tenantId
     WHERE ${whereClause}${orderClause} LIMIT ${limitNum} OFFSET ${offsetNum}
   `;
@@ -1556,18 +1332,16 @@ export async function listAppointmentsForAdmin(
       p.passwordHash as p_passwordHash, p.role as p_role, p.createdAt as p_createdAt, p.updatedAt as p_updatedAt,
       prof.id as prof_id, prof.tenantId as prof_tenantId, prof.email as prof_email, prof.name as prof_name, prof.passwordHash as prof_passwordHash,
       prof.role as prof_role, prof.createdAt as prof_createdAt, prof.updatedAt as prof_updatedAt,
-      pp.userId as pp_userId, pp.tenantId as pp_tenantId, pp.specialtyId as pp_specialtyId, pp.isActive as pp_isActive,
+      pp.userId as pp_userId, pp.tenantId as pp_tenantId, pp.isActive as pp_isActive,
       pp.googleCalendarId as pp_googleCalendarId, pp.color as pp_color,
       pp.createdAt as pp_createdAt, pp.updatedAt as pp_updatedAt,
       l.id as l_id, l.tenantId as l_tenantId, l.name as l_name, l.address as l_address, l.phone as l_phone,
-      l.createdAt as l_createdAt, l.updatedAt as l_updatedAt,
-      s.id as s_id, s.tenantId as s_tenantId, s.name as s_name, s.createdAt as s_createdAt, s.updatedAt as s_updatedAt
+      l.createdAt as l_createdAt, l.updatedAt as l_updatedAt
     FROM appointments a
     INNER JOIN users p ON a.patientId = p.id AND a.tenantId = p.tenantId
     INNER JOIN users prof ON a.professionalId = prof.id AND a.tenantId = prof.tenantId
     LEFT JOIN professional_profiles pp ON prof.id = pp.userId AND prof.tenantId = pp.tenantId
     INNER JOIN locations l ON a.locationId = l.id AND a.tenantId = l.tenantId
-    INNER JOIN specialties s ON a.specialtyId = s.id AND a.tenantId = s.tenantId
     WHERE a.tenantId = ?
   `;
   let whereClause = 'a.tenantId = ?';
@@ -1627,7 +1401,6 @@ export async function listAppointmentsForAdmin(
       professional: row.pp_userId ? rowToProfessionalProfile({
         userId: row.pp_userId,
         tenantId: row.pp_tenantId,
-        specialtyId: row.pp_specialtyId,
         isActive: row.pp_isActive,
         googleCalendarId: row.pp_googleCalendarId,
         color: (row.pp_color && row.pp_color.trim() !== '') ? row.pp_color.trim() : null,
@@ -1643,13 +1416,6 @@ export async function listAppointmentsForAdmin(
       phone: row.l_phone,
       createdAt: row.l_createdAt,
       updatedAt: row.l_updatedAt,
-    }),
-    specialty: rowToSpecialty({
-      id: row.s_id,
-      tenantId: row.s_tenantId,
-      name: row.s_name,
-      createdAt: row.s_createdAt,
-      updatedAt: row.s_updatedAt,
     }),
   });
 
@@ -1668,7 +1434,6 @@ export async function updateAppointment(data: {
   patientId?: string;
   professionalId?: string;
   locationId?: string;
-  specialtyId?: string;
 }): Promise<Appointment> {
   const updates: string[] = [];
   const values: any[] = [];
@@ -1708,10 +1473,6 @@ export async function updateAppointment(data: {
   if (data.locationId !== undefined) {
     updates.push('locationId = ?');
     values.push(data.locationId);
-  }
-  if (data.specialtyId !== undefined) {
-    updates.push('specialtyId = ?');
-    values.push(data.specialtyId);
   }
 
   if (updates.length === 0) {

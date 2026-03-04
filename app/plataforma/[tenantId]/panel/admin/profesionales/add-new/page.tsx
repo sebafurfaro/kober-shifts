@@ -6,18 +6,15 @@ import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PanelHeader } from "../../../components/PanelHeader";
 import { ProfessionalForm } from "../components/ProfessionalForm";
-import { Specialty } from "../components/types";
 
 export default function ProfessionalAddPage() {
     const router = useRouter();
     const params = useParams();
     const tenantId = params.tenantId as string;
-    const [specialties, setSpecialties] = React.useState<Specialty[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [submitting, setSubmitting] = React.useState(false);
     const [submitError, setSubmitError] = React.useState<string | null>(null);
     const [limitReached, setLimitReached] = React.useState(false);
-    const [showSpecialties, setShowSpecialties] = React.useState(true);
     const [showCoverage, setShowCoverage] = React.useState(true);
 
     React.useEffect(() => {
@@ -36,13 +33,14 @@ export default function ProfessionalAddPage() {
                     const list = Array.isArray(professionals) ? professionals : [];
                     if (list.length >= maxUsers) {
                         setLimitReached(true);
-                        return;
+                    } else {
+                        setShowCoverage(features.show_coverage ?? true);
                     }
-                    setShowSpecialties(features.show_specialties ?? true);
-                    setShowCoverage(features.show_coverage ?? true);
                 }
+                setLoading(false);
             } catch {
                 if (!cancelled) setLimitReached(false);
+                setLoading(false);
             }
         })();
         return () => { cancelled = true; };
@@ -53,23 +51,6 @@ export default function ProfessionalAddPage() {
             router.replace(`/plataforma/${tenantId}/panel/admin/profesionales`);
         }
     }, [limitReached, router, tenantId]);
-
-    React.useEffect(() => {
-        if (limitReached) return;
-        async function loadSpecialties() {
-            try {
-                const res = await fetch(`/api/plataforma/${tenantId}/admin/specialties`);
-                if (!res.ok) throw new Error("Failed to load specialties");
-                const data = await res.json();
-                setSpecialties(data);
-            } catch (error) {
-                console.error("Error loading specialties:", error);
-            } finally {
-                setLoading(false);
-            }
-        }
-        loadSpecialties();
-    }, [tenantId, limitReached]);
 
     const handleSubmit = async (formData: any) => {
         setSubmitting(true);
@@ -119,7 +100,7 @@ export default function ProfessionalAddPage() {
         <div className="max-w-7xl mx-auto mt-8 mb-16">
             <PanelHeader
                 title="Agregar Profesional"
-                subtitle="Configura el perfil, especialidades y horarios del nuevo profesional"
+                subtitle="Configura el perfil y horarios del nuevo profesional"
                 action={{
                     label: "Volver",
                     onClick: returnBack,
@@ -137,10 +118,8 @@ export default function ProfessionalAddPage() {
             <div className="mt-6">
                 <ProfessionalForm
                     mode="create"
-                    specialties={specialties}
                     onSubmit={handleSubmit}
                     loading={submitting}
-                    showSpecialties={showSpecialties}
                     showCoverage={showCoverage}
                 />
             </div>

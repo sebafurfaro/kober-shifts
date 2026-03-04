@@ -22,7 +22,6 @@ interface Tenant {
 }
 
 const defaultFeatures: TenantFeatureFlags = {
-  show_specialties: true,
   show_coverage: true,
   show_mercado_pago: true,
   payment_enabled: true,

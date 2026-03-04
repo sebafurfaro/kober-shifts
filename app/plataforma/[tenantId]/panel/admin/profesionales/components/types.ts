@@ -1,8 +1,3 @@
-export interface Specialty {
-    id: string;
-    name: string;
-}
-
 export interface Slot {
     id: string;
     startTime: string;
@@ -47,7 +42,6 @@ export interface ProfessionalFormData {
     phone: string;
     licenseNumber: string;
     tempPassword?: string;
-    specialtyIds: string[];
     medicalCoverages: SelectedCoverage[];
     color: string;
     availabilityConfig: AvailabilityConfig;

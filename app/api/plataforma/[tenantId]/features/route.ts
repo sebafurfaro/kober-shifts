@@ -5,7 +5,7 @@ import { countStaffUsers } from "@/lib/db";
 
 /**
  * GET /api/plataforma/[tenantId]/features
- * Get tenant feature flags (legacy + store: show_specialties, show_coverage, maxUsers, usedUsers)
+ * Get tenant feature flags (legacy + store: show_coverage, maxUsers, usedUsers)
  */
 export async function GET(
   req: Request,
@@ -26,7 +26,6 @@ export async function GET(
     ]);
     return NextResponse.json({
       ...legacyFeatures,
-      show_specialties: flagsAndLimits.show_specialties,
       show_coverage: flagsAndLimits.show_coverage,
       maxUsers: flagsAndLimits.maxUsers,
       usedUsers,

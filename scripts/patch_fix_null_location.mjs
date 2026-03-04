@@ -16,8 +16,6 @@ async function main() {
     try {
         console.log("Modifying appointments table to allow NULL in locationId...");
         await pool.execute('ALTER TABLE appointments MODIFY COLUMN locationId VARCHAR(255) NULL');
-        console.log("Modifying appointments table to allow NULL in specialtyId...");
-        await pool.execute('ALTER TABLE appointments MODIFY COLUMN specialtyId VARCHAR(255) NULL');
         console.log("Successfully updated database schema.");
     } catch (error) {
         console.error("Error updating database schema:", error);

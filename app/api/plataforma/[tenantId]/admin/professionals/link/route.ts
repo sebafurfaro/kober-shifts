@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { findUserByEmail, findProfessionalProfileByUserId, createProfessionalProfile, findAllSpecialties } from "@/lib/db";
+import { findUserByEmail, findProfessionalProfileByUserId, createProfessionalProfile } from "@/lib/db";
 import { Role } from "@/lib/types";
 
 /**
@@ -29,17 +29,17 @@ export async function POST(
   const existing = await findProfessionalProfileByUserId(user.id, tenantId);
   if (existing) return NextResponse.json({ error: "Ese usuario ya es profesional" }, { status: 409 });
 
-  const specialties = await findAllSpecialties(tenantId);
-  const specialtyId = specialties.length > 0 ? specialties[0].id : "";
-  if (!specialtyId) return NextResponse.json({ error: "Cree al menos una especialidad antes de vincular" }, { status: 400 });
-
-  await createProfessionalProfile({
-    userId: user.id,
-    tenantId,
-    specialtyId,
-    specialtyIds: [specialtyId],
-    color: "#2196f3",
-  });
+  try {
+    await createProfessionalProfile({
+      userId: user.id,
+      tenantId,
+      color: "#2196f3",
+    });
+  } catch (err: unknown) {
+    console.error("Error creating professional profile on link:", err);
+    const message = err instanceof Error ? err.message : "Error al crear el perfil profesional";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 
   return NextResponse.json({ id: user.id, email: user.email, name: user.name });
 }

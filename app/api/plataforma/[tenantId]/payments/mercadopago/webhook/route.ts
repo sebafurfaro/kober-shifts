@@ -7,6 +7,7 @@ import { getMercadoPagoAccountByTenant, getMercadoPagoAccountWithRefresh } from 
 import { findAppointmentById, updateAppointmentStatus, findAppointmentWithRelations } from "@/lib/db";
 import { AppointmentStatus } from "@/lib/types";
 import { renderBasicTemplate, sendMail } from "@/lib/email";
+import { mysqlDateToUTC, formatInBuenosAires } from "@/lib/timezone";
 
 async function getTenantAccessToken(tenantId: string): Promise<string | null> {
   const accountFetcher =
@@ -290,32 +291,30 @@ export async function POST(
             const startAt = data.appointment.startAt instanceof Date
               ? data.appointment.startAt
               : new Date(data.appointment.startAt);
-            const startIso = startAt.toISOString();
+            const startFormatted = formatInBuenosAires(mysqlDateToUTC(startAt), "dd/MM/yyyy HH:mm");
             await sendMail({
               to: data.patient.email,
               subject: "Turno confirmado",
-              text: `Tu turno fue confirmado.\n\nEspecialidad: ${data.specialty.name}\nSede: ${data.location.name}\nInicio: ${startIso}`,
+              text: `Tu turno fue confirmado.\n\nSede: ${data.location.name}\nInicio: ${startFormatted}`,
               html: renderBasicTemplate({
                 title: "Turno confirmado",
                 preview: "Tu turno fue confirmado.",
                 body: `<p>Tu turno fue confirmado.</p>
-                       <p><strong>Especialidad:</strong> ${data.specialty.name}<br/>
-                       <strong>Sede:</strong> ${data.location.name}<br/>
-                       <strong>Inicio:</strong> ${startIso}</p>`,
+                       <p><strong>Sede:</strong> ${data.location.name}<br/>
+                       <strong>Inicio:</strong> ${startFormatted}</p>`,
               }),
             });
             await sendMail({
               to: data.professional.email,
               subject: "Turno confirmado",
-              text: `Turno confirmado.\n\nPaciente: ${data.patient.name} (${data.patient.email})\nEspecialidad: ${data.specialty.name}\nSede: ${data.location.name}\nInicio: ${startIso}`,
+              text: `Turno confirmado.\n\nPaciente: ${data.patient.name} (${data.patient.email})\nSede: ${data.location.name}\nInicio: ${startFormatted}`,
               html: renderBasicTemplate({
                 title: "Turno confirmado",
                 preview: "Turno confirmado.",
                 body: `<p>Turno confirmado.</p>
                        <p><strong>Paciente:</strong> ${data.patient.name} (${data.patient.email})<br/>
-                       <strong>Especialidad:</strong> ${data.specialty.name}<br/>
                        <strong>Sede:</strong> ${data.location.name}<br/>
-                       <strong>Inicio:</strong> ${startIso}</p>`,
+                       <strong>Inicio:</strong> ${startFormatted}</p>`,
               }),
             });
           }

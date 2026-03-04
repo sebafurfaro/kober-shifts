@@ -53,14 +53,6 @@ export interface User {
   updatedAt: Date;
 }
 
-export interface Specialty {
-  id: string;
-  tenantId: string;
-  name: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 export interface Service {
   id: string;
   tenantId: string;
@@ -95,7 +87,6 @@ export interface Location {
 export interface ProfessionalProfile {
   userId: string;
   tenantId: string;
-  specialtyId: string;
   isActive: boolean;
   googleCalendarId: string | null;
   color: string | null;
@@ -149,7 +140,6 @@ export interface Appointment {
   patientId: string;
   professionalId: string;
   locationId: string;
-  specialtyId: string;
   serviceId?: string | null;
   googleEventId: string | null;
   notes: string | null;

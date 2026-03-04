@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { findAppointmentsByDateRange } from "@/lib/db";
+import { mysqlDateToUTC } from "@/lib/timezone";
 import { Role } from "@/lib/types";
 
 export async function GET(
@@ -43,19 +44,22 @@ export async function GET(
     patientId,
   });
 
-  // Format response
-  const formatted = appointments.map((apt) => ({
-    id: apt.id,
-    professionalName: apt.professional.name,
-    locationName: apt.location.name,
-    specialtyName: apt.specialty.name,
-    startAt: apt.startAt,
-    endAt: apt.endAt,
-    status: apt.status,
-    cancellationReason: apt.cancellationReason,
-    cancelledBy: apt.cancelledBy,
-    notes: apt.notes,
-  }));
+  // Format response: convert MySQL BA time to real UTC ISO so client displays correctly
+  const formatted = appointments.map((apt) => {
+    const startDate = apt.startAt instanceof Date ? apt.startAt : new Date(apt.startAt);
+    const endDate = apt.endAt instanceof Date ? apt.endAt : new Date(apt.endAt);
+    return {
+      id: apt.id,
+      professionalName: apt.professional.name,
+      locationName: apt.location.name,
+      startAt: mysqlDateToUTC(startDate).toISOString(),
+      endAt: mysqlDateToUTC(endDate).toISOString(),
+      status: apt.status,
+      cancellationReason: apt.cancellationReason,
+      cancelledBy: apt.cancelledBy,
+      notes: apt.notes,
+    };
+  });
 
   return NextResponse.json(formatted);
 }

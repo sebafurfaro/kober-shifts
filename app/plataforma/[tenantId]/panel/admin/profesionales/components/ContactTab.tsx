@@ -43,13 +43,12 @@ export function ContactTab({ formData, handleChange, errors, mode }: ContactTabP
             />
             <Input
                 label="DNI"
+                type="number"
                 value={formData.dni ?? ""}
                 onValueChange={(value) => handleChange("dni", value)}
                 isInvalid={!!errors.dni}
                 errorMessage={errors.dni}
-                isRequired={mode === "create"}
-                description={mode === "create" ? "Será la clave temporal para el primer acceso. El profesional ingresa con email y DNI." : undefined}
-                isDisabled={mode === "edit"}
+                description={mode === "create" ? "Opcional. Si lo ingresás, será la clave temporal para el primer acceso (el profesional ingresa con email y DNI)." : undefined}
                 classNames={{
                     input: "text-slate-800",
                     inputWrapper: "text-slate-800",

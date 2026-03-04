@@ -9,9 +9,8 @@ import {
     Tabs,
     Tab,
 } from "@heroui/react";
-import { ProfessionalFormData, INITIAL_AVAILABILITY, Specialty } from "./types";
+import { ProfessionalFormData, INITIAL_AVAILABILITY } from "./types";
 import { ContactTab } from "./ContactTab";
-import { SpecialtiesTab } from "./SpecialtiesTab";
 import { CoveragesTab } from "./CoveragesTab";
 import { AvailabilityTab } from "./AvailabilityTab";
 import { HolidaysTab } from "./HolidaysTab";
@@ -21,9 +20,6 @@ interface ProfessionalFormProps {
     onSubmit: (data: ProfessionalFormData) => Promise<void>;
     loading?: boolean;
     mode: "create" | "edit";
-    specialties: Specialty[];
-    /** Si false, no se muestra el tab Especialidades (feature flag show_specialties). */
-    showSpecialties?: boolean;
     /** Si false, no se muestra el tab Coberturas (feature flag show_coverage). */
     showCoverage?: boolean;
 }
@@ -33,8 +29,6 @@ export function ProfessionalForm({
     onSubmit,
     loading = false,
     mode,
-    specialties,
-    showSpecialties = true,
     showCoverage = true,
 }: ProfessionalFormProps) {
     const [selectedTab, setSelectedTab] = React.useState<string>("contacto");
@@ -49,7 +43,6 @@ export function ProfessionalForm({
         phone: initialData?.phone || "",
         licenseNumber: initialData?.licenseNumber || "",
         tempPassword: "",
-        specialtyIds: initialData?.specialtyIds || [],
         medicalCoverages: initialData?.medicalCoverages || [],
         color: initialData?.color || "#2196f3",
         availabilityConfig: initialData?.availabilityConfig || { ...INITIAL_AVAILABILITY },
@@ -70,12 +63,6 @@ export function ProfessionalForm({
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             newErrors.email = "El formato del email no es válido";
         }
-        if (mode === "create" && !formData.dni?.trim()) {
-            newErrors.dni = "El DNI es requerido (será la clave temporal para el primer acceso)";
-        }
-        if (showSpecialties && formData.specialtyIds.length === 0) {
-            newErrors.specialtyIds = "Selecciona al menos una especialidad";
-        }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -84,9 +71,6 @@ export function ProfessionalForm({
         if (e) e.preventDefault();
         if (validate()) {
             let dataToSubmit = formData;
-            if (!showSpecialties && formData.specialtyIds.length === 0 && specialties.length > 0) {
-                dataToSubmit = { ...formData, specialtyIds: [specialties[0].id] };
-            }
             if (mode === "create" && dataToSubmit.dni?.trim()) {
                 dataToSubmit = { ...dataToSubmit, tempPassword: dataToSubmit.dni.trim() };
             }
@@ -124,20 +108,6 @@ export function ProfessionalForm({
                         </CardBody>
                     </Card>
                 </Tab>
-                {showSpecialties && (
-                    <Tab key="especialidades" title="Especialidades">
-                        <Card>
-                            <CardBody>
-                                <SpecialtiesTab
-                                    formData={formData}
-                                    handleChange={handleChange}
-                                    errors={errors}
-                                    specialties={specialties}
-                                />
-                            </CardBody>
-                        </Card>
-                    </Tab>
-                )}
                 {showCoverage && (
                     <Tab key="coberturas" title="Coberturas">
                         <Card>

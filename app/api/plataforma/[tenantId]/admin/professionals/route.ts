@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { findUsersWithProfessionalProfile, findUsersWithRoleIn, findUserByEmail, createUser, createProfessionalProfile, findAllSpecialties } from "@/lib/db";
+import { findUsersWithProfessionalProfile, findUsersWithRoleIn, findUserByEmail, createUser, createProfessionalProfile } from "@/lib/db";
 import { getTenantFeatureFlagsAndLimits } from "@/lib/tenant-features";
 import { hashPassword } from "@/lib/auth";
 import { Role } from "@/lib/types";
@@ -41,8 +41,6 @@ export async function POST(
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const dni = typeof body.dni === "string" ? body.dni.trim() : null;
   const role = body.role === "ADMIN" || body.role === "PROFESSIONAL" || body.role === "SUPERVISOR" ? body.role : Role.PROFESSIONAL;
-  const specialtyId = typeof body.specialtyId === "string" ? body.specialtyId : "";
-  const specialtyIds = Array.isArray(body.specialtyIds) ? body.specialtyIds.filter((id): id is string => typeof id === "string") : (specialtyId ? [specialtyId] : []);
   const color = typeof body.color === "string" ? body.color.trim() : "#2196f3";
   const tempPassword = typeof body.tempPassword === "string" ? body.tempPassword : (dni || "changeme123");
   const licenseNumber = typeof body.licenseNumber === "string" ? body.licenseNumber.trim() : null;
@@ -69,13 +67,6 @@ export async function POST(
   const exists = await findUserByEmail(email, tenantId);
   if (exists) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
 
-  let effectiveSpecialtyIds = specialtyIds;
-  if (role === Role.PROFESSIONAL && effectiveSpecialtyIds.length === 0) {
-    const specialties = await findAllSpecialties(tenantId);
-    if (specialties.length === 0) return NextResponse.json({ error: "Cree al menos una especialidad antes de agregar un profesional." }, { status: 400 });
-    effectiveSpecialtyIds = [specialties[0].id];
-  }
-
   const userId = randomUUID();
   const user = await createUser({
     id: userId,
@@ -91,8 +82,6 @@ export async function POST(
     await createProfessionalProfile({
       userId,
       tenantId,
-      specialtyId: effectiveSpecialtyIds[0] || "",
-      specialtyIds: effectiveSpecialtyIds,
       color: color || "#2196f3",
       licenseNumber,
       medicalCoverages,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import mysql from "@/lib/mysql";
+import { mysqlDateToUTC } from "@/lib/timezone";
 import { Role } from "@/lib/types";
 
 async function ensurePaymentsTable() {
@@ -69,11 +70,16 @@ export async function GET(
       [tenantId, sinceDate]
     );
 
-    const appointmentItems = (appointmentRows as any[]).map((row) => ({
-      id: `apt_${row.id}`,
-      message: `Turno confirmado: ${row.patientName || "Paciente"} (${new Date(row.startAt).toLocaleString("es-AR")})`,
-      createdAt: row.updatedAt,
-    }));
+    const appointmentItems = (appointmentRows as any[]).map((row) => {
+      const startDate = row.startAt instanceof Date ? row.startAt : new Date(row.startAt);
+      const utcDate = mysqlDateToUTC(startDate);
+      const startFormatted = utcDate.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", dateStyle: "short", timeStyle: "short" });
+      return {
+        id: `apt_${row.id}`,
+        message: `Turno confirmado: ${row.patientName || "Paciente"} (${startFormatted})`,
+        createdAt: row.updatedAt,
+      };
+    });
     const paymentItems = (paymentRows as any[]).map((row) => ({
       id: `pay_${row.id}`,
       message: `Pago ingresado: $${Number(row.amount).toFixed(2)}`,

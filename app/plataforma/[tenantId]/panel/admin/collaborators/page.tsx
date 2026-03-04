@@ -19,14 +19,6 @@ interface Professional {
   dni?: string | null;
   color?: string | null;
   professional?: {
-    specialty?: {
-      id: string;
-      name: string;
-    } | null;
-    specialties?: Array<{
-      id: string;
-      name: string;
-    }>;
     color?: string | null;
   } | null;
 }
@@ -207,13 +199,20 @@ export default function AdminProfessionalsPage() {
             >
               {professionals.map((professional) => {
                 const color = professional.color || professional.professional?.color || "#2196f3";
-                const initials = professional.name
+                const name = professional.name ?? "";
+                const initials = name
                   .split(" ")
-                  .filter(n => n.length > 0)
-                  .map((n) => n[0])
+                  .filter((n: string) => n.length > 0)
+                  .map((n: string) => n[0])
                   .join("")
                   .toUpperCase()
                   .slice(0, 2);
+                const roleLabel =
+                  professional.role === "ADMIN"
+                    ? "Administrador"
+                    : professional.role === "SUPERVISOR"
+                      ? "Recepcionista"
+                      : "Profesional";
 
                 const actionCell = (
                   <TableCell key="actions">
@@ -252,21 +251,17 @@ export default function AdminProfessionalsPage() {
                     </TableCell>
                     <TableCell>
                       <p className="text-sm font-medium text-gray-900">
-                        {professional.name}
+                        {name}
                       </p>
                     </TableCell>
                     <TableCell>
                       <p className="text-sm text-gray-600">
-                        {professional.email}
+                        {professional.email ?? ""}
                       </p>
                     </TableCell>
                     <TableCell>
                       <p className="text-sm text-gray-700">
-                        {professional.role === "ADMIN"
-                          ? "Administrador"
-                          : professional.role === "SUPERVISOR"
-                            ? "Recepcionista"
-                            : "Profesional"}
+                        {roleLabel}
                       </p>
                     </TableCell>
                     {actionCell}

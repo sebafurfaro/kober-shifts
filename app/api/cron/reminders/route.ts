@@ -54,7 +54,6 @@ export async function GET(req: Request) {
                 patient: true,
                 professional: true,
                 location: true,
-                specialty: true,
             },
         });
 

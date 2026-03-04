@@ -6,13 +6,17 @@ export interface TenantTranslations {
   professionalLabel: string;
 }
 
-/** Configuración global de reservas: seña, reembolso, confirmación manual, anticipación min/max. */
+/** Configuración global de reservas: seña, reembolso, confirmación manual, anticipación min/max, duración y margen de turno. */
 export interface TenantBookingSettings {
   depositPercent: number;
   refundPolicyMessage: string;
   manualTurnConfirmation: boolean;
   minAnticipation: number;
   maxAnticipation: number;
+  /** Duración por defecto del turno en minutos (ej. 30). */
+  defaultSlotDurationMinutes: number;
+  /** Margen entre turnos en minutos (ej. 15); no se pueden elegir turnos consecutivos. */
+  defaultSlotMarginMinutes: number;
 }
 
 const defaultBookingSettings: TenantBookingSettings = {
@@ -21,6 +25,8 @@ const defaultBookingSettings: TenantBookingSettings = {
   manualTurnConfirmation: false,
   minAnticipation: 0,
   maxAnticipation: 30,
+  defaultSlotDurationMinutes: 30,
+  defaultSlotMarginMinutes: 0,
 };
 
 interface TenantSettingsState {
@@ -69,6 +75,8 @@ export const useTenantSettingsStore = create<TenantSettingsState>()(
                 manualTurnConfirmation: typeof data.manualTurnConfirmation === "boolean" ? data.manualTurnConfirmation : defaultBookingSettings.manualTurnConfirmation,
                 minAnticipation: typeof data.minAnticipation === "number" ? data.minAnticipation : defaultBookingSettings.minAnticipation,
                 maxAnticipation: typeof data.maxAnticipation === "number" ? data.maxAnticipation : defaultBookingSettings.maxAnticipation,
+                defaultSlotDurationMinutes: typeof data.defaultSlotDurationMinutes === "number" ? data.defaultSlotDurationMinutes : defaultBookingSettings.defaultSlotDurationMinutes,
+                defaultSlotMarginMinutes: typeof data.defaultSlotMarginMinutes === "number" ? data.defaultSlotMarginMinutes : defaultBookingSettings.defaultSlotMarginMinutes,
               },
             });
           } else {

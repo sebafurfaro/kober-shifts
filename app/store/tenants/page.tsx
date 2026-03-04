@@ -157,7 +157,6 @@ export default function StoreTenantsPage() {
               {tenants.map((tenant) => {
                 const config = tenant.config || {
                   features: {
-                    show_specialties: true,
                     show_coverage: true,
                     show_mercado_pago: true,
                     payment_enabled: true,
