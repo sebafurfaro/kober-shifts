@@ -16,7 +16,9 @@ export async function GET(
   }
 
   const url = new URL(req.url);
-  const professionalId = url.searchParams.get("professionalId") || (session.role === Role.PROFESSIONAL ? session.userId : null);
+  const professionalId =
+    url.searchParams.get("professionalId") ||
+    (session.role === Role.PROFESSIONAL || session.role === Role.ADMIN ? session.userId : null);
 
   if (!professionalId) {
     return NextResponse.json({ error: "professionalId is required" }, { status: 400 });
