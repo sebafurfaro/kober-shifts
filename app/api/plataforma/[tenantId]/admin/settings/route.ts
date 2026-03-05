@@ -27,9 +27,9 @@ export async function GET(
 
     const settings = await collection.findOne({ tenantId });
 
-    // Return default settings if none exist
+    // Return default settings if none exist (sitio inactivo por defecto)
     const defaultSettings = {
-      isActive: true,
+      isActive: false,
       notifications: {
         whatsapp: false,
         sms: false,
@@ -113,7 +113,7 @@ export async function PUT(
 
     const isActive = typeof body.isActive === "boolean"
       ? body.isActive
-      : (typeof existingSettings.isActive === "boolean" ? existingSettings.isActive : true);
+      : (existingSettings.isActive === true);
 
     const validReminderOptions = ["48", "24", "48_and_24"] as const;
     const rawReminder = body.whatsappReminderOption;

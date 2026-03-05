@@ -22,6 +22,8 @@ export const SettingsTab = () => {
   const { setBookingSettings } = useTenantSettingsStore();
   const [form, setForm] = React.useState<TenantBookingSettings>(defaultBooking);
   const [saving, setSaving] = React.useState(false);
+  /** String value for maxAnticipation input so the user can clear and type freely; committed to form on blur/save */
+  const [maxAnticipationInput, setMaxAnticipationInput] = React.useState(String(defaultBooking.maxAnticipation));
 
   React.useEffect(() => {
     if (!tenantId) return;
@@ -30,24 +32,43 @@ export const SettingsTab = () => {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (cancelled || !data) return;
+        const maxAnt = typeof data.maxAnticipation === "number" ? data.maxAnticipation : defaultBooking.maxAnticipation;
         setForm({
           depositPercent: typeof data.depositPercent === "number" ? data.depositPercent : defaultBooking.depositPercent,
           refundPolicyMessage: typeof data.refundPolicyMessage === "string" ? data.refundPolicyMessage : defaultBooking.refundPolicyMessage,
           manualTurnConfirmation: typeof data.manualTurnConfirmation === "boolean" ? data.manualTurnConfirmation : defaultBooking.manualTurnConfirmation,
           minAnticipation: typeof data.minAnticipation === "number" ? data.minAnticipation : defaultBooking.minAnticipation,
-          maxAnticipation: typeof data.maxAnticipation === "number" ? data.maxAnticipation : defaultBooking.maxAnticipation,
+          maxAnticipation: maxAnt,
           defaultSlotDurationMinutes: typeof data.defaultSlotDurationMinutes === "number" ? data.defaultSlotDurationMinutes : defaultBooking.defaultSlotDurationMinutes,
           defaultSlotMarginMinutes: typeof data.defaultSlotMarginMinutes === "number" ? data.defaultSlotMarginMinutes : defaultBooking.defaultSlotMarginMinutes,
         });
+        setMaxAnticipationInput(maxAnt === -1 ? "-1" : String(maxAnt));
       })
       .catch(() => {});
     return () => { cancelled = true; };
   }, [tenantId]);
 
+  const commitMaxAnticipation = React.useCallback(() => {
+    const parsed =
+      maxAnticipationInput === "" || maxAnticipationInput === "-"
+        ? 30
+        : maxAnticipationInput === "-1"
+          ? -1
+          : Math.max(-1, parseInt(maxAnticipationInput, 10) ?? 30);
+    setForm((f) => ({ ...f, maxAnticipation: parsed }));
+    setMaxAnticipationInput(parsed === -1 ? "-1" : String(parsed));
+  }, [maxAnticipationInput]);
+
   const handleSave = async () => {
     if (!tenantId) return;
     setSaving(true);
     try {
+      const maxAnt =
+        maxAnticipationInput === "" || maxAnticipationInput === "-"
+          ? 30
+          : maxAnticipationInput === "-1"
+            ? -1
+            : Math.max(-1, parseInt(maxAnticipationInput, 10) ?? 30);
       const res = await fetch(`/api/plataforma/${tenantId}/admin/settings`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -57,7 +78,7 @@ export const SettingsTab = () => {
           refundPolicyMessage: form.refundPolicyMessage,
           manualTurnConfirmation: form.manualTurnConfirmation,
           minAnticipation: form.minAnticipation,
-          maxAnticipation: form.maxAnticipation,
+          maxAnticipation: maxAnt,
           defaultSlotDurationMinutes: form.defaultSlotDurationMinutes,
           defaultSlotMarginMinutes: form.defaultSlotMarginMinutes,
         }),
@@ -65,12 +86,15 @@ export const SettingsTab = () => {
       if (res.ok) {
         const data = await res.json();
         if (data.settings) {
+          const maxAnt = data.settings.maxAnticipation ?? 30;
+          setForm((f) => ({ ...f, maxAnticipation: maxAnt }));
+          setMaxAnticipationInput(maxAnt === -1 ? "-1" : String(maxAnt));
           setBookingSettings({
             depositPercent: data.settings.depositPercent,
             refundPolicyMessage: data.settings.refundPolicyMessage,
             manualTurnConfirmation: data.settings.manualTurnConfirmation,
             minAnticipation: data.settings.minAnticipation,
-            maxAnticipation: data.settings.maxAnticipation,
+            maxAnticipation: maxAnt,
             defaultSlotDurationMinutes: data.settings.defaultSlotDurationMinutes,
             defaultSlotMarginMinutes: data.settings.defaultSlotMarginMinutes,
           });
@@ -151,8 +175,10 @@ export const SettingsTab = () => {
               label="Anticipación máxima para reservar"
               name="maxAnticipation"
               type="text"
-              value={form.maxAnticipation === -1 ? "-1" : String(form.maxAnticipation)}
-              onValueChange={(v) => setForm((f) => ({ ...f, maxAnticipation: v === "-1" ? -1 : Math.max(-1, parseInt(v, 10) || 30) }))}
+              inputMode="numeric"
+              value={maxAnticipationInput}
+              onValueChange={setMaxAnticipationInput}
+              onBlur={commitMaxAnticipation}
               endContent={<span className="text-sm text-slate-500">días</span>}
               isDisabled={saving}
             />

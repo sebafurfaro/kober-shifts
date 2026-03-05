@@ -48,8 +48,9 @@ export const DetailsTab = () => {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (cancelled || !data) return;
-        setIsActive(typeof data.isActive === "boolean" ? data.isActive : true);
-        setActive(typeof data.isActive === "boolean" ? data.isActive : true);
+        const active = data.isActive === true;
+        setIsActive(active);
+        setActive(active);
       })
       .catch(() => {});
     return () => { cancelled = true; };

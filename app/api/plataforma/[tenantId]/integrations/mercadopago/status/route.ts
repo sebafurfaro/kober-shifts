@@ -22,9 +22,8 @@ export async function GET(
 
   try {
     const oauthLinked = await hasMercadoPagoAccount(tenantId);
-    const envToken = process.env.MERCADOPAGO_ACCESS_TOKEN?.trim();
-    const linked = oauthLinked || !!envToken;
-    return NextResponse.json({ linked });
+    // Solo se considera vinculado si este tenant completó OAuth. No usar token global para la UI.
+    return NextResponse.json({ linked: oauthLinked });
   } catch (error) {
     console.error("Error checking MercadoPago status:", error);
     return NextResponse.json({ linked: false });
