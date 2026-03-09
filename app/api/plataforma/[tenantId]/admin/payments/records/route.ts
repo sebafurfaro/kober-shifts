@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { mongoClientPromise } from "@/lib/mongo";
+import mysql from "@/lib/mysql";
 import { Role } from "@/lib/types";
 
 export async function GET(
@@ -22,19 +22,29 @@ export async function GET(
     const limit = parseInt(url.searchParams.get("limit") || "20", 10);
     const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 20;
     const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
-    const skip = (safePage - 1) * safeLimit;
+    const offset = (safePage - 1) * safeLimit;
 
-    const client = await mongoClientPromise;
-    const db = client.db();
-    const collection = db.collection("payments");
+    const [countRows] = await mysql.execute(
+      "SELECT COUNT(*) as total FROM appointment_payments WHERE tenantId = ?",
+      [tenantId]
+    );
+    const total = Number((countRows as { total: number }[])[0]?.total ?? 0);
 
-    const total = await collection.countDocuments({ tenantId });
-    const payments = await collection
-      .find({ tenantId })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(safeLimit)
-      .toArray();
+    const [rows] = await mysql.execute(
+      `SELECT id, tenantId, appointmentId, provider, purpose, amount, status, preferenceId, paymentId, createdAt, updatedAt
+       FROM appointment_payments
+       WHERE tenantId = ?
+       ORDER BY createdAt DESC
+       LIMIT ? OFFSET ?`,
+      [tenantId, safeLimit, offset]
+    );
+
+    const payments = (rows as Record<string, unknown>[]).map((row) => ({
+      ...row,
+      mercadoPago: row.preferenceId
+        ? { preferenceId: row.preferenceId, paymentId: row.paymentId }
+        : undefined,
+    }));
 
     return NextResponse.json({
       payments,
@@ -45,7 +55,7 @@ export async function GET(
         totalPages: Math.ceil(total / safeLimit),
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching payments records:", error);
     return NextResponse.json(
       { error: "Failed to fetch payments records" },

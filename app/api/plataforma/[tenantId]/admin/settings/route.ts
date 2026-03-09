@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { mongoClientPromise } from "@/lib/mongo";
+import { getTenantSettingsRow, updateTenantSettingsOnly } from "@/lib/settings-db";
 import { Role } from "@/lib/types";
 
 /**
  * GET /api/plataforma/[tenantId]/admin/settings
- * Get tenant settings from MongoDB
+ * Get tenant settings from MySQL
  */
 export async function GET(
   req: Request,
@@ -21,11 +21,8 @@ export async function GET(
   }
 
   try {
-    const client = await mongoClientPromise;
-    const db = client.db();
-    const collection = db.collection("tenant_settings");
-
-    const settings = await collection.findOne({ tenantId });
+    const row = await getTenantSettingsRow(tenantId);
+    const settingsObj = row?.settings ?? {};
 
     // Return default settings if none exist (sitio inactivo por defecto)
     const defaultSettings = {
@@ -50,9 +47,9 @@ export async function GET(
       defaultSlotMarginMinutes: 0,
     };
 
-    const merged = { ...defaultSettings, ...settings?.settings };
+    const merged = { ...defaultSettings, ...settingsObj };
     return NextResponse.json(merged);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching settings:", error);
     return NextResponse.json(
       { error: "Failed to fetch settings" },
@@ -63,7 +60,7 @@ export async function GET(
 
 /**
  * PUT /api/plataforma/[tenantId]/admin/settings
- * Update tenant settings in MongoDB
+ * Update tenant settings in MySQL
  */
 export async function PUT(
   req: Request,
@@ -80,11 +77,8 @@ export async function PUT(
 
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-    const client = await mongoClientPromise;
-    const db = client.db();
-    const collection = db.collection("tenant_settings");
-    const existing = await collection.findOne({ tenantId });
-    const existingSettings = (existing?.settings && typeof existing.settings === "object") ? existing.settings : {} as Record<string, unknown>;
+    const row = await getTenantSettingsRow(tenantId);
+    const existingSettings = (row?.settings && typeof row.settings === "object") ? row.settings : {} as Record<string, unknown>;
 
     const notificationsFromBody = body.notifications as { whatsapp?: boolean; sms?: boolean; email?: boolean } | undefined;
     const notifications = {
@@ -177,14 +171,10 @@ export async function PUT(
       defaultSlotMarginMinutes,
     };
 
-    await collection.updateOne(
-      { tenantId },
-      { $set: { tenantId, settings, updatedAt: new Date() } },
-      { upsert: true }
-    );
+    await updateTenantSettingsOnly(tenantId, settings);
 
     return NextResponse.json({ success: true, settings });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating settings:", error);
     return NextResponse.json(
       { error: "Failed to update settings" },

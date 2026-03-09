@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import mysql from "@/lib/mysql";
 import { Role } from "@/lib/types";
-import { getMongoClientPromise } from "@/lib/mongo";
+import { getTenantFeaturesRow } from "@/lib/settings-db";
 
 /**
  * GET /api/plataforma/[tenantId]/analytics/metrics
@@ -138,9 +138,7 @@ export async function GET(
     let remindersAssigned = 0;
     let remindersUsed = 0;
     try {
-      const client = await getMongoClientPromise();
-      const db = client.db("kober_shifts");
-      const doc = await db.collection("tenant_features").findOne({ tenantId });
+      const doc = await getTenantFeaturesRow(tenantId);
       const limits = doc?.limits && typeof doc.limits === "object" ? doc.limits : {};
       remindersAssigned =
         typeof (limits as { whatsappRemindersLimit?: number }).whatsappRemindersLimit === "number" &&
@@ -154,7 +152,7 @@ export async function GET(
           ? (usage as { remindersUsed: number }).remindersUsed
           : 0;
     } catch {
-      // Ignore Mongo errors
+      // Ignore errors
     }
 
     // --- Horarios mas consumidos (mes actual) ---

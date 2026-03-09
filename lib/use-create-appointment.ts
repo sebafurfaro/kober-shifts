@@ -37,6 +37,19 @@ export function useCreateAppointment(tenantId: string) {
       body: CreateAppointmentBody,
       options?: CreateAppointmentOptions
     ): Promise<CreateAppointmentResult> => {
+      const startAt =
+        typeof body.startAt === "string"
+          ? body.startAt
+          : body.startAt instanceof Date
+            ? body.startAt.toISOString()
+            : String(body.startAt);
+      const endAt =
+        typeof body.endAt === "string"
+          ? body.endAt
+          : body.endAt instanceof Date
+            ? body.endAt.toISOString()
+            : String(body.endAt);
+
       const res = await fetch(`/api/plataforma/${tenantId}/appointments`, {
         method: "POST",
         headers: {
@@ -48,8 +61,8 @@ export function useCreateAppointment(tenantId: string) {
           professionalId: body.professionalId,
           locationId: body.locationId,
           serviceId: body.serviceId ?? null,
-          startAt: body.startAt,
-          endAt: body.endAt,
+          startAt,
+          endAt,
           notes: body.notes ?? null,
         }),
         credentials: "include",
@@ -57,14 +70,16 @@ export function useCreateAppointment(tenantId: string) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const err = new Error(data.error || "Error al crear el turno");
+        const message =
+          typeof data?.error === "string" ? data.error : (data?.details as string) || "Error al crear el turno";
+        const err = new Error(message);
         options?.onError?.(err);
         throw err;
       }
       invalidate();
       options?.onSuccess?.();
       return {
-        appointmentId: data.appointmentId,
+        appointmentId: data.appointmentId ?? "",
         googleEventId: data.googleEventId ?? null,
       };
     },

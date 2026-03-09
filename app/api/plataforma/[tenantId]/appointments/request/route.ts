@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { findUserById, findLocationById, findProfessionalProfileByUserId, findGoogleOAuthTokenByUserId, createAppointment, findServiceById } from "@/lib/db";
+import { getTenantSettingsRow } from "@/lib/settings-db";
 import { getSession } from "@/lib/session";
 import { createAppointmentEvent } from "@/lib/googleCalendar";
 import { renderBasicTemplate, sendMail } from "@/lib/email";
 import { AppointmentStatus, Role } from "@/lib/types";
 import { randomUUID } from "crypto";
-import { realUTCToMySQLDate, mysqlDateToUTC, formatInBuenosAires } from "@/lib/timezone";
+import { realUTCToMySQLDate, mysqlDateToUTC, formatInBuenosAires, BUENOS_AIRES_TIMEZONE } from "@/lib/timezone";
+import { toZonedTime } from "date-fns-tz";
+import { getProfessionalAvailableDayNumbers } from "@/lib/professional-availability";
 
 export async function POST(
   req: Request,
@@ -58,6 +61,18 @@ export async function POST(
     return NextResponse.json({ error: "Invalid professional" }, { status: 400 });
   }
 
+  const allowedDays = getProfessionalAvailableDayNumbers(professionalProfile);
+  if (allowedDays.length > 0) {
+    const startAtInBA = toZonedTime(startAt, BUENOS_AIRES_TIMEZONE);
+    const dayOfWeek = startAtInBA.getDay();
+    if (!allowedDays.includes(dayOfWeek)) {
+      return NextResponse.json(
+        { error: "La fecha/hora elegida no está dentro de la disponibilidad del profesional." },
+        { status: 400 }
+      );
+    }
+  }
+
   const [googleOAuth, location] = await Promise.all([
     findGoogleOAuthTokenByUserId(professionalId, tenantId),
     findLocationById(locationId, tenantId),
@@ -65,13 +80,24 @@ export async function POST(
 
   if (!location) return NextResponse.json({ error: "Invalid location" }, { status: 400 });
 
-  // Si el servicio tiene costo, el turno queda pendiente de seña hasta que pague
-  let initialStatus = AppointmentStatus.REQUESTED;
-  if (serviceId) {
-    const service = await findServiceById(serviceId, tenantId);
-    if (service && service.price > 0) {
-      initialStatus = AppointmentStatus.PENDING_DEPOSIT;
-    }
+  const service = serviceId ? await findServiceById(serviceId, tenantId) : null;
+  const hasSenia = !!(service && service.price > 0);
+
+  let manualTurnConfirmation = false;
+  try {
+    const row = await getTenantSettingsRow(tenantId);
+    const settings = (row?.settings && typeof row.settings === "object") ? row.settings as Record<string, unknown> : {};
+    manualTurnConfirmation = settings.manualTurnConfirmation === true;
+  } catch {
+    // default: auto-confirm when no seña
+  }
+
+  // Confirmación según plan: con señas → pendiente hasta pago; sin señas y manualTurnConfirmation false → auto CONFIRMED; sin señas y true → REQUESTED
+  let initialStatus: AppointmentStatus;
+  if (hasSenia) {
+    initialStatus = AppointmentStatus.PENDING_DEPOSIT;
+  } else {
+    initialStatus = manualTurnConfirmation ? AppointmentStatus.REQUESTED : AppointmentStatus.CONFIRMED;
   }
 
   // Try to create Google Calendar event if OAuth token exists (optional)

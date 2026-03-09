@@ -93,8 +93,8 @@ Este documento prioriza los ítems del `plan_mejoras.md` por **simplicidad de im
 
 ---
 
-### 12. **Integración Mailsender**
-- **Problema:** Mailsender necesita un dominio real para integrar la plataforma y enviar correos. Hasta no tener el deploy en el servidor final, no se puede testear en vivo.
+### 12. **Integración Resed**
+- **Problema:** Resend necesita un dominio real para integrar la plataforma y enviar correos. Hasta no tener el deploy en el servidor final, no se puede testear en vivo.
 - **Solución:** Crear un template con información dinámica para la confirmación de turnos, por ejemplo: *"El turno con {profesional} para el día {fecha+hora} en {sede} ha sido confirmado."* Centralizar ese texto en una función que reciba las variables (profesional, fecha, hora, sede) y usarla en los envíos actuales (confirmación manual, webhook Mercado Pago, etc.). Dejar la integración preparada con variables de entorno en modo dummy (sin dominio real) y documentar los pasos para la integración final (dominio, DNS, Mailsender/Resend/SMTP).
 - **Esfuerzo:** Medio (template reutilizable + uso en rutas existentes que ya envían mail + documentación de env y deploy).
 - **Contexto:** Ya existe `lib/email.ts` con `sendMail` y `renderBasicTemplate`; los mails de confirmación se envían desde `appointments/[id]/route.ts`, `payments/mercadopago/webhook/route.ts` y `appointments/request/route.ts`. El trabajo es unificar el mensaje en un template y documentar.
@@ -131,12 +131,12 @@ Este documento prioriza los ítems del `plan_mejoras.md` por **simplicidad de im
 | 4     | Roles – Botón Guardar        | `roles/page.tsx`                       | Baja         | Implementado |
 | 5     | Roles – Tooltips             | `roles/page.tsx`                       | Baja         | Implementado |
 | 6     | DetailsTab persistencia Switch | `DetailsTab.tsx` + API settings     | Baja–media   | Implementado |
-| 7     | Roles – Checkbox todos       | `roles/page.tsx`                       | Baja–media   | Pendiente   |
-| 8     | Página 404                   | `not-found.tsx` (ruta a definir)       | Baja         | Pendiente   |
-| 9     | Login / tenantId + 404       | layout, API tenant, login              | Medio        | Pendiente   |
-| 10    | Roles – Admin no modifica sus permisos | `roles/page.tsx` + session       | Medio        | Pendiente   |
-| 11    | Confirmación turnos (manual + señas)  | API appointments, webhook         | Medio        | Pendiente   |
-| 12    | Integración Mailsender       | `lib/email.ts`, rutas de turnos, docs  | Medio        | Pendiente   |
-| 13    | Integración WhatsApp         | cron, API WhatsApp, tenant config, UI  | Alto         | Pendiente   |
+| 7     | Roles – Checkbox todos       | `roles/page.tsx`                       | Baja–media   | Implementado |
+| 8     | Página 404                   | `not-found.tsx` (ruta a definir)       | Baja         | Implementado |
+| 9     | Login / tenantId + 404       | layout, API tenant, login              | Medio        | Implementado |
+| 10    | Roles – Admin no modifica sus permisos | `roles/page.tsx` + session       | Medio        | Implementado |
+| 11    | Confirmación turnos (manual + señas)  | API appointments, webhook         | Medio        | Implementado |
+| 12    | Integración Resend       | `lib/email.ts`, rutas de turnos, docs  | Medio        | Implementado |
+| 13    | Integración WhatsApp         | cron, API WhatsApp, tenant config, UI  | Alto         | Implementado |
 
-Siguiente paso sugerido: puntos 4 y 5 (Roles – Botón Guardar y Tooltips) o punto 6 (persistencia del Switch en Detalles).
+Siguiente paso sugerido: punto 13 implementado; seguir con otras mejoras del plan_mejoras.md.

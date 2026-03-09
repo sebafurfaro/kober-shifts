@@ -1,5 +1,35 @@
 import nodemailer from "nodemailer";
 
+/** Variables para el mensaje de turno confirmado (paciente) */
+export type TurnoConfirmadoPacienteVars = {
+  profesional: string;
+  fechaHora: string;
+  sede: string;
+};
+
+/** Genera el texto y el HTML del cuerpo del email de "turno confirmado" para el paciente. */
+export function getTurnoConfirmadoPacienteContent(v: TurnoConfirmadoPacienteVars) {
+  const sentence = `El turno con ${v.profesional} para el día ${v.fechaHora} en ${v.sede} ha sido confirmado.`;
+  const text = `Tu turno fue confirmado.\n\n${sentence}`;
+  const bodyHtml = `<p>Tu turno fue confirmado.</p><p>${sentence}</p><p><strong>Sede:</strong> ${v.sede}<br/><strong>Fecha y hora:</strong> ${v.fechaHora}</p>`;
+  return { text, bodyHtml, preview: sentence };
+}
+
+/** Variables para el mensaje de turno confirmado (profesional) */
+export type TurnoConfirmadoProfesionalVars = {
+  pacienteNombre: string;
+  pacienteEmail: string;
+  sede: string;
+  fechaHora: string;
+};
+
+/** Genera el texto y el HTML del cuerpo del email de "turno confirmado" para el profesional. */
+export function getTurnoConfirmadoProfesionalContent(v: TurnoConfirmadoProfesionalVars) {
+  const text = `Turno confirmado.\n\nPaciente: ${v.pacienteNombre} (${v.pacienteEmail})\nSede: ${v.sede}\nInicio: ${v.fechaHora}`;
+  const bodyHtml = `<p>Turno confirmado.</p><p><strong>Paciente:</strong> ${v.pacienteNombre} (${v.pacienteEmail})<br/><strong>Sede:</strong> ${v.sede}<br/><strong>Inicio:</strong> ${v.fechaHora}</p>`;
+  return { text, bodyHtml, preview: "Turno confirmado." };
+}
+
 export function renderBasicTemplate(input: {
   title: string;
   preview?: string;
@@ -58,6 +88,7 @@ export async function sendMail(input: { to: string; subject: string; text: strin
         headers: {
           Authorization: `Bearer ${resendKey}`,
           "Content-Type": "application/json",
+          "User-Agent": process.env.RESEND_USER_AGENT || "kober-shifts/1.0",
         },
         body: JSON.stringify({
           from: resendFrom,

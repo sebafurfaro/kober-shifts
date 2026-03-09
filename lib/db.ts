@@ -1009,6 +1009,18 @@ export async function updateAppointmentStatus(id: string, tenantId: string, stat
   return appointment;
 }
 
+/**
+ * Pasa a ATTENDED todos los turnos CONFIRMED cuya fecha de fin (endAt) sea anterior al umbral.
+ * Uso: cron que ejecuta con threshold = now - 1h para marcar "turno tomado" automáticamente.
+ */
+export async function markConfirmedAsAttendedAfterEnd(thresholdEndAt: Date): Promise<number> {
+  const [result] = await mysql.execute(
+    "UPDATE appointments SET status = ? WHERE status = ? AND endAt < ?",
+    ["ATTENDED", "CONFIRMED", thresholdEndAt]
+  );
+  return (result as { affectedRows?: number }).affectedRows ?? 0;
+}
+
 export async function updateAppointmentGoogleEventId(id: string, tenantId: string, googleEventId: string | null): Promise<Appointment> {
   await mysql.execute('UPDATE appointments SET googleEventId = ? WHERE id = ? AND tenantId = ?', [googleEventId, id, tenantId]);
   const appointment = await findAppointmentById(id, tenantId);
@@ -1121,9 +1133,9 @@ export async function findAppointmentsByDateRange(
   let query = `
     SELECT 
       a.*,
-      p.id as p_id, p.email as p_email, p.name as p_name, p.passwordHash as p_passwordHash, 
+      p.id as p_id, p.tenantId as p_tenantId, p.email as p_email, p.name as p_name, p.phone as p_phone, p.passwordHash as p_passwordHash,
       p.role as p_role, p.createdAt as p_createdAt, p.updatedAt as p_updatedAt,
-      prof.id as prof_id, prof.email as prof_email, prof.name as prof_name, prof.passwordHash as prof_passwordHash,
+      prof.id as prof_id, prof.tenantId as prof_tenantId, prof.email as prof_email, prof.name as prof_name, prof.passwordHash as prof_passwordHash,
       prof.role as prof_role, prof.createdAt as prof_createdAt, prof.updatedAt as prof_updatedAt,
       pp.userId as pp_userId, pp.isActive as pp_isActive,
       pp.googleCalendarId as pp_googleCalendarId, pp.color as pp_color,
@@ -1164,9 +1176,10 @@ export async function findAppointmentsByDateRange(
     ...rowToAppointment(row),
     patient: rowToUser({
       id: row.p_id,
-      tenantId: row.p_tenantId,
+      tenantId: row.p_tenantId ?? row.tenantId,
       email: row.p_email,
       name: row.p_name,
+      phone: row.p_phone ?? null,
       passwordHash: row.p_passwordHash,
       role: row.p_role,
       createdAt: row.p_createdAt,

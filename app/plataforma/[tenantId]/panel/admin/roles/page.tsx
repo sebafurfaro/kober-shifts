@@ -7,17 +7,17 @@ import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { useParams } from "next/navigation";
 
 const PERMISSIONS = [
-  { key: "analytics", label: "Analíticas", path: "/analytics" },
-  { key: "turnosProfessional", label: "Turnos Profesional", path: "/professional" },
-  { key: "patients", label: "Clientes", path: "/patients" },
-  { key: "servicios", label: "Servicios", path: "/servicios" },
-  { key: "admin", label: "Admin", path: "/admin" },
-  { key: "pagos", label: "Pagos", path: "/pagos" },
-  { key: "turnos", label: "Turnos", path: "/turnos" },
-  { key: "locations", label: "Sedes", path: "/locations" },
-  { key: "coberturas", label: "Coberturas", path: "/coberturas" },
-  { key: "collaborators", label: "Usuarios", path: "/collaborators" },
-  { key: "profesionales", label: "Profesionales", path: "/profesionales" },
+  { key: "analytics", label: "Analíticas", path: "/analytics", text: "Acceso a la sección de métricas" },
+  { key: "turnosProfessional", label: "Turnos Profesional", path: "/professional", text: "Acceso a la sección de turnos para profesionales" },
+  { key: "patients", label: "Clientes", path: "/patients", text: "Acceso a la sección de clientes" },
+  { key: "servicios", label: "Añadir Servicios", path: "/servicios", text: "Acceso a la sección de servicios con/sin señas" },
+  { key: "admin", label: "Admin", path: "/admin", text: "Acceso a la sección de configuración del negocio" },
+  { key: "pagos", label: "Pagos", path: "/pagos", text: "Acceso a la sección de historial de pagos" },
+  { key: "turnos", label: "Turnos", path: "/turnos", text: "Acceso a la sección de listado de turnos" },
+  { key: "locations", label: "Añadir Sedes", path: "/locations", text: "Acceso a la sección de sedes" },
+  { key: "coberturas", label: "Coberturas", path: "/coberturas", text: "Acceso a la sección de coberturas medicas" },
+  { key: "collaborators", label: "Añadir Colaboradores", path: "/collaborators", text: "Acceso a la sección de colaboradores" },
+  { key: "profesionales", label: "Añadir Profesionales", path: "/profesionales", text: "Acceso a la sección de profesionales" },
 ] as const;
 
 type RoleKey = "ADMIN" | "PROFESSIONAL" | "SUPERVISOR";
@@ -49,11 +49,31 @@ export default function AdminRolesPage() {
   const [permissions, setPermissions] = React.useState<Record<string, Record<RoleKey, number>>>(() => ({ ...DEFAULT_PERMISSIONS }));
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  const [currentUserRole, setCurrentUserRole] = React.useState<RoleKey | null>(null);
   const [alert, setAlert] = React.useState<{ open: boolean; message: string; type: "success" | "error" | "warning" }>({ open: false, message: "", type: "success" });
 
+  /** El admin no puede modificar la columna Administrador (sus propios permisos). */
+  const isAdminColumnDisabled = currentUserRole === "ADMIN";
+
   React.useEffect(() => {
-    // TODO: cargar permisos desde API cuando exista
-    setLoading(false);
+    let cancelled = false;
+    Promise.all([
+      fetch(`/api/plataforma/${tenantId}/auth/me`, { credentials: "include" }).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/plataforma/${tenantId}/admin/permissions`, { credentials: "include" }).then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([meData, permData]) => {
+        if (cancelled) return;
+        if (meData?.role === "ADMIN" || meData?.role === "PROFESSIONAL" || meData?.role === "SUPERVISOR") {
+          setCurrentUserRole(meData.role);
+        }
+        if (permData?.permissions && typeof permData.permissions === "object" && !Array.isArray(permData.permissions)) {
+          setPermissions((prev) => ({ ...DEFAULT_PERMISSIONS, ...prev, ...permData.permissions }));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, [tenantId]);
 
   const handleChange = (permKey: string, role: RoleKey, checked: boolean) => {
@@ -66,12 +86,61 @@ export default function AdminRolesPage() {
     }));
   };
 
+  /** Marcar o desmarcar todos los permisos para un rol (columna) */
+  const handleSelectAllForRole = (role: RoleKey, checked: boolean) => {
+    setPermissions((prev) => {
+      const next = { ...prev };
+      PERMISSIONS.forEach((perm) => {
+        next[perm.key] = { ...next[perm.key], [role]: checked ? 1 : 0 };
+      });
+      return next;
+    });
+  };
+
+  /** Marcar o desmarcar un permiso para todos los roles (fila). Si el usuario es admin, no se modifica la columna ADMIN. */
+  const handleSelectAllForPermission = (permKey: string, checked: boolean) => {
+    const value = checked ? 1 : 0;
+    setPermissions((prev) => ({
+      ...prev,
+      [permKey]: {
+        ADMIN: isAdminColumnDisabled ? (prev[permKey]?.ADMIN ?? 1) : value,
+        PROFESSIONAL: value,
+        SUPERVISOR: value,
+      },
+    }));
+  };
+
+  const allSelectedForRole = (role: RoleKey) =>
+    PERMISSIONS.every((perm) => (permissions[perm.key]?.[role] ?? (role === "ADMIN" ? 1 : 0)) === 1);
+  const noneSelectedForRole = (role: RoleKey) =>
+    PERMISSIONS.every((perm) => (permissions[perm.key]?.[role] ?? 0) === 0);
+  const someSelectedForRole = (role: RoleKey) => !allSelectedForRole(role) && !noneSelectedForRole(role);
+
+  const allSelectedForPermission = (permKey: string) =>
+    (permissions[permKey]?.ADMIN ?? 1) === 1 &&
+    (permissions[permKey]?.PROFESSIONAL ?? 0) === 1 &&
+    (permissions[permKey]?.SUPERVISOR ?? 0) === 1;
+  const noneSelectedForPermission = (permKey: string) =>
+    (permissions[permKey]?.ADMIN ?? 0) === 0 &&
+    (permissions[permKey]?.PROFESSIONAL ?? 0) === 0 &&
+    (permissions[permKey]?.SUPERVISOR ?? 0) === 0;
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      // TODO: llamar a API de persistencia de permisos cuando exista
-      await new Promise((r) => setTimeout(r, 400));
-      setAlert({ open: true, message: "Los cambios se guardarán cuando la persistencia de permisos esté disponible.", type: "warning" });
+      const res = await fetch(`/api/plataforma/${tenantId}/admin/permissions`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ permissions }),
+      });
+      if (res.ok) {
+        setAlert({ open: true, message: "Permisos guardados correctamente.", type: "success" });
+      } else {
+        setAlert({ open: true, message: "Error al guardar permisos.", type: "error" });
+      }
+    } catch (e) {
+      setAlert({ open: true, message: "Error de red al guardar permisos.", type: "error" });
     } finally {
       setSaving(false);
     }
@@ -82,7 +151,7 @@ export default function AdminRolesPage() {
       <div className="py-8">
         <PanelHeader
           title="Roles"
-          subtitle="Activa o desactiva permisos por rol (1 = activo, 0 = desactivado). Los cambios se replicarán en las secciones y en la base de datos."
+          subtitle="Activa o desactiva permisos por rol. Controla los accesos de tus colaboradores al panel de administracion."
         />
 
         <Card className="card">
@@ -114,20 +183,78 @@ export default function AdminRolesPage() {
               loadingContent={<Spinner label="Cargando..." />}
               emptyContent={null}
             >
+              <TableRow className="bg-slate-50 border-b border-slate-200">
+                <TableCell>
+                  <Tooltip content="Marcar o desmarcar todos los permisos de cada columna" placement="right">
+                    <span className="text-sm font-medium text-slate-600">Seleccionar todos</span>
+                  </Tooltip>
+                </TableCell>
+                <TableCell>
+                  <Tooltip content={isAdminColumnDisabled ? "No podés modificar los permisos del rol Administrador" : "Marcar o desmarcar todos para Administrador"} placement="top">
+                    <Checkbox
+                      isSelected={allSelectedForRole("ADMIN")}
+                      isIndeterminate={someSelectedForRole("ADMIN")}
+                      onValueChange={(checked) => handleSelectAllForRole("ADMIN", checked ?? false)}
+                      aria-label="Todos Administrador"
+                      isDisabled={isAdminColumnDisabled}
+                    />
+                  </Tooltip>
+                </TableCell>
+                <TableCell>
+                  <Tooltip content="Marcar o desmarcar todos para Profesional" placement="top">
+                    <Checkbox
+                      isSelected={allSelectedForRole("PROFESSIONAL")}
+                      isIndeterminate={someSelectedForRole("PROFESSIONAL")}
+                      onValueChange={(checked) => handleSelectAllForRole("PROFESSIONAL", checked ?? false)}
+                      aria-label="Todos Profesional"
+                    />
+                  </Tooltip>
+                </TableCell>
+                <TableCell>
+                  <Tooltip content="Marcar o desmarcar todos para Recepcionista" placement="top">
+                    <Checkbox
+                      isSelected={allSelectedForRole("SUPERVISOR")}
+                      isIndeterminate={someSelectedForRole("SUPERVISOR")}
+                      onValueChange={(checked) => handleSelectAllForRole("SUPERVISOR", checked ?? false)}
+                      aria-label="Todos Recepcionista"
+                    />
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+              <>
               {PERMISSIONS.map((perm) => (
                 <TableRow key={perm.key}>
                   <TableCell>
-                    <Tooltip content={`Ruta: ${perm.path}`} placement="right">
-                      <span className="text-sm font-medium text-slate-800">{perm.label}</span>
-                    </Tooltip>
-                    <span className="text-xs text-slate-500 block">{perm.path}</span>
+                    <div className="flex items-center gap-2">
+                      <Tooltip content="Marcar o desmarcar este permiso para todos los roles" placement="right">
+                        <Checkbox
+                          isSelected={allSelectedForPermission(perm.key)}
+                          isIndeterminate={
+                            !allSelectedForPermission(perm.key) && !noneSelectedForPermission(perm.key)
+                          }
+                          onValueChange={(checked) =>
+                            handleSelectAllForPermission(perm.key, checked ?? false)
+                          }
+                          aria-label={`${perm.label} todos los roles`}
+                          size="sm"
+                          className="shrink-0"
+                        />
+                      </Tooltip>
+                      <div>
+                        <Tooltip content={`${perm.text}`} placement="right">
+                          <span className="text-sm font-medium text-slate-800">{perm.label}</span>
+                        </Tooltip>
+                        <span className="text-xs text-slate-500 block">{perm.path}</span>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <Tooltip content={`${perm.label} como Administrador`} placement="top">
+                    <Tooltip content={isAdminColumnDisabled ? "No podés modificar tus propios permisos de Administrador" : `${perm.label} como Administrador`} placement="top">
                       <Checkbox
                         isSelected={(permissions[perm.key]?.ADMIN ?? 1) === 1}
                         onValueChange={(checked) => handleChange(perm.key, "ADMIN", checked)}
                         aria-label={`${perm.label} Administrador`}
+                        isDisabled={isAdminColumnDisabled}
                       />
                     </Tooltip>
                   </TableCell>
@@ -151,6 +278,7 @@ export default function AdminRolesPage() {
                   </TableCell>
                 </TableRow>
               ))}
+              </>
             </TableBody>
           </Table>
           <div className="p-4 border-t border-gray-200 flex justify-end">

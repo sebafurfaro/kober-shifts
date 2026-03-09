@@ -1,5 +1,6 @@
 {
     "chat.mcp.assisted.nuget.enabled": true,
     "chat.mcp.gallery.enabled": true,
-    "chat.mcp.serverSampling": {}
+    "chat.mcp.serverSampling": {},
+    "inlineChat.defaultModel": "Auto (copilot)"
 }

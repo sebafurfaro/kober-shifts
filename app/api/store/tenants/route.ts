@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStoreSession } from "@/lib/store-session";
 import { findAllTenants, createTenant, createUser, findUserByEmail } from "@/lib/db";
-import { mongoClientPromise } from "@/lib/mongo";
+import { upsertTenantFeatures } from "@/lib/settings-db";
 import { randomUUID } from "crypto";
 import { hashPassword } from "@/lib/auth";
 import { Role } from "@/lib/types";
@@ -63,10 +63,6 @@ export async function POST(req: Request) {
   try {
     const created = await createTenant({ id, name, logoUrl });
 
-    const client = await mongoClientPromise;
-    const db = client.db("kober_shifts");
-    const collection = db.collection("tenant_features");
-
     const featureFlags = {
       show_coverage: features?.show_coverage ?? true,
       show_mercado_pago: features?.show_mercado_pago ?? true,
@@ -80,15 +76,9 @@ export async function POST(req: Request) {
     };
 
     try {
-      await collection.insertOne({
-        tenantId: id,
-        features: featureFlags,
-        limits: limitsData,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-    } catch (mongoError) {
-      console.error("Error saving tenant config:", mongoError);
+      await upsertTenantFeatures(id, { features: featureFlags, limits: limitsData });
+    } catch (err) {
+      console.error("Error saving tenant features:", err);
     }
 
     if (adminEmail && adminPassword) {

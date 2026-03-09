@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getStoreSession } from "@/lib/store-session";
-import { getMongoClientPromise } from "@/lib/mongo";
+import { getTenantFeaturesRow, upsertTenantFeatures } from "@/lib/settings-db";
 
 const ALLOWED_EMAILS = ["seba.furfaro@gmail.com", "caourisaldana@gmail.com"].map((e) => e.toLowerCase());
 
@@ -33,7 +33,7 @@ const DEFAULT_LIMITS = {
 
 /**
  * GET /api/store/tenants/[id]/features
- * Get tenant feature flags from MongoDB
+ * Get tenant feature flags from MySQL
  */
 export async function GET(
   req: Request,
@@ -47,11 +47,7 @@ export async function GET(
   const { id: tenantId } = await params;
 
   try {
-    const client = await getMongoClientPromise();
-    const db = client.db("kober_shifts");
-    const collection = db.collection("tenant_features");
-
-    const doc = await collection.findOne({ tenantId });
+    const doc = await getTenantFeaturesRow(tenantId);
 
     const rawFeatures = doc?.features && typeof doc.features === "object" ? doc.features : {};
     const paymentEnabled =
@@ -65,7 +61,7 @@ export async function GET(
       payment_enabled: paymentEnabled,
     };
     const limits = doc?.limits && typeof doc.limits === "object"
-      ? { ...DEFAULT_LIMITS, ...doc.limits }
+      ? { ...DEFAULT_LIMITS, ...(doc.limits as Record<string, unknown>) }
       : DEFAULT_LIMITS;
 
     return NextResponse.json({ features, limits });
@@ -88,7 +84,7 @@ function getErrorMessage(err: unknown): string {
 
 /**
  * PUT /api/store/tenants/[id]/features
- * Update tenant feature flags in MongoDB
+ * Update tenant feature flags in MySQL
  */
 export async function PUT(
   req: Request,
@@ -119,72 +115,30 @@ export async function PUT(
       whatsappRemindersLimit?: number;
     } | undefined;
 
-    const isConnectionError = (err: unknown) => {
-      const msg = getErrorMessage(err);
-      return /ECONNREFUSED|MongoServerSelectionError|connection/i.test(msg);
+    const doc = await getTenantFeaturesRow(tenantId);
+    const docRaw = doc?.features && typeof doc.features === "object" ? doc.features : {};
+    const docPaymentEnabled =
+      (docRaw as { payment_enabled?: boolean }).payment_enabled ??
+      (typeof (docRaw as { disabled_payment?: boolean }).disabled_payment === "boolean"
+        ? !(docRaw as { disabled_payment: boolean }).disabled_payment
+        : true);
+    const featureFlags = {
+      show_coverage: features?.show_coverage ?? (docRaw as { show_coverage?: boolean }).show_coverage ?? true,
+      show_mercado_pago: features?.show_mercado_pago ?? (docRaw as { show_mercado_pago?: boolean }).show_mercado_pago ?? true,
+      calendar: features?.calendar ?? (docRaw as { calendar?: boolean }).calendar ?? true,
+      payment_enabled: features?.payment_enabled ?? docPaymentEnabled ?? true,
+      whatsappNotifications: features?.whatsappNotifications ?? (docRaw as { whatsappNotifications?: boolean }).whatsappNotifications ?? false,
+      whatsappCustomMessage: features?.whatsappCustomMessage ?? (docRaw as { whatsappCustomMessage?: string }).whatsappCustomMessage ?? "",
     };
 
-    let lastError: unknown;
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const client = await getMongoClientPromise();
-        const db = client.db("kober_shifts");
-        const collection = db.collection("tenant_features");
-
-        const doc = await collection.findOne({ tenantId });
-
-        const docRaw = doc?.features && typeof doc.features === "object" ? doc.features : {};
-        const docPaymentEnabled =
-          (docRaw as { payment_enabled?: boolean }).payment_enabled ??
-          (typeof (docRaw as { disabled_payment?: boolean }).disabled_payment === "boolean"
-            ? !(docRaw as { disabled_payment: boolean }).disabled_payment
-            : true);
-        const featureFlags = {
-          show_coverage: features?.show_coverage ?? doc?.features?.show_coverage ?? true,
-          show_mercado_pago: features?.show_mercado_pago ?? doc?.features?.show_mercado_pago ?? true,
-          calendar: features?.calendar ?? doc?.features?.calendar ?? true,
-          payment_enabled: features?.payment_enabled ?? docPaymentEnabled ?? true,
-          whatsappNotifications: features?.whatsappNotifications ?? doc?.features?.whatsappNotifications ?? false,
-          whatsappCustomMessage: features?.whatsappCustomMessage ?? doc?.features?.whatsappCustomMessage ?? "",
-        };
-
-        const limitsData = {
-          maxUsers: typeof limits?.maxUsers === "number" ? limits.maxUsers : (doc?.limits?.maxUsers ?? 1),
-          whatsappRemindersLimit: typeof limits?.whatsappRemindersLimit === "number" ? limits.whatsappRemindersLimit : (doc?.limits?.whatsappRemindersLimit ?? 0),
-        };
-
-        await collection.updateOne(
-          { tenantId },
-          { $set: { tenantId, features: featureFlags, limits: limitsData, updatedAt: new Date() } },
-          { upsert: true }
-        );
-
-        return NextResponse.json({ success: true, features: featureFlags, limits: limitsData });
-      } catch (error: unknown) {
-        lastError = error;
-        console.error(`Error updating feature flags (attempt ${attempt}):`, error);
-        if (attempt === 2 || !isConnectionError(error)) {
-          const message = getErrorMessage(error);
-          const payload: { error: string; detail?: string } = {
-            error: "Failed to update feature flags",
-          };
-          if (process.env.NODE_ENV !== "production") {
-            payload.detail = message;
-          }
-          return NextResponse.json(payload, { status: 500 });
-        }
-        await new Promise((r) => setTimeout(r, 800));
-      }
-    }
-
-    const message = getErrorMessage(lastError);
-    const payload: { error: string; detail?: string } = {
-      error: "Failed to update feature flags",
+    const limitsData = {
+      maxUsers: typeof limits?.maxUsers === "number" ? limits.maxUsers : ((doc?.limits as { maxUsers?: number })?.maxUsers ?? 1),
+      whatsappRemindersLimit: typeof limits?.whatsappRemindersLimit === "number" ? limits.whatsappRemindersLimit : ((doc?.limits as { whatsappRemindersLimit?: number })?.whatsappRemindersLimit ?? 0),
     };
-    if (process.env.NODE_ENV !== "production") {
-      payload.detail = message;
-    }
-    return NextResponse.json(payload, { status: 500 });
+
+    await upsertTenantFeatures(tenantId, { features: featureFlags, limits: limitsData });
+
+    return NextResponse.json({ success: true, features: featureFlags, limits: limitsData });
   } catch (err: unknown) {
     console.error("PUT /api/store/tenants/[id]/features unexpected error:", err);
     const payload: { error: string; detail?: string } = {

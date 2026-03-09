@@ -7,7 +7,7 @@ import {
   findUsersWithRoleIn,
   findServiceById,
 } from "@/lib/db";
-import { mongoClientPromise } from "@/lib/mongo";
+import { getTenantSettingsRow } from "@/lib/settings-db";
 import { getCalendarClient } from "@/lib/googleOAuth";
 import { AppointmentStatus } from "@/lib/types";
 
@@ -77,10 +77,8 @@ export async function GET(
   let appointmentDurationMinutes = 30;
   let slotMarginMinutes = 0;
   try {
-    const client = await mongoClientPromise;
-    const db = client.db();
-    const settingsDoc = await db.collection("tenant_settings").findOne({ tenantId });
-    const settings = (settingsDoc?.settings && typeof settingsDoc.settings === "object") ? settingsDoc.settings as Record<string, unknown> : {};
+    const row = await getTenantSettingsRow(tenantId);
+    const settings = (row?.settings && typeof row.settings === "object") ? row.settings as Record<string, unknown> : {};
     appointmentDurationMinutes = typeof settings.defaultSlotDurationMinutes === "number" && settings.defaultSlotDurationMinutes > 0
       ? settings.defaultSlotDurationMinutes
       : 30;
@@ -329,10 +327,20 @@ function generateAvailableSlots(
     return [];
   }
 
+  // Normalize legacy availableDays to a Set of numbers (0-6) so we only allow those days.
+  // If both systems exist, we intersect: availabilityConfig is restricted to these days.
+  let legacyAllowedDays: Set<number> | null = null;
+  if (profile.availableDays && Array.isArray(profile.availableDays) && profile.availableDays.length > 0) {
+    const nums = profile.availableDays
+      .map((d: unknown) => (typeof d === "number" ? d : Number(d)))
+      .filter((n: number) => !Number.isNaN(n) && n >= 0 && n <= 6);
+    if (nums.length > 0) legacyAllowedDays = new Set(nums);
+  }
+
   // Use new availabilityConfig if available, otherwise fall back to legacy
   if (hasAvailabilityConfig && profile.availabilityConfig?.days) {
     // New system: availabilityConfig with slots
-    // Use already normalized days from earlier check
+    // If legacy availableDays is set, only generate slots for those days (intersect).
     const normalizedDays = normalizedDaysForCheck;
     
     const currentDate = new Date(startDate);
@@ -344,6 +352,10 @@ function generateAvailableSlots(
       }
 
       const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 6 = Saturday
+      if (legacyAllowedDays !== null && !legacyAllowedDays.has(dayOfWeek)) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        continue;
+      }
       const dayConfig = normalizedDays[dayOfWeek];
       
       // Format date in local timezone for logging
@@ -515,13 +527,8 @@ function generateAvailableSlots(
       // Move to next day
       currentDate.setDate(currentDate.getDate() + 1);
     }
-  } else if (hasLegacyAvailability && profile.availableDays && profile.availableHours) {
-    // Legacy system: availableDays and availableHours
-    // Double-check that we have valid data before generating slots
-    if (!Array.isArray(profile.availableDays) || profile.availableDays.length === 0) {
-      console.log("Invalid availableDays, returning empty array");
-      return [];
-    }
+  } else if (hasLegacyAvailability && legacyAllowedDays && legacyAllowedDays.size > 0 && profile.availableHours) {
+    // Legacy system: availableDays and availableHours (use normalized legacyAllowedDays)
     if (!profile.availableHours?.start || !profile.availableHours?.end) {
       console.log("Invalid availableHours, returning empty array");
       return [];
@@ -536,7 +543,7 @@ function generateAvailableSlots(
       }
 
       const dayOfWeek = currentDate.getDay();
-      if (profile.availableDays.includes(dayOfWeek)) {
+      if (legacyAllowedDays.has(dayOfWeek)) {
         const [startHour, startMin] = profile.availableHours.start
           .split(":")
           .map(Number);

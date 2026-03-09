@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { mongoClientPromise } from "@/lib/mongo";
+import { getTenantPaymentsRow, upsertTenantPayments } from "@/lib/settings-db";
 import { Role } from "@/lib/types";
 
 export async function GET(
@@ -17,10 +17,8 @@ export async function GET(
   }
 
   try {
-    const client = await mongoClientPromise;
-    const db = client.db();
-    const collection = db.collection("tenant_payments");
-    const existing = await collection.findOne({ tenantId });
+    const row = await getTenantPaymentsRow(tenantId);
+    const existing = row;
 
     const defaultSettings = {
       bank: {
@@ -42,8 +40,8 @@ export async function GET(
       },
     };
 
-    return NextResponse.json(existing?.settings || defaultSettings);
-  } catch (error: any) {
+    return NextResponse.json(row?.settings || defaultSettings);
+  } catch (error: unknown) {
     console.error("Error fetching payments settings:", error);
     return NextResponse.json(
       { error: "Failed to fetch payments settings" },
@@ -66,10 +64,8 @@ export async function PUT(
   }
 
   try {
-    const client = await mongoClientPromise;
-    const db = client.db();
-    const collection = db.collection("tenant_payments");
-    const existingDoc = await collection.findOne({ tenantId });
+    const row = await getTenantPaymentsRow(tenantId);
+    const existingDoc = row;
 
     const body = (await req.json().catch(() => ({}))) as Record<string, any>;
     const bank = body.bank && typeof body.bank === "object" ? body.bank : null;
@@ -80,10 +76,10 @@ export async function PUT(
       ? body.paymentConfig
       : null;
 
-    const existingSettings = existingDoc?.settings || {};
-    const existingBank = existingSettings.bank || {};
-    const existingMercadoPago = existingSettings.mercadoPago || {};
-    const existingPaymentConfig = existingSettings.paymentConfig || {};
+    const existingSettings = (existingDoc?.settings ?? {}) as Record<string, unknown>;
+    const existingBank = (existingSettings.bank && typeof existingSettings.bank === "object" ? existingSettings.bank : {}) as Record<string, string>;
+    const existingMercadoPago = (existingSettings.mercadoPago && typeof existingSettings.mercadoPago === "object" ? existingSettings.mercadoPago : {}) as Record<string, string>;
+    const existingPaymentConfig = (existingSettings.paymentConfig && typeof existingSettings.paymentConfig === "object" ? existingSettings.paymentConfig : {}) as Record<string, unknown>;
 
     const settings = {
       bank: {
@@ -131,14 +127,10 @@ export async function PUT(
       },
     };
 
-    await collection.updateOne(
-      { tenantId },
-      { $set: { tenantId, settings, updatedAt: new Date() } },
-      { upsert: true }
-    );
+    await upsertTenantPayments(tenantId, settings);
 
     return NextResponse.json({ success: true, settings });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating payments settings:", error);
     return NextResponse.json(
       { error: "Failed to update payments settings" },

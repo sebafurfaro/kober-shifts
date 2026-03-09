@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { mongoClientPromise } from "@/lib/mongo";
+import { getTenantPaymentsRow } from "@/lib/settings-db";
 import mysql from "@/lib/mysql";
 import { Role } from "@/lib/types";
 import { MercadoPagoConfig, Preference } from "mercadopago";
@@ -20,11 +20,8 @@ function getBaseUrl(req: Request) {
 }
 
 async function getTenantPaymentsSettings(tenantId: string) {
-  const client = await mongoClientPromise;
-  const db = client.db();
-  const collection = db.collection("tenant_payments");
-  const settings = await collection.findOne({ tenantId });
-  return settings?.settings || null;
+  const row = await getTenantPaymentsRow(tenantId);
+  return row?.settings ?? null;
 }
 
 async function getAccessTokenForTenant(tenantId: string): Promise<string | null> {
@@ -152,29 +149,6 @@ export async function POST(
         null,
       ]
     );
-
-    const paymentsCollection = (await mongoClientPromise)
-      .db()
-      .collection("payments");
-    try {
-      await paymentsCollection.insertOne({
-        tenantId,
-        appointmentId,
-        purpose,
-        amount: Number(amount),
-        status: "PENDING",
-        provider: "mercadopago",
-        mercadoPago: {
-          preferenceId: preferenceResult.id,
-          initPoint: preferenceResult.init_point,
-          sandboxInitPoint: preferenceResult.sandbox_init_point,
-        },
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-    } catch (mongoError) {
-      console.error("Error saving payment to MongoDB:", mongoError);
-    }
 
     if (purpose === "deposit" && appointment.status === AppointmentStatus.REQUESTED) {
       try {

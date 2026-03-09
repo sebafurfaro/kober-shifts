@@ -1,3 +1,5 @@
+"use client";
+
 import { PaymentsForm } from "../../payments/components/PaymentsForm";
 import { Card, Button } from "@heroui/react";
 import Typography from "@/app/components/Typography";

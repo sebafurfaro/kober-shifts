@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { mongoClientPromise } from "@/lib/mongo";
+import { getTenantPaymentsRow } from "@/lib/settings-db";
 import mysql from "@/lib/mysql";
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import crypto from "crypto";
 import { getMercadoPagoAccountByTenant, getMercadoPagoAccountWithRefresh } from "@/lib/mercadopago-accounts";
 import { findAppointmentById, updateAppointmentStatus, findAppointmentWithRelations } from "@/lib/db";
 import { AppointmentStatus } from "@/lib/types";
-import { renderBasicTemplate, sendMail } from "@/lib/email";
+import { renderBasicTemplate, sendMail, getTurnoConfirmadoPacienteContent, getTurnoConfirmadoProfesionalContent } from "@/lib/email";
 import { mysqlDateToUTC, formatInBuenosAires } from "@/lib/timezone";
 
 async function getTenantAccessToken(tenantId: string): Promise<string | null> {
@@ -16,21 +16,17 @@ async function getTenantAccessToken(tenantId: string): Promise<string | null> {
       : getMercadoPagoAccountByTenant;
   const account = await accountFetcher(tenantId);
   if (account?.accessToken) return account.accessToken;
-  const client = await mongoClientPromise;
-  const db = client.db();
-  const collection = db.collection("tenant_payments");
-  const settings = await collection.findOne({ tenantId });
-  return settings?.settings?.mercadoPago?.accessToken || null;
+  const row = await getTenantPaymentsRow(tenantId);
+  const mp = row?.settings && typeof row.settings === "object" ? (row.settings as { mercadoPago?: { accessToken?: string } }).mercadoPago : undefined;
+  return (mp?.accessToken && typeof mp.accessToken === "string" ? mp.accessToken.trim() : null) || null;
 }
 
 async function getWebhookSecret(_tenantId: string): Promise<string | null> {
   const fromEnv = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim();
   if (fromEnv) return fromEnv;
-  const client = await mongoClientPromise;
-  const db = client.db();
-  const collection = db.collection("tenant_payments");
-  const settings = await collection.findOne({ tenantId: _tenantId });
-  const fromTenant = settings?.settings?.mercadoPago?.webhookSecret;
+  const row = await getTenantPaymentsRow(_tenantId);
+  const mp = row?.settings && typeof row.settings === "object" ? (row.settings as { mercadoPago?: { webhookSecret?: string } }).mercadoPago : undefined;
+  const fromTenant = mp?.webhookSecret;
   if (fromTenant && typeof fromTenant === "string" && fromTenant.trim()) return fromTenant.trim();
   return null;
 }
@@ -193,10 +189,6 @@ export async function POST(
     const preferenceId = paymentDataAny.preference_id ? String(paymentDataAny.preference_id) : null;
     const externalReference = paymentDataAny.external_reference ? String(paymentDataAny.external_reference) : null;
 
-    const paymentsCollection = (await mongoClientPromise)
-      .db()
-      .collection("payments");
-
     await ensurePaymentsTable();
     const paymentRow = await findPaymentRow({
       tenantId,
@@ -256,23 +248,6 @@ export async function POST(
       );
     }
 
-    await paymentsCollection.updateOne(
-      { tenantId, "mercadoPago.preferenceId": preferenceId },
-      {
-        $set: {
-          status: paymentDataAny.status,
-          mercadoPago: {
-            preferenceId: preferenceId,
-            paymentId: paymentDataAny.id ?? null,
-            status: paymentDataAny.status,
-            statusDetail: paymentDataAny.status_detail,
-          },
-          mercadoPagoRaw: paymentData,
-          updatedAt: new Date(),
-        },
-      }
-    );
-
     if (
       paymentDataAny.status === "approved" &&
       appointmentId &&
@@ -292,29 +267,36 @@ export async function POST(
               ? data.appointment.startAt
               : new Date(data.appointment.startAt);
             const startFormatted = formatInBuenosAires(mysqlDateToUTC(startAt), "dd/MM/yyyy HH:mm");
+            const profesionalName = data.professional?.name ?? "el profesional";
+            const pacienteContent = getTurnoConfirmadoPacienteContent({
+              profesional: profesionalName,
+              fechaHora: startFormatted,
+              sede: data.location.name,
+            });
+            const profContent = getTurnoConfirmadoProfesionalContent({
+              pacienteNombre: data.patient.name,
+              pacienteEmail: data.patient.email,
+              sede: data.location.name,
+              fechaHora: startFormatted,
+            });
             await sendMail({
               to: data.patient.email,
               subject: "Turno confirmado",
-              text: `Tu turno fue confirmado.\n\nSede: ${data.location.name}\nInicio: ${startFormatted}`,
+              text: pacienteContent.text,
               html: renderBasicTemplate({
                 title: "Turno confirmado",
-                preview: "Tu turno fue confirmado.",
-                body: `<p>Tu turno fue confirmado.</p>
-                       <p><strong>Sede:</strong> ${data.location.name}<br/>
-                       <strong>Inicio:</strong> ${startFormatted}</p>`,
+                preview: pacienteContent.preview,
+                body: pacienteContent.bodyHtml,
               }),
             });
             await sendMail({
               to: data.professional.email,
               subject: "Turno confirmado",
-              text: `Turno confirmado.\n\nPaciente: ${data.patient.name} (${data.patient.email})\nSede: ${data.location.name}\nInicio: ${startFormatted}`,
+              text: profContent.text,
               html: renderBasicTemplate({
                 title: "Turno confirmado",
-                preview: "Turno confirmado.",
-                body: `<p>Turno confirmado.</p>
-                       <p><strong>Paciente:</strong> ${data.patient.name} (${data.patient.email})<br/>
-                       <strong>Sede:</strong> ${data.location.name}<br/>
-                       <strong>Inicio:</strong> ${startFormatted}</p>`,
+                preview: profContent.preview,
+                body: profContent.bodyHtml,
               }),
             });
           }

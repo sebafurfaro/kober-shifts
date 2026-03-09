@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getStoreSession } from "@/lib/store-session";
-import { getMongoClientPromise } from "@/lib/mongo";
+import { getTenantSettingsRow, updateTenantSettingsOnly } from "@/lib/settings-db";
 
 const ALLOWED_EMAILS = ["seba.furfaro@gmail.com", "caourisaldana@gmail.com"].map((e) => e.toLowerCase());
 
@@ -22,7 +22,7 @@ const DEFAULT_TRANSLATIONS = {
 
 /**
  * GET /api/store/tenants/[id]/settings
- * Get tenant translations (labels) from MongoDB. Used by Store to edit per-tenant.
+ * Get tenant translations (labels) from MySQL. Used by Store to edit per-tenant.
  */
 export async function GET(
   req: Request,
@@ -39,12 +39,8 @@ export async function GET(
   }
 
   try {
-    const client = await getMongoClientPromise();
-    const db = client.db("kober_shifts");
-    const collection = db.collection("tenant_settings");
-
-    const doc = await collection.findOne({ tenantId });
-    const settings = doc?.settings && typeof doc.settings === "object" ? doc.settings : {};
+    const row = await getTenantSettingsRow(tenantId);
+    const settings = row?.settings && typeof row.settings === "object" ? row.settings : {};
 
     const patientLabel =
       typeof (settings as { patientLabel?: string }).patientLabel === "string" &&
@@ -69,7 +65,7 @@ export async function GET(
 
 /**
  * PUT /api/store/tenants/[id]/settings
- * Update tenant translations (labels) in MongoDB. Merges only patientLabel/professionalLabel.
+ * Update tenant translations (labels) in MySQL. Merges only patientLabel/professionalLabel.
  */
 export async function PUT(
   req: Request,
@@ -96,14 +92,10 @@ export async function PUT(
         ? body.professionalLabel.trim()
         : DEFAULT_TRANSLATIONS.professionalLabel;
 
-    const client = await getMongoClientPromise();
-    const db = client.db("kober_shifts");
-    const collection = db.collection("tenant_settings");
-
-    const doc = await collection.findOne({ tenantId });
+    const row = await getTenantSettingsRow(tenantId);
     const existingSettings =
-      doc?.settings && typeof doc.settings === "object"
-        ? (doc.settings as Record<string, unknown>)
+      row?.settings && typeof row.settings === "object"
+        ? (row.settings as Record<string, unknown>)
         : {};
 
     const notifications =
@@ -123,11 +115,7 @@ export async function PUT(
       professionalLabel,
     };
 
-    await collection.updateOne(
-      { tenantId },
-      { $set: { tenantId, settings, updatedAt: new Date() } },
-      { upsert: true }
-    );
+    await updateTenantSettingsOnly(tenantId, settings);
 
     return NextResponse.json({ success: true, patientLabel, professionalLabel });
   } catch (error: unknown) {

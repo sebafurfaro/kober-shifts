@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@heroui/react";
 import { CircleArrowRight } from "lucide-react";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';

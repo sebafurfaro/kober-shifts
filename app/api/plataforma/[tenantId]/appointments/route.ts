@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { findAppointmentsByDateRange, findUserById, findLocationById, findProfessionalProfileByUserId, findGoogleOAuthTokenByUserId, createAppointment } from "@/lib/db";
+import { findAppointmentsByDateRange, findUserById, findLocationById, findProfessionalProfileByUserId, findGoogleOAuthTokenByUserId, createAppointment, findServiceById } from "@/lib/db";
+import { getTenantSettingsRow } from "@/lib/settings-db";
 import { createAppointmentEvent } from "@/lib/googleCalendar";
 import { AppointmentStatus, Role } from "@/lib/types";
 import { randomUUID } from "crypto";
-import { utcToMySQLDate } from "@/lib/timezone";
+import { utcToMySQLDate, BUENOS_AIRES_TIMEZONE } from "@/lib/timezone";
 import { toZonedTime } from "date-fns-tz";
+import { getProfessionalAvailableDayNumbers } from "@/lib/professional-availability";
 
 export async function GET(
   req: Request,
@@ -172,6 +174,18 @@ export async function POST(
     return NextResponse.json({ error: "Invalid location" }, { status: 400 });
   }
 
+  const allowedDays = getProfessionalAvailableDayNumbers(professionalProfile);
+  if (allowedDays.length > 0) {
+    const startAtInBA = toZonedTime(startAt, BUENOS_AIRES_TIMEZONE);
+    const dayOfWeek = startAtInBA.getDay();
+    if (!allowedDays.includes(dayOfWeek)) {
+      return NextResponse.json(
+        { error: "La fecha/hora elegida no está dentro de la disponibilidad del profesional." },
+        { status: 400 }
+      );
+    }
+  }
+
   // Check for duplicate appointments (same patient, professional, date and time)
   // Allow a small tolerance (1 minute) to account for potential timezone rounding issues
   const duplicateCheckStart = new Date(startAt.getTime() - 60000); // 1 minute before
@@ -202,6 +216,24 @@ export async function POST(
       error: "Ya existe un turno para este paciente y profesional en el mismo horario" 
     }, { status: 409 });
   }
+
+  // Misma lógica que appointments/request: seña → PENDING_DEPOSIT; sin seña y manualTurnConfirmation → REQUESTED; sin seña y !manualTurnConfirmation → CONFIRMED
+  let manualTurnConfirmation = false;
+  try {
+    const row = await getTenantSettingsRow(tenantId);
+    const settings = row?.settings && typeof row.settings === "object" ? row.settings : {};
+    manualTurnConfirmation = (settings as Record<string, unknown>).manualTurnConfirmation === true;
+  } catch {
+    // default: auto-confirm when no seña
+  }
+  const service = serviceId ? await findServiceById(serviceId, tenantId) : null;
+  const hasSenia = !!(service && service.price > 0);
+  const initialStatus =
+    hasSenia
+      ? AppointmentStatus.PENDING_DEPOSIT
+      : manualTurnConfirmation
+        ? AppointmentStatus.REQUESTED
+        : AppointmentStatus.CONFIRMED;
 
   let googleEventId: string | null = null;
 
@@ -234,7 +266,7 @@ export async function POST(
     serviceId: serviceId ?? null,
     startAt,
     endAt,
-    status: AppointmentStatus.REQUESTED,
+    status: initialStatus,
     googleEventId,
     notes,
     patientFirstName: patient.firstName ?? null,
