@@ -150,6 +150,7 @@ export function UserFormDialog({
       isOpen={open} 
       onClose={onClose} 
       size="md" 
+      className="custom-dialog"
       scrollBehavior="inside"
       classNames={{
         wrapper: "z-[99999]"
@@ -356,7 +357,8 @@ export function UserFormDialog({
           </ModalBody>
           <ModalFooter>
             <Button
-              variant="light"
+              variant="bordered"
+              color="danger"
               onPress={onClose}
               isDisabled={loading}
             >
@@ -364,6 +366,7 @@ export function UserFormDialog({
             </Button>
             <Button
               type="submit"
+              variant="solid"
               color="primary"
               isDisabled={loading}
               isLoading={loading}

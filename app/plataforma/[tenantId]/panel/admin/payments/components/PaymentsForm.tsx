@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import * as React from "react";
 import Typography from "@/app/components/Typography";
+import { WithSkeleton } from "../../../components/skeletons";
 
 const MP_ERROR_MESSAGES: Record<string, string> = {
     missing_code_or_state: "Faltó código o estado en la respuesta de MercadoPago.",
@@ -70,26 +71,28 @@ export function PaymentsForm() {
         }
     }, [tenantId, disconnecting]);
 
+    const skeletonCard = (
+        <Card className="p-4 flex flex-col items-start space-y-4 shadow-none border border-gray-200">
+            <div className="h-16 bg-default-100 rounded animate-pulse w-full max-w-[200px]" />
+            <div className="h-6 bg-default-100 rounded animate-pulse w-3/4" />
+            <div className="h-4 bg-default-100 rounded animate-pulse w-full" />
+        </Card>
+    );
+
     return (
-        <div className="flex w-full flex-col">
-            <div className="">
-                {searchParams.get("mp_error") && (
-                    <Alert color="danger" variant="flat" className="mb-4">
-                        {MP_ERROR_MESSAGES[searchParams.get("mp_error") || ""] || "Error al vincular con MercadoPago."}
-                    </Alert>
-                )}
-                {searchParams.get("mp_linked") === "1" && (
-                    <Alert color="success" variant="flat" className="mb-4">
-                        Cuenta vinculada correctamente con MercadoPago.
-                    </Alert>
-                )}
-                {loading ? (
-                    <Card className="p-4 flex flex-col items-start space-y-4 shadow-none border border-gray-200">
-                        <div className="h-16 bg-default-100 rounded animate-pulse w-full max-w-[200px]" />
-                        <div className="h-6 bg-default-100 rounded animate-pulse w-3/4" />
-                        <div className="h-4 bg-default-100 rounded animate-pulse w-full" />
-                    </Card>
-                ) : (
+        <WithSkeleton loading={loading} fallback={skeletonCard}>
+            <div className="flex w-full flex-col">
+                <div className="">
+                    {searchParams.get("mp_error") && (
+                        <Alert color="danger" variant="flat" className="mb-4">
+                            {MP_ERROR_MESSAGES[searchParams.get("mp_error") || ""] || "Error al vincular con MercadoPago."}
+                        </Alert>
+                    )}
+                    {searchParams.get("mp_linked") === "1" && (
+                        <Alert color="success" variant="flat" className="mb-4">
+                            Cuenta vinculada correctamente con MercadoPago.
+                        </Alert>
+                    )}
                     <Card className="p-4 flex flex-col items-start space-y-4 shadow-none border border-gray-200">
                         <Image src="/logo_mp.png" alt="Mercado Pago" width={80} height={60} />
                         <Typography variant="h4" color="black">Mercado Pago</Typography>
@@ -117,8 +120,8 @@ export function PaymentsForm() {
                             </Button>
                         )}
                     </Card>
-                )}
+                </div>
             </div>
-        </div>
+        </WithSkeleton>
     );
 }

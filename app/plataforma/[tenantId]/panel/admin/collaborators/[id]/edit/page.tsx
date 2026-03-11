@@ -6,6 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PanelHeader } from "../../../../components/PanelHeader";
 import { ProfessionalForm } from "../../../profesionales/components/ProfessionalForm";
+import { Section } from "../../../../components/layout/Section";
 
 export default function ProfessionalEditPage() {
     const router = useRouter();
@@ -76,14 +77,14 @@ export default function ProfessionalEditPage() {
 
     if (loading) {
         return (
-            <div className="max-w-7xl mx-auto mt-8 text-center">
+            <Section>
                 <Spinner size="lg" />
-            </div>
+            </Section>
         );
     }
 
     return (
-        <div className="max-w-7xl mx-auto mt-8 mb-16">
+        <Section>
             <PanelHeader
                 title="Editar Profesional"
                 subtitle={`Modificando el perfil de ${initialData?.name}`}
@@ -110,6 +111,6 @@ export default function ProfessionalEditPage() {
                     showCoverage={showCoverage}
                 />
             </div>
-        </div>
+        </Section>
     );
 }

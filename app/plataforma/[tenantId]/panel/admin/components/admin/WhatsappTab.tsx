@@ -55,7 +55,7 @@ export const WhatsappTab = () => {
 
   return (
     <div className="w-full flex flex-col space-y-6">
-      <div className="max-w-1/2 w-full flex flex-col space-y-6 p-4">
+      <div className="md:max-w-1/2 w-full flex flex-col space-y-6 p-4">
         <Typography variant="h4" color="black">Recordatorios de turnos</Typography>
         <Switch
           isSelected={whatsappEnabled}
@@ -64,9 +64,9 @@ export const WhatsappTab = () => {
         >
           Enviar recordatorios de turnos por WhatsApp
         </Switch>
-        <p className="text-sm text-slate-500">
+        <Typography variant="p" size="sm" color="gray" opacity={70} className="mt-2">
           Activa esta opción para enviar recordatorios automáticos a tus clientes antes de sus turnos. Esto puede ayudar a reducir las ausencias y mantener a tus clientes informados sobre sus citas.
-        </p>
+        </Typography>
         <Divider className="my-4" />
         <Select
           label="Tiempo de anticipación para enviar el recordatorio"
@@ -82,7 +82,7 @@ export const WhatsappTab = () => {
             <SelectItem key={o.key}>{o.label}</SelectItem>
           ))}
         </Select>
-        <p className="text-sm text-slate-500">Recordá que cada recordatorio se descuenta de tu paquete contratado.</p>
+        <Typography variant="p" size="sm" color="gray" opacity={70} className="mt-2">Recordá que cada recordatorio se descuenta de tu paquete contratado.</Typography>
       </div>
       <Divider className="my-4" />
       <Button variant="solid" color="primary" className="ml-auto w-fit" onPress={handleSave} isLoading={saving}>

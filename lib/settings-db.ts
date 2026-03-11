@@ -107,7 +107,7 @@ export interface TenantFeaturesRow {
 
 export async function getTenantFeaturesRow(tenantId: string): Promise<TenantFeaturesRow | null> {
   const [rows] = await mysql.execute(
-    "SELECT tenantId, features, limits, usage, updatedAt FROM tenant_features WHERE tenantId = ?",
+    "SELECT tenantId, features, limits, `usage`, updatedAt FROM tenant_features WHERE tenantId = ?",
     [tenantId]
   );
   const arr = rows as { tenantId: string; features: string | Record<string, unknown> | null; limits: string | Record<string, unknown> | null; usage: string | Record<string, unknown> | null; updatedAt: Date }[];
@@ -137,8 +137,8 @@ export async function upsertTenantFeatures(
   const limits = data.limits !== undefined ? data.limits : (row?.limits ?? {});
   const usage = data.usage !== undefined ? data.usage : (row?.usage ?? {});
   await mysql.execute(
-    `INSERT INTO tenant_features (tenantId, features, limits, usage, updatedAt) VALUES (?, ?, ?, ?, NOW())
-     ON DUPLICATE KEY UPDATE features = VALUES(features), limits = VALUES(limits), usage = VALUES(usage), updatedAt = NOW()`,
+    `INSERT INTO tenant_features (tenantId, features, limits, \`usage\`, updatedAt) VALUES (?, ?, ?, ?, NOW())
+     ON DUPLICATE KEY UPDATE features = VALUES(features), limits = VALUES(limits), \`usage\` = VALUES(\`usage\`), updatedAt = NOW()`,
     [tenantId, JSON.stringify(features), JSON.stringify(limits), JSON.stringify(usage)]
   );
 }

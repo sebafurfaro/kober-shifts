@@ -56,7 +56,7 @@ async function main() {
         tenantId VARCHAR(255) PRIMARY KEY,
         features JSON,
         limits JSON,
-        usage JSON,
+        \`usage\` JSON,
         updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
@@ -105,8 +105,8 @@ async function main() {
       const limits = doc.limits != null ? JSON.stringify(doc.limits) : null;
       const usage = doc.usage != null ? JSON.stringify(doc.usage) : null;
       await mysqlConn.execute(
-        `INSERT INTO tenant_features (tenantId, features, limits, usage, updatedAt) VALUES (?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE features = VALUES(features), limits = VALUES(limits), usage = VALUES(usage), updatedAt = VALUES(updatedAt)`,
+        `INSERT INTO tenant_features (tenantId, features, limits, \`usage\`, updatedAt) VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE features = VALUES(features), limits = VALUES(limits), \`usage\` = VALUES(\`usage\`), updatedAt = VALUES(updatedAt)`,
         [tenantId, features, limits, usage, doc.updatedAt || new Date()]
       );
       tfCount++;

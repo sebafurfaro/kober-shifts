@@ -13,8 +13,7 @@ import AppBar from "./layout/AppBar";
 import { Aside } from "./layout/Aside";
 import { useTenantLabels } from "@/lib/use-tenant-labels";
 import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
-
-type Role = "PATIENT" | "PROFESSIONAL" | "ADMIN" | "SUPERVISOR";
+import type { Role } from "@/lib/types";
 
 const DRAWER_WIDTH = 260;
 
@@ -172,7 +171,7 @@ export function PanelLayoutShell({
 
       {/* Main Content */}
       <main
-        className="flex-1 pt-16 px-6 w-full text-slate-900 transition-all duration-300"
+        className="flex-1 py-16 px-6 w-full text-slate-900 transition-all duration-300"
         style={{
           marginLeft: isMobile ? 0 : `${asideWidth}px`,
           backgroundImage: "linear-gradient(to bottom, #F3F8FC, #f4f8fa)",

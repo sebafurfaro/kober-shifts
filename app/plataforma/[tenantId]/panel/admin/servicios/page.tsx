@@ -12,13 +12,16 @@ import {
   Card,
   CardBody,
   Spinner,
+  Divider,
 } from "@heroui/react";
 import { Pencil, Trash2, Eye } from "lucide-react";
+import Typography from "@/app/components/Typography";
 import { ServiceFormDialog } from "../components/ServiceFormDialog";
 import { ConfirmationDialog } from "../../components/alerts/ConfirmationDialog";
 import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { PanelHeader } from "../../components/PanelHeader";
 import { useParams } from "next/navigation";
+import { Section } from "../../components/layout/Section";
 
 interface Service {
   id: string;
@@ -162,11 +165,11 @@ export default function ServiciosPage() {
     }
   };
 
-  const dialogOpenForForm = dialogOpen && (editingService || !viewingService);
+  const dialogOpenForForm = dialogOpen && (!!editingService || !viewingService);
   const dialogOpenForView = dialogOpen && !!viewingService && !editingService;
 
   return (
-    <div className="max-w-7xl mx-auto px-4">
+    <Section>
       <PanelHeader
         title="Servicios"
         subtitle="Gestiona los servicios y precios de tu centro"
@@ -178,77 +181,156 @@ export default function ServiciosPage() {
 
       <Card>
         <CardBody className="p-0">
-          <Table aria-label="Tabla de servicios" className="text-slate-800">
-            <TableHeader>
-              <TableColumn className="text-slate-800 text-base">Nombre</TableColumn>
-              <TableColumn className="text-slate-800 text-base">Descripción</TableColumn>
-              <TableColumn className="text-slate-800 text-base">Duración</TableColumn>
-              <TableColumn className="text-slate-800 text-base">Margen</TableColumn>
-              <TableColumn className="text-slate-800 text-base">Precio</TableColumn>
-              <TableColumn className="text-slate-800 text-base">Seña %</TableColumn>
-              <TableColumn className="text-slate-800 text-base" align="end">
-                Acciones
-              </TableColumn>
-            </TableHeader>
-            <TableBody
-              isLoading={loading}
-              loadingContent={<Spinner />}
-              emptyContent={
-                loading ? "Cargando..." : "No hay servicios. Creá uno para comenzar."
-              }
-            >
-              {services.map((service) => (
-                <TableRow key={service.id}>
-                  <TableCell className="font-medium">{service.name}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">
-                    {service.description || "—"}
-                  </TableCell>
-                  <TableCell>{service.durationMinutes} min</TableCell>
-                  <TableCell>{service.marginMinutes} min</TableCell>
-                  <TableCell>
-                    ${typeof service.price === "number" ? service.price.toFixed(2) : service.price}
-                  </TableCell>
-                  <TableCell>{service.seniaPercent}%</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2 justify-end">
-                      <Button
-                        isIconOnly
-                        size="sm"
-                        variant="light"
-                        onPress={() => handleView(service)}
-                        aria-label="ver"
-                        title="Ver"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        isIconOnly
-                        size="sm"
-                        variant="light"
-                        color="primary"
-                        onPress={() => handleEdit(service)}
-                        aria-label="editar"
-                        title="Editar"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        isIconOnly
-                        size="sm"
-                        variant="light"
-                        color="danger"
-                        onPress={() => handleDelete(service)}
-                        aria-label="eliminar"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+          <div className="hidden md:block">
+            <Table aria-label="Tabla de servicios" className="text-slate-800">
+              <TableHeader>
+                <TableColumn className="text-slate-800 text-base">Nombre</TableColumn>
+                <TableColumn className="text-slate-800 text-base">Descripción</TableColumn>
+                <TableColumn className="text-slate-800 text-base">Duración</TableColumn>
+                <TableColumn className="text-slate-800 text-base">Margen</TableColumn>
+                <TableColumn className="text-slate-800 text-base">Precio</TableColumn>
+                <TableColumn className="text-slate-800 text-base">Seña %</TableColumn>
+                <TableColumn className="text-slate-800 text-base" align="end">
+                  Acciones
+                </TableColumn>
+              </TableHeader>
+              <TableBody
+                isLoading={loading}
+                loadingContent={<Spinner />}
+                emptyContent={
+                  loading ? "Cargando..." : "No hay servicios. Creá uno para comenzar."
+                }
+              >
+                {services.map((service) => (
+                  <TableRow key={service.id}>
+                    <TableCell className="font-medium">{service.name}</TableCell>
+                    <TableCell className="max-w-[200px] truncate">
+                      {service.description || "—"}
+                    </TableCell>
+                    <TableCell>{service.durationMinutes} min</TableCell>
+                    <TableCell>{service.marginMinutes} min</TableCell>
+                    <TableCell>
+                      ${typeof service.price === "number" ? service.price.toFixed(2) : service.price}
+                    </TableCell>
+                    <TableCell>{service.seniaPercent}%</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          isIconOnly
+                          size="sm"
+                          variant="light"
+                          onPress={() => handleView(service)}
+                          aria-label="ver"
+                          title="Ver"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          isIconOnly
+                          size="sm"
+                          variant="light"
+                          color="primary"
+                          onPress={() => handleEdit(service)}
+                          aria-label="editar"
+                          title="Editar"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          isIconOnly
+                          size="sm"
+                          variant="light"
+                          color="danger"
+                          onPress={() => handleDelete(service)}
+                          aria-label="eliminar"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="flex md:hidden flex-col gap-4 p-4">
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <Spinner />
+              </div>
+            ) : services.length === 0 ? (
+              <Typography variant="p" color="gray">No hay servicios. Creá uno para comenzar.</Typography>
+            ) : (
+              services.map((svc) => (
+                <div key={svc.id} className="flex flex-col space-y-3">
+                  <Typography variant="h6" color="black">{svc.name}</Typography>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col space-y-1">
+                      <Typography variant="p" color="gray" opacity={50}>Descripción</Typography>
+                      <Typography variant="p">{svc.description || "—"}</Typography>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                    <div className="flex flex-col space-y-1">
+                      <Typography variant="p" color="gray" opacity={50}>Duración</Typography>
+                      <Typography variant="p">{svc.durationMinutes} min</Typography>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col space-y-1">
+                      <Typography variant="p" color="gray" opacity={50}>Margen</Typography>
+                      <Typography variant="p">{svc.marginMinutes} min</Typography>
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      <Typography variant="p" color="gray" opacity={50}>Precio</Typography>
+                      <Typography variant="p">
+                        ${typeof svc.price === "number" ? svc.price.toFixed(2) : svc.price}
+                      </Typography>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col space-y-1">
+                      <Typography variant="p" color="gray" opacity={50}>Seña %</Typography>
+                      <Typography variant="p">{svc.seniaPercent}%</Typography>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1 mt-3">
+                    <Button
+                      size="sm"
+                      variant="solid"
+                      color="default"
+                      onPress={() => handleView(svc)}
+                      aria-label="Ver"
+                      startContent={<Eye className="w-4 h-4" />}
+                    >
+                      Ver
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="solid"
+                      color="primary"
+                      onPress={() => handleEdit(svc)}
+                      aria-label="Editar"
+                      startContent={<Pencil className="w-4 h-4" />}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="solid"
+                      color="danger"
+                      onPress={() => handleDelete(svc)}
+                      aria-label="Eliminar"
+                      startContent={<Trash2 className="w-4 h-4" />}
+                    >
+                      Eliminar
+                    </Button>
+                  </div>
+                  <Divider className="my-4" />
+                </div>
+              ))
+            )}
+          </div>
         </CardBody>
       </Card>
 
@@ -282,6 +364,6 @@ export default function ServiciosPage() {
         message={alertDialog.message}
         type={alertDialog.type}
       />
-    </div>
+    </Section>
   );
 }

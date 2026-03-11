@@ -3,8 +3,10 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+  // directUrl solo si necesitás migraciones contra la DB directa (sin Accelerate)
+  // directUrl = env("DIRECT_DATABASE_URL")
 }
 
 enum Role {

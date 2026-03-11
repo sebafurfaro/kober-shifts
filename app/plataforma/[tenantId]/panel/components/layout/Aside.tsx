@@ -19,8 +19,7 @@ import {
 import { Alert } from "@heroui/react";
 import Logo from "@/app/branding/Logo";
 import { Dispatch, SetStateAction } from "react";
-
-type Role = "PATIENT" | "PROFESSIONAL" | "ADMIN" | "SUPERVISOR";
+import type { Role } from "@/lib/types";
 
 const DRAWER_WIDTH = 210;
 const DRAWER_COLLAPSED_WIDTH = 64;

@@ -5,6 +5,7 @@ import { Card, CardBody, Table, TableBody, TableCell, TableColumn, TableHeader, 
 import * as React from "react";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
+import { Section } from "../../../components/layout/Section";
 
 type PaymentRecord = {
     _id: string;
@@ -82,8 +83,7 @@ export default function AdminPaymentsDetailsPage() {
     }, [tenantId, page]);
 
     return (
-        <div className="max-w-7xl mx-auto">
-            <div className="py-8">
+        <Section>
                 <PanelHeader
                     title="Historial de pagos"
                     subtitle="Revisa el historial de pagos totales o señas Pagadas"
@@ -94,7 +94,7 @@ export default function AdminPaymentsDetailsPage() {
                         },
                     }}
                 />
-            </div>
+            
 
             {mpLinked && (
                 <Card className="mb-8">
@@ -219,6 +219,6 @@ export default function AdminPaymentsDetailsPage() {
                     )}
                 </CardBody>
             </Card>
-        </div>
+        </Section>
     )
 }

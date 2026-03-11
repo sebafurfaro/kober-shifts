@@ -12,11 +12,14 @@ import {
   Card,
   CardBody,
   Spinner,
+  Divider,
 } from "@heroui/react";
 import { Pencil } from "lucide-react";
 import { PatientFormDialog } from "../../admin/components/PatientFormDialog";
 import { PanelHeader } from "../../components/PanelHeader";
+import Typography from "@/app/components/Typography";
 import { useParams } from "next/navigation";
+import { Section } from "../../components/layout/Section";
 
 interface Patient {
   id: string;
@@ -119,8 +122,7 @@ export default function ProfessionalPatientsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto mt-8 px-4">
-      <div className="py-8">
+    <Section>
         <PanelHeader
           title="Pacientes"
           action={{
@@ -131,42 +133,86 @@ export default function ProfessionalPatientsPage() {
 
         <Card>
           <CardBody className="p-0">
-            <Table aria-label="Tabla de pacientes">
-              <TableHeader>
-                <TableColumn>Nombre</TableColumn>
-                <TableColumn>Apellido</TableColumn>
-                <TableColumn>Email</TableColumn>
-                <TableColumn>Teléfono</TableColumn>
-                <TableColumn align="end">Acciones</TableColumn>
-              </TableHeader>
-              <TableBody
-                isLoading={loading}
-                loadingContent={<Spinner />}
-                emptyContent={loading ? "Cargando..." : "No hay pacientes registrados"}
-              >
-                {patients.map((patient) => (
-                  <TableRow key={patient.id}>
-                    <TableCell>{patient.firstName || patient.name}</TableCell>
-                    <TableCell>{patient.lastName || ""}</TableCell>
-                    <TableCell>{patient.email}</TableCell>
-                    <TableCell>{patient.phone || "-"}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end">
+            <div className="hidden md:block">
+              <Table aria-label="Tabla de pacientes">
+                <TableHeader>
+                  <TableColumn>Nombre</TableColumn>
+                  <TableColumn>Apellido</TableColumn>
+                  <TableColumn>Email</TableColumn>
+                  <TableColumn>Teléfono</TableColumn>
+                  <TableColumn align="end">Acciones</TableColumn>
+                </TableHeader>
+                <TableBody
+                  isLoading={loading}
+                  loadingContent={<Spinner />}
+                  emptyContent={loading ? "Cargando..." : "No hay pacientes registrados"}
+                >
+                  {patients.map((patient) => (
+                    <TableRow key={patient.id}>
+                      <TableCell>{patient.firstName || patient.name}</TableCell>
+                      <TableCell>{patient.lastName || ""}</TableCell>
+                      <TableCell>{patient.email}</TableCell>
+                      <TableCell>{patient.phone || "-"}</TableCell>
+                      <TableCell>
+                        <div className="flex justify-end">
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            onPress={() => handleEdit(patient)}
+                            aria-label="editar"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex md:hidden flex-col gap-4 p-4">
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <Spinner />
+                </div>
+              ) : patients.length === 0 ? (
+                <Typography variant="p" color="gray">No hay pacientes registrados</Typography>
+              ) : (
+                patients.map((p) => {
+                  const displayName = [p.firstName, p.lastName].filter(Boolean).join(" ") || p.name || "—";
+                  return (
+                    <div key={p.id} className="flex flex-col space-y-3">
+                      <Typography variant="h6" color="black">{displayName}</Typography>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col space-y-1">
+                          <Typography variant="p" color="gray" opacity={50}>Email</Typography>
+                          <Typography variant="p">{p.email ?? "—"}</Typography>
+                        </div>
+                        <div className="flex flex-col space-y-1">
+                          <Typography variant="p" color="gray" opacity={50}>Teléfono</Typography>
+                          <Typography variant="p">{p.phone ?? "—"}</Typography>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1 mt-3">
                         <Button
-                          isIconOnly
                           size="sm"
-                          variant="light"
-                          onPress={() => handleEdit(patient)}
-                          aria-label="editar"
+                          variant="solid"
+                          color="primary"
+                          onPress={() => handleEdit(p)}
+                          aria-label="Editar"
+                          startContent={<Pencil className="w-4 h-4" />}
                         >
-                          <Pencil className="w-4 h-4" />
+                          Editar
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      <Divider className="my-4" />
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </CardBody>
         </Card>
 
@@ -180,8 +226,7 @@ export default function ProfessionalPatientsPage() {
           mode={editingPatient ? "edit" : "create"}
           initialData={editingPatient || undefined}
         />
-      </div>
-    </div>
+    </Section>
   );
 }
 

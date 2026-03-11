@@ -5,6 +5,7 @@ import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Card, 
 import { PanelHeader } from "../../components/PanelHeader";
 import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { useParams } from "next/navigation";
+import { Section } from "../../components/layout/Section";
 
 const PERMISSIONS = [
   { key: "analytics", label: "Analíticas", path: "/analytics", text: "Acceso a la sección de métricas" },
@@ -147,8 +148,7 @@ export default function AdminRolesPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
-      <div className="py-8">
+    <Section>
         <PanelHeader
           title="Roles"
           subtitle="Activa o desactiva permisos por rol. Controla los accesos de tus colaboradores al panel de administracion."
@@ -294,7 +294,6 @@ export default function AdminRolesPage() {
           message={alert.message}
           type={alert.type}
         />
-      </div>
-    </div>
+      </Section>
   );
 }

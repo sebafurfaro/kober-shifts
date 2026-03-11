@@ -96,3 +96,20 @@ body {
 .card {
   @apply p-6 bg-white shadow-sm rounded-lg;
 }
+
+@media (max-width: 640px) {
+  section[role="dialog"].custom-dialog {
+    min-height: 100dvh;
+    border-radius: 0;
+    margin: 0;
+    overflow: scroll;
+  }
+  section[role="dialog"].custom-dialog button[aria-label="Close"] {
+    display: none;
+  }
+  section[role="dialog"].custom-dialog footer {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+}

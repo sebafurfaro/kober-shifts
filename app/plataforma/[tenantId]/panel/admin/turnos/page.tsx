@@ -16,14 +16,17 @@ import {
   Tooltip,
   Chip,
   Input,
+  Divider,
 } from "@heroui/react";
-import { CircleCheck, CircleX, Hand, MessageCircle, Plus, Search } from "lucide-react";
+import { CircleCheck, CircleX, Hand, MapPin, MessageCircle, Plus, Search } from "lucide-react";
 import { PanelHeader } from "../../components/PanelHeader";
 import { ConfirmationDialog } from "../../components/alerts/ConfirmationDialog";
 import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { useParams } from "next/navigation";
 import { useAppointmentsInvalidationStore } from "@/lib/appointments-invalidation-store";
 import { CreateTurnoDialog } from "./CreateTurnoDialog";
+import Typography from "@/app/components/Typography";
+import { Section } from "../../components/layout/Section";
 
 type Filter = "proximos" | "hoy" | "manana" | "todos";
 
@@ -58,14 +61,15 @@ const AR_TZ = "America/Argentina/Buenos_Aires";
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: AR_TZ,
-  });
+  const day = d.getDate().toString().padStart(2, "0");
+  let month = d.toLocaleString("es-AR", { month: "long", timeZone: AR_TZ });
+  month = month.slice(0, 3);
+  let hour = d.getHours();
+  const minute = d.getMinutes().toString().padStart(2, "0");
+  const ampm = hour >= 12 ? "p.m." : "a.m.";
+  hour = hour % 12;
+  if (hour === 0) hour = 12;
+  return `${day} ${month}, ${hour}:${minute} ${ampm}`;
 }
 
 function formatPrice(value: number): string {
@@ -193,9 +197,8 @@ export default function AdminTurnosPage() {
   const isCancellable = (status: string) => isPending(status) || status === "CONFIRMED";
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
-      <div className="py-8">
-        <PanelHeader
+    <Section>
+      <PanelHeader
           title="Turnos"
           subtitle="Podrás ver todos los turnos registrados"
         />
@@ -249,7 +252,7 @@ export default function AdminTurnosPage() {
               />
             </div>
 
-            <Table aria-label="Turnos" removeWrapper>
+            <Table aria-label="Turnos" removeWrapper className="hidden md:block">
               <TableHeader>
                 <TableColumn>Sucursal</TableColumn>
                 <TableColumn>Servicio</TableColumn>
@@ -271,7 +274,11 @@ export default function AdminTurnosPage() {
                   const waUrl = whatsAppUrl(apt.patient?.phone);
                   return (
                     <TableRow key={apt.id}>
-                      <TableCell>{apt.location?.name ?? "—"}</TableCell>
+                      <TableCell className="text-center">
+                        <Tooltip content={apt.location?.name ?? "—"} placement="top">
+                          <MapPin className="w-4 h-4 text-primary" />
+                        </Tooltip>
+                      </TableCell>
                       <TableCell>{apt.service?.name ?? "—"}</TableCell>
                       <TableCell>{apt.professional?.name ?? "—"}</TableCell>
                       <TableCell>{clientName}</TableCell>
@@ -355,6 +362,116 @@ export default function AdminTurnosPage() {
               </TableBody>
             </Table>
 
+            <div className="flex md:hidden flex-col gap-4">
+              {appointments.map((apt) => {
+                  const clientName = [apt.patient?.firstName, apt.patient?.lastName].filter(Boolean).join(" ") || apt.patient?.name || "—";
+                  const waUrl = whatsAppUrl(apt.patient?.phone);
+                  return (
+                    <div key={apt.id} className="flex flex-col space-y-3">
+                      <Typography variant="h6" color="black">{clientName}</Typography>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col space-y-1">
+                          <Typography variant="p" color="gray" opacity={50}>Fecha</Typography>
+                          <Typography variant="p">{formatDateTime(apt.startAt)}</Typography>
+                        </div>
+                        <div className="flex flex-col space-y-1">
+                          <Typography variant="p" color="gray" opacity={50}>Estado</Typography>
+                          <Chip size="sm" variant="flat" color={
+                          apt.status === "CONFIRMED" ? "success" :
+                            apt.status === "CANCELLED" ? "danger" :
+                              apt.status === "ATTENDED" ? "primary" : "warning"
+                        }>
+                          {STATUS_LABELS[apt.status] ?? apt.status}
+                        </Chip>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col space-y-1">
+                          <Typography variant="p" color="gray" opacity={50}>Profesional</Typography>
+                          <Typography variant="p">{apt.professional?.name ?? "—"}</Typography>
+                        </div>
+                        <div className="flex flex-col space-y-1">
+                          <Typography variant="p" color="gray" opacity={50}>Sede</Typography>
+                          <Typography variant="p">{apt.location?.name ?? "—"}</Typography>
+                        </div>
+                      </div>
+
+                      {apt.service != null && apt.service?.seniaAmount != null && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col space-y-1">
+                          <Typography variant="p" color="gray" opacity={50}>Servicio</Typography>
+                          <Typography variant="p">{apt.service?.name}</Typography>
+                        </div>
+                        <div className="flex flex-col space-y-1">
+                          <Typography variant="p" color="gray" opacity={50}>Sede</Typography>
+                          <Typography variant="p">{formatPrice(apt.service.seniaAmount)}</Typography>
+                        </div>
+                      </div>
+                      )}
+                      <>
+                        <div className="flex flex-col gap-1 mt-3">
+                          {isConfirmable(apt.status) && (
+                              <Button
+                                size="sm"
+                                variant="solid"
+                                color="success"
+                                onPress={() => handleConfirm(apt)}
+                                aria-label="Confirmar"
+                                className="text-white"
+                                startContent={<CircleCheck className="w-4 h-4" />}
+                              >
+                                Confirmar
+                              </Button>
+                          )}
+                          {isCancellable(apt.status) && (                            
+                              <Button
+                                size="sm"
+                                variant="solid"
+                                color="danger"
+                                onPress={() => setCancelDialog(apt)}
+                                aria-label="Cancelar"
+                                startContent={<CircleX className="w-4 h-4" />}
+                              >
+                                Cancelar
+                              </Button>
+                          )}
+                          
+                            <Button
+                              size="sm"
+                              variant="solid"
+                              color="primary"
+                              isDisabled={apt.status !== "CONFIRMED"}
+                              onPress={() => apt.status === "CONFIRMED" && handleMarkAttended(apt)}
+                              aria-label="Tomado"
+                              startContent={<Hand className="w-4 h-4" />}
+                            >
+                              Atendido
+                            </Button>
+                         
+                          {waUrl && (
+                              <Button
+                                size="sm"
+                                variant="faded"
+                                as="a"
+                                href={waUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label="WhatsApp"
+                                className="text-emerald-500 hover:text-emerald-600"
+                                startContent={<MessageCircle className="w-4 h-4" />}
+                              >
+                                Contactar
+                              </Button>
+                          )}
+                        </div>
+                      </>
+                      <Divider className="my-4" />
+                    </div>
+                  );
+                })}
+            </div>
+
             {totalPages > 1 && (
               <div className="flex justify-center p-4 border-t border-gray-200">
                 <Pagination
@@ -393,7 +510,6 @@ export default function AdminTurnosPage() {
           onClose={() => setCreateDialogOpen(false)}
           onSuccess={loadAppointments}
         />
-      </div>
-    </div>
+    </Section>
   );
 }

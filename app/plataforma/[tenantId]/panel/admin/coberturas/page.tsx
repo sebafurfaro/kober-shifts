@@ -20,6 +20,7 @@ import { CoverageFormDialog } from "../components/CoverageFormDialog";
 import { ConfirmationDialog } from "../../components/alerts/ConfirmationDialog";
 import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { useParams } from "next/navigation";
+import { Section } from "../../components/layout/Section";
 
 interface Plan {
     id: string;
@@ -151,7 +152,7 @@ export default function CoveragesPage() {
     }, [coverages, search]);
 
     return (
-        <div className="max-w-7xl mx-auto mt-8 mb-8 px-4">
+        <Section>
             <PanelHeader
                 title="Coberturas"
                 subtitle="Carga de coberturas y planes"
@@ -306,6 +307,6 @@ export default function CoveragesPage() {
               message={alertDialog.message}
               type={alertDialog.type}
             />
-        </div>
+        </Section>
     );
 }

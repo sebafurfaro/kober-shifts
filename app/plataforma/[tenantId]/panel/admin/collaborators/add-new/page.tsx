@@ -6,6 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PanelHeader } from "../../../components/PanelHeader";
 import { ProfessionalForm } from "../../profesionales/components/ProfessionalForm";
+import { Section } from "../../../components/layout/Section";
 
 export default function ProfessionalAddPage() {
     const router = useRouter();
@@ -80,9 +81,9 @@ export default function ProfessionalAddPage() {
 
     if (loading) {
         return (
-            <div className="max-w-7xl mx-auto mt-8 text-center">
+            <Section>
                 <Spinner size="lg" />
-            </div>
+            </Section>
         );
     }
 
@@ -91,15 +92,13 @@ export default function ProfessionalAddPage() {
     };
 
     return (
-        <div className="max-w-7xl mx-auto mt-8 mb-16">
+        <Section>
             <PanelHeader
                 title="Agregar Profesional"
                 subtitle="Configura el perfil y horarios del nuevo profesional"
                 action={{
                     label: "Volver",
-                    onClick: returnBack,
-                    variant: "bordered",
-                    startIcon: <ArrowLeft className="w-4 h-4" />
+                    onClick: returnBack
                 }}
             />
 
@@ -117,6 +116,6 @@ export default function ProfessionalAddPage() {
                     showCoverage={showCoverage}
                 />
             </div>
-        </div>
+        </Section>
     );
 }

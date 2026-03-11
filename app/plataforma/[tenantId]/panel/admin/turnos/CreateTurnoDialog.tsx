@@ -223,10 +223,10 @@ export function CreateTurnoDialog({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} size="2xl" scrollBehavior="inside">
+    <Modal isOpen={isOpen} onClose={handleClose} size="2xl" scrollBehavior="inside" className="custom-dialog">
       <ModalContent>
         <ModalHeader>Agregar turno</ModalHeader>
-        <ModalBody>
+        <ModalBody className="flex-0 md:flex-1">
           {loadingData ? (
             <div className="flex justify-center py-8">
               <Spinner />
@@ -320,10 +320,10 @@ export function CreateTurnoDialog({
           )}
         </ModalBody>
         <ModalFooter>
-          <Button variant="light" onPress={handleClose} isDisabled={submitting}>
+          <Button variant="bordered" color="danger" onPress={handleClose} isDisabled={submitting}>
             Cancelar
           </Button>
-          <Button color="primary" onPress={handleSubmit} isLoading={submitting} isDisabled={loadingData}>
+          <Button variant="solid" color="primary" onPress={handleSubmit} isLoading={submitting} isDisabled={loadingData}>
             Crear turno
           </Button>
         </ModalFooter>

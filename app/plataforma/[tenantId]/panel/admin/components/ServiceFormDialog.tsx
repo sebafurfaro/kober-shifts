@@ -108,7 +108,7 @@ export function ServiceFormDialog({
   const isView = mode === "view";
 
   return (
-    <Modal isOpen={open} onClose={onClose} size="md" classNames={{ wrapper: "z-[99999]" }}>
+    <Modal isOpen={open} onClose={onClose} size="md" className="custom-dialog" classNames={{ wrapper: "z-[99999]" }}>
       <ModalContent>
         <form onSubmit={isView ? (e) => { e.preventDefault(); onClose(); } : handleSubmit}>
           <ModalHeader className="text-slate-800">
@@ -190,7 +190,7 @@ export function ServiceFormDialog({
             </div>
           </ModalBody>
           <ModalFooter>
-            <Button variant="light" onPress={onClose} isDisabled={loading}>
+            <Button variant="bordered" color="danger" onPress={onClose} isDisabled={loading}>
               {isView ? "Cerrar" : "Cancelar"}
             </Button>
             {!isView && (

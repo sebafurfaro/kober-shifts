@@ -11,6 +11,7 @@ import { RevenueChart } from "./components/RevenueChart";
 import { PatientsTable } from "./components/PatientsTable";
 import type { AnalyticsMetrics, PatientsResponse } from "./components/types";
 import { useTenantLabels } from "@/lib/use-tenant-labels";
+import { Section } from "../components/layout/Section";
 
 export default function AnalyticsPageClient() {
   const params = useParams();
@@ -78,7 +79,7 @@ export default function AnalyticsPageClient() {
   }, [tenantId]);
 
   return (
-    <div className="lg:max-w-7xl w-full mx-auto mt-8 px-4">
+    <Section>
       {metricsLoading ? (
         <div className="flex justify-center items-center py-16">
           <Spinner size="lg" />
@@ -127,6 +128,6 @@ export default function AnalyticsPageClient() {
         </div>
         </>
       )}
-    </div>
+    </Section>
   );
 }

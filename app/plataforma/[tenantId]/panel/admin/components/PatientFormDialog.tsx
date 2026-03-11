@@ -237,6 +237,7 @@ export function PatientFormDialog({
       onClose={onClose} 
       size="2xl" 
       scrollBehavior="inside"
+      className="custom-dialog"
       classNames={{
         wrapper: "z-[99999]"
       }}
@@ -547,7 +548,8 @@ export function PatientFormDialog({
           </ModalBody>
           <ModalFooter>
             <Button
-              variant="light"
+              variant="bordered"
+              color="danger"
               onPress={onClose}
               isDisabled={loading}
             >
@@ -555,7 +557,8 @@ export function PatientFormDialog({
             </Button>
             <Button
               type="submit"
-              className="button button-secondary"
+              variant="solid"
+              color="primary"
               isDisabled={loading}
               isLoading={loading}
             >

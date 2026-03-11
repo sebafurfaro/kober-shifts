@@ -21,10 +21,13 @@ import {
   ModalFooter,
   Textarea,
   Alert,
+  Divider,
 } from "@heroui/react";
 import { CircleX } from "lucide-react";
 import { PanelHeader } from "../components/PanelHeader";
+import Typography from "@/app/components/Typography";
 import { useParams } from "next/navigation";
+import { Section } from "../components/layout/Section";
 
 type Filter = "hoy" | "proximos" | "todos";
 
@@ -166,8 +169,8 @@ export default function ProfessionalPanelPage() {
     status === "REQUESTED" || status === "PENDING_DEPOSIT" || status === "CONFIRMED";
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
-      <div className="py-8">
+    <Section>
+      
         <PanelHeader title="Mis Turnos" subtitle="Gestiona tus turnos" />
 
         {loadError && (
@@ -198,68 +201,123 @@ export default function ProfessionalPanelPage() {
               ))}
             </div>
 
-            <Table aria-label="Mis turnos" removeWrapper>
-              <TableHeader>
-                <TableColumn>Sucursal</TableColumn>
-                <TableColumn>Cliente</TableColumn>
-                <TableColumn>Fecha y hora</TableColumn>
-                <TableColumn>Estado</TableColumn>
-                <TableColumn align="end">Acciones</TableColumn>
-              </TableHeader>
-              <TableBody
-                isLoading={!mounted || loading}
-                loadingContent={<Spinner label="Cargando..." />}
-                emptyContent={!mounted || loading ? null : "No hay turnos"}
-              >
-                {mounted ? filteredAppointments.map((appointment) => (
-                  <TableRow key={appointment.id}>
-                    <TableCell>{appointment.locationName ?? "—"}</TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{appointment.patientName}</p>
-                        <p className="text-sm text-gray-500">{appointment.patientEmail}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell suppressHydrationWarning>{formatDateTime(appointment.startAt)}</TableCell>
-                    <TableCell>
+            <div className="hidden md:block">
+              <Table aria-label="Mis turnos" removeWrapper>
+                <TableHeader>
+                  <TableColumn>Sucursal</TableColumn>
+                  <TableColumn>Cliente</TableColumn>
+                  <TableColumn>Fecha y hora</TableColumn>
+                  <TableColumn>Estado</TableColumn>
+                  <TableColumn align="end">Acciones</TableColumn>
+                </TableHeader>
+                <TableBody
+                  isLoading={!mounted || loading}
+                  loadingContent={<Spinner label="Cargando..." />}
+                  emptyContent={!mounted || loading ? null : "No hay turnos"}
+                >
+                  {(mounted ? filteredAppointments : []).map((appointment) => (
+                    <TableRow key={appointment.id}>
+                      <TableCell>{appointment.locationName ?? "—"}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{appointment.patientName}</p>
+                          <p className="text-sm text-gray-500">{appointment.patientEmail}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell suppressHydrationWarning>{formatDateTime(appointment.startAt)}</TableCell>
+                      <TableCell>
+                        <Chip
+                          size="sm"
+                          variant="flat"
+                          color={
+                            appointment.status === "CONFIRMED"
+                              ? "success"
+                              : appointment.status === "CANCELLED"
+                                ? "danger"
+                                : appointment.status === "ATTENDED"
+                                  ? "primary"
+                                  : "warning"
+                          }
+                        >
+                          {STATUS_LABELS[appointment.status] ?? appointment.status}
+                        </Chip>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          {isCancellable(appointment.status) && (
+                            <Tooltip content="Cancelar" placement="top">
+                              <Button
+                                isIconOnly
+                                size="sm"
+                                variant="light"
+                                color="danger"
+                                onPress={() => handleCancelClick(appointment)}
+                                aria-label="Cancelar"
+                              >
+                                <CircleX className="w-4 h-4" />
+                              </Button>
+                            </Tooltip>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex md:hidden flex-col gap-4">
+              {(mounted ? filteredAppointments : []).map((apt) => (
+                <div key={apt.id} className="flex flex-col space-y-3">
+                  <Typography variant="h6" color="black">{apt.patientName ?? "—"}</Typography>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col space-y-1">
+                      <Typography variant="p" color="gray" opacity={50}>Fecha</Typography>
+                      <Typography variant="p" suppressHydrationWarning>{formatDateTime(apt.startAt)}</Typography>
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      <Typography variant="p" color="gray" opacity={50}>Estado</Typography>
                       <Chip
                         size="sm"
                         variant="flat"
                         color={
-                          appointment.status === "CONFIRMED"
-                            ? "success"
-                            : appointment.status === "CANCELLED"
-                              ? "danger"
-                              : appointment.status === "ATTENDED"
-                                ? "primary"
-                                : "warning"
+                          apt.status === "CONFIRMED" ? "success" :
+                          apt.status === "CANCELLED" ? "danger" :
+                          apt.status === "ATTENDED" ? "primary" : "warning"
                         }
                       >
-                        {STATUS_LABELS[appointment.status] ?? appointment.status}
+                        {STATUS_LABELS[apt.status] ?? apt.status}
                       </Chip>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        {isCancellable(appointment.status) && (
-                          <Tooltip content="Cancelar" placement="top">
-                            <Button
-                              isIconOnly
-                              size="sm"
-                              variant="light"
-                              color="danger"
-                              onPress={() => handleCancelClick(appointment)}
-                              aria-label="Cancelar"
-                            >
-                              <CircleX className="w-4 h-4" />
-                            </Button>
-                          </Tooltip>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )) : null}
-              </TableBody>
-            </Table>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col space-y-1">
+                      <Typography variant="p" color="gray" opacity={50}>Sucursal</Typography>
+                      <Typography variant="p">{apt.locationName ?? "—"}</Typography>
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      <Typography variant="p" color="gray" opacity={50}>Email</Typography>
+                      <Typography variant="p">{apt.patientEmail ?? "—"}</Typography>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1 mt-3">
+                    {isCancellable(apt.status) && (
+                      <Button
+                        size="sm"
+                        variant="solid"
+                        color="danger"
+                        onPress={() => handleCancelClick(apt)}
+                        aria-label="Cancelar"
+                        startContent={<CircleX className="w-4 h-4" />}
+                      >
+                        Cancelar
+                      </Button>
+                    )}
+                  </div>
+                  <Divider className="my-4" />
+                </div>
+              ))}
+            </div>
           </CardBody>
         </Card>
 
@@ -315,7 +373,6 @@ export default function ProfessionalPanelPage() {
             </ModalFooter>
           </ModalContent>
         </Modal>
-      </div>
-    </div>
+    </Section>
   );
 }

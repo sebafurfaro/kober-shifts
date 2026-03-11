@@ -1,15 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Spinner, Tooltip } from "@heroui/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Spinner, Tooltip, Divider } from "@heroui/react";
 import { Edit, Trash2, MessageCircle } from "lucide-react";
 import { PatientFormDialog } from "../components/PatientFormDialog";
 import { PanelHeader } from "../../components/PanelHeader";
+import Typography from "@/app/components/Typography";
 import { useParams } from "next/navigation";
 import { ConfirmationDialog } from "../../components/alerts/ConfirmationDialog";
 import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { useTenantLabels } from "@/lib/use-tenant-labels";
 import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
+import { Section } from "../../components/layout/Section";
 
 interface Patient {
   id: string;
@@ -199,8 +201,7 @@ export default function AdminPatientsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
-      <div className="py-8">
+    <Section>
         <PanelHeader
           title={patientLabel}
           action={{
@@ -210,89 +211,182 @@ export default function AdminPatientsPage() {
         />
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden text-slate-800">
-          <Table aria-label="Tabla de pacientes">
-            <TableHeader>
-              <TableColumn>Nombre</TableColumn>
-              <TableColumn>Turnos</TableColumn>
-              <TableColumn>Cancelaciones</TableColumn>
-              <TableColumn>Señas</TableColumn>
-              <TableColumn>Reservas</TableColumn>
-              <TableColumn align="end">Acciones</TableColumn>
-            </TableHeader>
-            <TableBody
-              isLoading={loading}
-              loadingContent={<Spinner label="Cargando..." />}
-              emptyContent={loading ? null : `No hay ${patientLabel.toLowerCase()} registrados`}
-            >
-              {patients.map((patient) => {
-                const total = patient.totalAppointments ?? 0;
-                const cancelled = patient.cancelledAppointments ?? 0;
-                const scheduled = total - cancelled;
-                const waUrl = whatsAppUrl(patient.phone);
-                return (
-                  <TableRow key={patient.id}>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">
-                          {(patient.firstName ?? patient.name ?? "").trim()} {(patient.lastName ?? "").trim()}
-                        </span>
-                        <span className="text-sm text-gray-500">{patient.email}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{scheduled}</TableCell>
-                    <TableCell>{cancelled}</TableCell>
-                    <TableCell>{seniasEnabled ? "Habilitada" : "Deshabilitada"}</TableCell>
-                    <TableCell>{reservasEnabled ? "Habilitada" : "Deshabilitada"}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Tooltip content="Editar">
-                          <Button
-                            isIconOnly
-                            size="sm"
-                            variant="light"
-                            onPress={() => handleEdit(patient)}
-                            aria-label="editar"
-                            className="text-gray-600 hover:text-gray-900"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                        </Tooltip>
-                        <Tooltip content="Eliminar">
-                          <Button
-                            isIconOnly
-                            size="sm"
-                            variant="light"
-                            color="danger"
-                            onPress={() => handleDelete(patient)}
-                            aria-label="eliminar"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </Tooltip>
-                        {waUrl ? (
-                          <Tooltip content="WhatsApp">
+          <div className="hidden md:block">
+            <Table aria-label="Tabla de pacientes">
+              <TableHeader>
+                <TableColumn>Nombre</TableColumn>
+                <TableColumn>Turnos</TableColumn>
+                <TableColumn>Cancelaciones</TableColumn>
+                <TableColumn>Señas</TableColumn>
+                <TableColumn>Reservas</TableColumn>
+                <TableColumn align="end">Acciones</TableColumn>
+              </TableHeader>
+              <TableBody
+                isLoading={loading}
+                loadingContent={<Spinner label="Cargando..." />}
+                emptyContent={loading ? null : `No hay ${patientLabel.toLowerCase()} registrados`}
+              >
+                {patients.map((patient) => {
+                  const total = patient.totalAppointments ?? 0;
+                  const cancelled = patient.cancelledAppointments ?? 0;
+                  const scheduled = total - cancelled;
+                  const waUrl = whatsAppUrl(patient.phone);
+                  return (
+                    <TableRow key={patient.id}>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {(patient.firstName ?? patient.name ?? "").trim()} {(patient.lastName ?? "").trim()}
+                          </span>
+                          <span className="text-sm text-gray-500">{patient.email}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{scheduled}</TableCell>
+                      <TableCell>{cancelled}</TableCell>
+                      <TableCell>{seniasEnabled ? "Habilitada" : "Deshabilitada"}</TableCell>
+                      <TableCell>{reservasEnabled ? "Habilitada" : "Deshabilitada"}</TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          <Tooltip content="Editar">
                             <Button
                               isIconOnly
                               size="sm"
                               variant="light"
-                              as="a"
-                              href={waUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              aria-label="WhatsApp"
-                              className="text-green-600 hover:text-green-700"
+                              onPress={() => handleEdit(patient)}
+                              aria-label="editar"
+                              className="text-gray-600 hover:text-gray-900"
                             >
-                              <MessageCircle className="w-4 h-4" />
+                              <Edit className="w-4 h-4" />
                             </Button>
                           </Tooltip>
-                        ) : null}
+                          <Tooltip content="Eliminar">
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="light"
+                              color="danger"
+                              onPress={() => handleDelete(patient)}
+                              aria-label="eliminar"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </Tooltip>
+                          {waUrl ? (
+                            <Tooltip content="WhatsApp">
+                              <Button
+                                isIconOnly
+                                size="sm"
+                                variant="light"
+                                as="a"
+                                href={waUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label="WhatsApp"
+                                className="text-green-600 hover:text-green-700"
+                              >
+                                <MessageCircle className="w-4 h-4" />
+                              </Button>
+                            </Tooltip>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="flex md:hidden flex-col gap-4 p-4">
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <Spinner label="Cargando..." />
+              </div>
+            ) : patients.length === 0 ? (
+              <Typography variant="p" color="gray">No hay {patientLabel.toLowerCase()} registrados</Typography>
+            ) : (
+              patients.map((p) => {
+                const displayName = [p.firstName, p.lastName].filter(Boolean).join(" ").trim() || p.name || "—";
+                const total = p.totalAppointments ?? 0;
+                const cancelled = p.cancelledAppointments ?? 0;
+                const scheduled = total - cancelled;
+                const waUrl = whatsAppUrl(p.phone);
+                return (
+                  <div key={p.id} className="flex flex-col space-y-3">
+                    <Typography variant="h6" color="black">{displayName}</Typography>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="p" color="gray" opacity={50}>Email</Typography>
+                        <Typography variant="p">{p.email ?? "—"}</Typography>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="p" color="gray" opacity={50}>Turnos</Typography>
+                        <Typography variant="p">{scheduled}</Typography>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="p" color="gray" opacity={50}>Cancelaciones</Typography>
+                        <Typography variant="p">{cancelled}</Typography>
+                      </div>
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="p" color="gray" opacity={50}>Teléfono</Typography>
+                        <Typography variant="p">{p.phone ?? "—"}</Typography>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="p" color="gray" opacity={50}>Señas</Typography>
+                        <Typography variant="p">{seniasEnabled ? "Habilitada" : "Deshabilitada"}</Typography>
+                      </div>
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="p" color="gray" opacity={50}>Reservas</Typography>
+                        <Typography variant="p">{reservasEnabled ? "Habilitada" : "Deshabilitada"}</Typography>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1 mt-3">
+                      <Button
+                        size="sm"
+                        variant="solid"
+                        color="primary"
+                        onPress={() => handleEdit(p)}
+                        aria-label="Editar"
+                        startContent={<Edit className="w-4 h-4" />}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="solid"
+                        color="danger"
+                        onPress={() => handleDelete(p)}
+                        aria-label="Eliminar"
+                        startContent={<Trash2 className="w-4 h-4" />}
+                      >
+                        Eliminar
+                      </Button>
+                      {waUrl && (
+                        <Button
+                          size="sm"
+                          variant="faded"
+                          as="a"
+                          href={waUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="WhatsApp"
+                          className="text-emerald-500 hover:text-emerald-600"
+                          startContent={<MessageCircle className="w-4 h-4" />}
+                        >
+                          Contactar
+                        </Button>
+                      )}
+                    </div>
+                    <Divider className="my-4" />
+                  </div>
                 );
-              })}
-            </TableBody>
-          </Table>
+              })
+            )}
+          </div>
         </div>
 
         <PatientFormDialog
@@ -327,8 +421,7 @@ export default function AdminPatientsPage() {
           message={alertDialog.message}
           type={alertDialog.type}
         />
-      </div>
-    </div>
+      </Section>
   );
 }
 

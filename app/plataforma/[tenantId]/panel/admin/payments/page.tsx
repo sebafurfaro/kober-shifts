@@ -1,9 +1,11 @@
 "use client";
 
 import { PanelHeader } from "../../components/PanelHeader";
-import { Card, CardBody, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow, Spinner, Pagination } from "@heroui/react";
+import { Card, CardBody, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow, Spinner, Pagination, Divider } from "@heroui/react";
 import * as React from "react";
 import { useParams } from "next/navigation";
+import { Section } from "../../components/layout/Section";
+import Typography from "@/app/components/Typography";
 
 type PaymentRecord = {
     _id: string;
@@ -82,13 +84,12 @@ export default function AdminPaymentsPage() {
     }, [tenantId, page]);
 
     return (
-        <div className="max-w-7xl mx-auto">
-            <div className="py-8">
+        <Section>
                 <PanelHeader
                     title="Pagos"
                     subtitle="Gestion de pagos por pasarelas, transferencias, depocitos, etc."
                 />
-            </div>
+            
 
             {mpLinked && (
                 <Card className="mb-8">
@@ -167,39 +168,101 @@ export default function AdminPaymentsPage() {
 
             <Card className="mb-8">
                 <CardBody className="p-6">
-                    <Table aria-label="Tabla de pagos">
-                        <TableHeader>
-                            <TableColumn>ID Turno</TableColumn>
-                            <TableColumn>Tipo</TableColumn>
-                            <TableColumn>Proveedor</TableColumn>
-                            <TableColumn>Estado</TableColumn>
-                            <TableColumn align={"end" as "start" | "center" | "end"}>
-                                Monto
-                            </TableColumn>
-                            <TableColumn>Fecha</TableColumn>
-                            <TableColumn>Detalle</TableColumn>
-                        </TableHeader>
-                        <TableBody
-                            isLoading={loading}
-                            loadingContent={<Spinner label="Cargando..." />}
-                            emptyContent={loading ? null : "No hay pagos registrados"}
-                        >
-                            {records.map((payment) => (
-                                <TableRow key={payment._id}>
-                                    <TableCell>{payment.appointmentId || "-"}</TableCell>
-                                    <TableCell>{payment.purpose || "-"}</TableCell>
-                                    <TableCell>{payment.provider || "-"}</TableCell>
-                                    <TableCell>{payment.status || "-"}</TableCell>
-                                    <TableCell className="text-right">
-                                        {typeof payment.amount === "number" ? payment.amount.toFixed(2) : "-"}
-                                    </TableCell>
-                                    <TableCell>
-                                        {payment.createdAt ? new Date(payment.createdAt).toLocaleString() : "-"}
-                                    </TableCell>
-                                    <TableCell>
+                    <div className="hidden md:block">
+                        <Table aria-label="Tabla de pagos">
+                            <TableHeader>
+                                <TableColumn>ID Turno</TableColumn>
+                                <TableColumn>Tipo</TableColumn>
+                                <TableColumn>Proveedor</TableColumn>
+                                <TableColumn>Estado</TableColumn>
+                                <TableColumn align={"end" as "start" | "center" | "end"}>
+                                    Monto
+                                </TableColumn>
+                                <TableColumn>Fecha</TableColumn>
+                                <TableColumn>Detalle</TableColumn>
+                            </TableHeader>
+                            <TableBody
+                                isLoading={loading}
+                                loadingContent={<Spinner label="Cargando..." />}
+                                emptyContent={loading ? null : "No hay pagos registrados"}
+                            >
+                                {records.map((payment) => (
+                                    <TableRow key={payment._id}>
+                                        <TableCell>{payment.appointmentId || "-"}</TableCell>
+                                        <TableCell>{payment.purpose || "-"}</TableCell>
+                                        <TableCell>{payment.provider || "-"}</TableCell>
+                                        <TableCell>{payment.status || "-"}</TableCell>
+                                        <TableCell className="text-right">
+                                            {typeof payment.amount === "number" ? payment.amount.toFixed(2) : "-"}
+                                        </TableCell>
+                                        <TableCell>
+                                            {payment.createdAt ? new Date(payment.createdAt).toLocaleString() : "-"}
+                                        </TableCell>
+                                        <TableCell>
+                                            <details className="text-xs">
+                                                <summary className="cursor-pointer text-primary">Ver</summary>
+                                                <pre className="whitespace-pre-wrap text-[11px] text-slate-600 mt-2">
+                                                    {JSON.stringify(
+                                                        payment.mercadoPagoRaw ?? payment.mercadoPago ?? {},
+                                                        null,
+                                                        2
+                                                    )}
+                                                </pre>
+                                            </details>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+
+                    <div className="flex md:hidden flex-col gap-4">
+                        {loading ? (
+                            <div className="flex justify-center py-8">
+                                <Spinner label="Cargando..." />
+                            </div>
+                        ) : records.length === 0 ? (
+                            <Typography variant="p" color="gray">No hay pagos registrados</Typography>
+                        ) : (
+                            records.map((payment) => (
+                                <div key={payment._id} className="flex flex-col space-y-3">
+                                    <Typography variant="h6" color="black">
+                                        {payment.appointmentId ? `Turno ${payment.appointmentId}` : "—"}
+                                    </Typography>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="flex flex-col space-y-1">
+                                            <Typography variant="p" color="gray" opacity={50}>Tipo</Typography>
+                                            <Typography variant="p">{payment.purpose ?? "—"}</Typography>
+                                        </div>
+                                        <div className="flex flex-col space-y-1">
+                                            <Typography variant="p" color="gray" opacity={50}>Estado</Typography>
+                                            <Typography variant="p">{payment.status ?? "—"}</Typography>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="flex flex-col space-y-1">
+                                            <Typography variant="p" color="gray" opacity={50}>Proveedor</Typography>
+                                            <Typography variant="p">{payment.provider ?? "—"}</Typography>
+                                        </div>
+                                        <div className="flex flex-col space-y-1">
+                                            <Typography variant="p" color="gray" opacity={50}>Monto</Typography>
+                                            <Typography variant="p">
+                                                {typeof payment.amount === "number" ? payment.amount.toFixed(2) : "—"}
+                                            </Typography>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="flex flex-col space-y-1 col-span-2">
+                                            <Typography variant="p" color="gray" opacity={50}>Fecha</Typography>
+                                            <Typography variant="p">
+                                                {payment.createdAt ? new Date(payment.createdAt).toLocaleString() : "—"}
+                                            </Typography>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col gap-1 mt-3">
                                         <details className="text-xs">
-                                            <summary className="cursor-pointer text-primary">Ver</summary>
-                                            <pre className="whitespace-pre-wrap text-[11px] text-slate-600 mt-2">
+                                            <summary className="cursor-pointer text-primary">Ver detalle</summary>
+                                            <pre className="whitespace-pre-wrap text-[11px] text-slate-600 mt-2 overflow-x-auto">
                                                 {JSON.stringify(
                                                     payment.mercadoPagoRaw ?? payment.mercadoPago ?? {},
                                                     null,
@@ -207,11 +270,12 @@ export default function AdminPaymentsPage() {
                                                 )}
                                             </pre>
                                         </details>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                                    </div>
+                                    <Divider className="my-4" />
+                                </div>
+                            ))
+                        )}
+                    </div>
 
                     {totalPages > 1 && (
                         <div className="flex justify-center mt-4">
@@ -226,6 +290,6 @@ export default function AdminPaymentsPage() {
                     )}
                 </CardBody>
             </Card>
-        </div>
+        </Section>
     );
 }

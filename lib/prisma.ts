@@ -1,14 +1,19 @@
-
 import { PrismaClient } from "@prisma/client";
+import { withAccelerate } from "@prisma/extension-accelerate";
 
 const globalForPrisma = globalThis as unknown as {
-    prisma: PrismaClient | undefined;
+  prisma: ReturnType<typeof createPrisma> | undefined;
 };
 
-export const prisma =
-    globalForPrisma.prisma ??
-    new PrismaClient({
-        log: ["query", "error", "warn"],
-    });
+function createPrisma() {
+  return new PrismaClient({
+    log: process.env.NODE_ENV !== "production" ? ["query", "error", "warn"] : ["error"],
+    ...(process.env.DATABASE_URL?.startsWith("prisma+")
+      ? { accelerateUrl: process.env.DATABASE_URL }
+      : {}),
+  }).$extends(withAccelerate());
+}
+
+export const prisma = globalForPrisma.prisma ?? createPrisma();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

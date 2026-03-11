@@ -1,15 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Avatar, Button, Spinner, Card } from "@heroui/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Avatar, Button, Spinner, Card, CardBody, Divider } from "@heroui/react";
 import { Edit, Trash2 } from "lucide-react";
 import { PanelHeader } from "../../components/PanelHeader";
+import Typography from "@/app/components/Typography";
 import { useRouter, useParams } from "next/navigation";
 import { ConfirmationDialog } from "../../components/alerts/ConfirmationDialog";
 import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { EditUserAside, type EditUserFormData } from "./components/EditUserAside";
 import { useTenantLabels } from "@/lib/use-tenant-labels";
 import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
+import { Section } from "../../components/layout/Section";
 
 interface Professional {
   id: string;
@@ -167,8 +169,7 @@ export default function AdminProfessionalsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
-      <div className="py-8">
+    <Section>
         <PanelHeader
           title={pageTitle}
           subtitle={atUserLimit ? `Límite de ${maxUsers} usuario(s) alcanzado. No se pueden agregar más.` : undefined}
@@ -184,94 +185,170 @@ export default function AdminProfessionalsPage() {
         />
 
         <Card className="card">
-          <Table aria-label="Tabla de colaboradores">
-            <TableHeader>
-              <TableColumn key="color" className="rounded-tl-lg rounded-bl-lg text-slate-800 text-base">Color</TableColumn>
-              <TableColumn key="name" className="text-slate-800 text-base">Nombre</TableColumn>
-              <TableColumn key="email" className="text-slate-800 text-base">Email</TableColumn>
-              <TableColumn key="role" className="text-slate-800 text-base">Rol</TableColumn>
-              <TableColumn key="actions" className="text-right rounded-tr-lg rounded-br-lg text-slate-800 text-base">Acciones</TableColumn>
-            </TableHeader>
-            <TableBody
-              isLoading={loading}
-              loadingContent={<Spinner label="Cargando..." />}
-              emptyContent={loading ? null : "No hay colaboradores registrados"}
-            >
-              {professionals.map((professional) => {
-                const color = professional.color || professional.professional?.color || "#2196f3";
-                const name = professional.name ?? "";
-                const initials = name
-                  .split(" ")
-                  .filter((n: string) => n.length > 0)
-                  .map((n: string) => n[0])
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2);
-                const roleLabel =
-                  professional.role === "ADMIN"
-                    ? "Administrador"
-                    : professional.role === "SUPERVISOR"
-                      ? "Recepcionista"
-                      : "Profesional";
+          <CardBody className="p-0">
+            <div className="hidden md:block">
+              <Table aria-label="Tabla de colaboradores">
+                <TableHeader>
+                  <TableColumn key="color" className="rounded-tl-lg rounded-bl-lg text-slate-800 text-base">Color</TableColumn>
+                  <TableColumn key="name" className="text-slate-800 text-base">Nombre</TableColumn>
+                  <TableColumn key="email" className="text-slate-800 text-base">Email</TableColumn>
+                  <TableColumn key="role" className="text-slate-800 text-base">Rol</TableColumn>
+                  <TableColumn key="actions" className="text-right rounded-tr-lg rounded-br-lg text-slate-800 text-base">Acciones</TableColumn>
+                </TableHeader>
+                <TableBody
+                  isLoading={loading}
+                  loadingContent={<Spinner label="Cargando..." />}
+                  emptyContent={loading ? null : "No hay colaboradores registrados"}
+                >
+                  {professionals.map((professional) => {
+                    const color = professional.color || professional.professional?.color || "#2196f3";
+                    const name = professional.name ?? "";
+                    const initials = name
+                      .split(" ")
+                      .filter((n: string) => n.length > 0)
+                      .map((n: string) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2);
+                    const roleLabel =
+                      professional.role === "ADMIN"
+                        ? "Administrador"
+                        : professional.role === "SUPERVISOR"
+                          ? "Recepcionista"
+                          : "Profesional";
 
-                const actionCell = (
-                  <TableCell key="actions">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        isIconOnly
-                        size="sm"
-                        variant="light"
-                        onPress={() => handleEdit(professional)}
-                        title="Editar"
-                        className="text-gray-600 hover:text-gray-900"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        isIconOnly
-                        size="sm"
-                        variant="light"
-                        color="danger"
-                        onPress={() => handleDelete(professional)}
-                        title="Eliminar"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    const actionCell = (
+                      <TableCell key="actions">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            onPress={() => handleEdit(professional)}
+                            title="Editar"
+                            className="text-gray-600 hover:text-gray-900"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            color="danger"
+                            onPress={() => handleDelete(professional)}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    );
+                    return (
+                      <TableRow key={professional.id}>
+                        <TableCell>
+                          <Avatar
+                            name={initials}
+                            style={{ backgroundColor: color }}
+                            className="w-9 h-9 text-xs font-semibold rounded-full text-white"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm font-medium text-gray-900">
+                            {name}
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm text-gray-600">
+                            {professional.email ?? ""}
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm text-gray-700">
+                            {roleLabel}
+                          </p>
+                        </TableCell>
+                        {actionCell}
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex md:hidden flex-col gap-4 p-4">
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <Spinner label="Cargando..." />
+                </div>
+              ) : professionals.length === 0 ? (
+                <Typography variant="p" color="gray">No hay colaboradores registrados</Typography>
+              ) : (
+                professionals.map((pro) => {
+                  const color = pro.color || pro.professional?.color || "#2196f3";
+                  const name = pro.name ?? "";
+                  const initials = name
+                    .split(" ")
+                    .filter((n: string) => n.length > 0)
+                    .map((n: string) => n[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2);
+                  const roleLabel =
+                    pro.role === "ADMIN"
+                      ? "Administrador"
+                      : pro.role === "SUPERVISOR"
+                        ? "Recepcionista"
+                        : "Profesional";
+                  return (
+                    <div key={pro.id} className="flex flex-col space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar
+                          name={initials}
+                          style={{ backgroundColor: color }}
+                          className="w-10 h-10 text-sm font-semibold rounded-full text-white shrink-0"
+                        />
+                        <Typography variant="h6" color="black">{name || "—"}</Typography>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col space-y-1">
+                          <Typography variant="p" color="gray" opacity={50}>Email</Typography>
+                          <Typography variant="p">{pro.email ?? "—"}</Typography>
+                        </div>
+                        <div className="flex flex-col space-y-1">
+                          <Typography variant="p" color="gray" opacity={50}>Rol</Typography>
+                          <Typography variant="p">{roleLabel}</Typography>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1 mt-3">
+                        <Button
+                          size="sm"
+                          variant="solid"
+                          color="primary"
+                          onPress={() => handleEdit(pro)}
+                          aria-label="Editar"
+                          startContent={<Edit className="w-4 h-4" />}
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="solid"
+                          color="danger"
+                          onPress={() => handleDelete(pro)}
+                          aria-label="Eliminar"
+                          startContent={<Trash2 className="w-4 h-4" />}
+                        >
+                          Eliminar
+                        </Button>
+                      </div>
+                      <Divider className="my-4" />
                     </div>
-                  </TableCell>
-                );
-                return (
-                  <TableRow key={professional.id}>
-                    <TableCell>
-                      <Avatar
-                        name={initials}
-                        style={{ backgroundColor: color }}
-                        className="w-9 h-9 text-xs font-semibold rounded-full text-white"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-sm font-medium text-gray-900">
-                        {name}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-sm text-gray-600">
-                        {professional.email ?? ""}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-sm text-gray-700">
-                        {roleLabel}
-                      </p>
-                    </TableCell>
-                    {actionCell}
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                  );
+                })
+              )}
+            </div>
+          </CardBody>
         </Card>
-      </div>
 
       <ConfirmationDialog
         open={deleteDialog.open}
@@ -302,6 +379,6 @@ export default function AdminProfessionalsPage() {
         initialData={editUser ? { name: editUser.name, email: editUser.email, dni: editUser.dni ?? "", role: editUser.role } : null}
         onSubmit={handleEditUserSubmit}
       />
-    </div>
+    </Section>
   );
 }

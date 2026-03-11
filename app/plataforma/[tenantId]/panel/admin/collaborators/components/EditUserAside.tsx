@@ -102,7 +102,7 @@ export function EditUserAside({
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-slate-800">{mode === "create" ? "Crear perfil" : "Editar usuario"}</h2>
-          <Button isIconOnly size="sm" variant="light" onPress={onClose} aria-label="Cerrar">
+          <Button isIconOnly size="sm" variant="light" onPress={onClose} aria-label="Cerrar" className="hidden md:block">
             <X className="w-5 h-5" />
           </Button>
         </div>
@@ -160,11 +160,11 @@ export function EditUserAside({
               ))}
             </Select>
           </div>
-          <div className="p-4 border-t border-gray-200 flex gap-2 justify-end">
-            <Button variant="bordered" onPress={onClose} isDisabled={submitting}>
+          <div className="p-4 border-t border-gray-200 grid grid-cols-2 md:flex gap-2 md:justify-end">
+            <Button variant="bordered" color="danger" onPress={onClose} isDisabled={submitting}>
               Cancelar
             </Button>
-            <Button type="submit" color="primary" isLoading={submitting || loading} isDisabled={submitting}>
+            <Button type="submit" color="primary" variant="solid" isLoading={submitting || loading} isDisabled={submitting}>
               {mode === "create" ? "Crear" : "Guardar"}
             </Button>
           </div>

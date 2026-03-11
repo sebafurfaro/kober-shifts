@@ -19,11 +19,14 @@ import {
   ModalFooter,
   Textarea,
   Alert,
+  Divider,
+  Chip,
 } from "@heroui/react";
 import { X } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { PanelHeader } from "../components/PanelHeader";
+import Typography from "@/app/components/Typography";
 import { useParams, useRouter } from "next/navigation";
 
 interface Appointment {
@@ -143,47 +146,112 @@ export default function PatientPanelPage() {
       <div className="py-8">
         <Card>
           <CardBody className="p-0">
-            <Table aria-label="Tabla de turnos">
-              <TableHeader>
-                <TableColumn>Profesional</TableColumn>
-                <TableColumn>Sede</TableColumn>
-                <TableColumn>Fecha</TableColumn>
-                <TableColumn>Hora</TableColumn>
-                <TableColumn>Estado</TableColumn>
-                <TableColumn align="end">Acciones</TableColumn>
-              </TableHeader>
-              <TableBody
-                isLoading={loading}
-                loadingContent={<Spinner />}
-                emptyContent={loading ? "Cargando..." : "No tienes turnos asignados"}
-              >
-                {appointments.map((appointment) => (
-                  <TableRow key={appointment.id}>
-                    <TableCell>{appointment.professionalName}</TableCell>
-                    <TableCell>{appointment.locationName}</TableCell>
-                    <TableCell>
-                      {format(new Date(appointment.startAt), "PPP", { locale: es })}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(appointment.startAt), "HH:mm")} - {format(new Date(appointment.endAt), "HH:mm")}
-                    </TableCell>
-                    <TableCell>{getStatusLabel(appointment.status, appointment.cancelledBy)}</TableCell>
-                    <TableCell>
-                      {appointment.status !== "CANCELLED" && (
+            <div className="hidden md:block">
+              <Table aria-label="Tabla de turnos">
+                <TableHeader>
+                  <TableColumn>Profesional</TableColumn>
+                  <TableColumn>Sede</TableColumn>
+                  <TableColumn>Fecha</TableColumn>
+                  <TableColumn>Hora</TableColumn>
+                  <TableColumn>Estado</TableColumn>
+                  <TableColumn align="end">Acciones</TableColumn>
+                </TableHeader>
+                <TableBody
+                  isLoading={loading}
+                  loadingContent={<Spinner />}
+                  emptyContent={loading ? "Cargando..." : "No tienes turnos asignados"}
+                >
+                  {appointments.map((appointment) => (
+                    <TableRow key={appointment.id}>
+                      <TableCell>{appointment.professionalName}</TableCell>
+                      <TableCell>{appointment.locationName}</TableCell>
+                      <TableCell>
+                        {format(new Date(appointment.startAt), "PPP", { locale: es })}
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(appointment.startAt), "HH:mm")} - {format(new Date(appointment.endAt), "HH:mm")}
+                      </TableCell>
+                      <TableCell>{getStatusLabel(appointment.status, appointment.cancelledBy)}</TableCell>
+                      <TableCell>
+                        {appointment.status !== "CANCELLED" && (
+                          <Button
+                            size="sm"
+                            color="danger"
+                            startContent={<X className="w-4 h-4" />}
+                            onPress={() => handleCancelClick(appointment)}
+                          >
+                            Cancelar
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex md:hidden flex-col gap-4 p-4">
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <Spinner />
+                </div>
+              ) : appointments.length === 0 ? (
+                <Typography variant="p" color="gray">No tienes turnos asignados</Typography>
+              ) : (
+                appointments.map((apt) => (
+                  <div key={apt.id} className="flex flex-col space-y-3">
+                    <Typography variant="h6" color="black">{apt.professionalName ?? "—"}</Typography>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="p" color="gray" opacity={50}>Fecha</Typography>
+                        <Typography variant="p">{format(new Date(apt.startAt), "PPP", { locale: es })}</Typography>
+                      </div>
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="p" color="gray" opacity={50}>Estado</Typography>
+                        <Chip
+                          size="sm"
+                          variant="flat"
+                          color={
+                            apt.status === "CONFIRMED" ? "success" :
+                            apt.status === "CANCELLED" ? "danger" :
+                            apt.status === "ATTENDED" ? "primary" : "warning"
+                          }
+                        >
+                          {getStatusLabel(apt.status, apt.cancelledBy)}
+                        </Chip>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="p" color="gray" opacity={50}>Sede</Typography>
+                        <Typography variant="p">{apt.locationName ?? "—"}</Typography>
+                      </div>
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="p" color="gray" opacity={50}>Hora</Typography>
+                        <Typography variant="p">
+                          {format(new Date(apt.startAt), "HH:mm")} - {format(new Date(apt.endAt), "HH:mm")}
+                        </Typography>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1 mt-3">
+                      {apt.status !== "CANCELLED" && (
                         <Button
                           size="sm"
+                          variant="solid"
                           color="danger"
+                          onPress={() => handleCancelClick(apt)}
+                          aria-label="Cancelar"
                           startContent={<X className="w-4 h-4" />}
-                          onPress={() => handleCancelClick(appointment)}
                         >
                           Cancelar
                         </Button>
                       )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    </div>
+                    <Divider className="my-4" />
+                  </div>
+                ))
+              )}
+            </div>
           </CardBody>
         </Card>
 

@@ -142,6 +142,7 @@ export function CoverageFormDialog({
             onClose={onClose} 
             size="md" 
             scrollBehavior="inside"
+            className="custom-dialog"
             classNames={{
                 wrapper: "z-[99999]"
             }}
@@ -236,7 +237,8 @@ export function CoverageFormDialog({
                     </ModalBody>
                     <ModalFooter>
                         <Button
-                            variant="light"
+                            variant="bordered"
+                            color="danger"
                             onPress={onClose}
                             isDisabled={loading}
                         >
@@ -245,6 +247,7 @@ export function CoverageFormDialog({
                         <Button
                             type="submit"
                             color="primary"
+                            variant="solid"
                             isDisabled={loading}
                             isLoading={loading}
                         >

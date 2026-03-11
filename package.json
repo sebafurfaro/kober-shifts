@@ -25,7 +25,7 @@
     "@heroui/react": "^2.8.7",
     "@heroui/theme": "^2.4.25",
     "@lottiefiles/dotlottie-react": "^0.17.13",
-    "@prisma/client": "^5.22.0",
+    "@prisma/extension-accelerate": "^3.0.1",
     "apexcharts": "^5.3.6",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
@@ -44,15 +44,17 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "mongodb": "^6.16.0",
+    "@prisma/client": "^7.4.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/nodemailer": "^7.0.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^16.6.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
-    "prisma": "^5.22.0",
+    "mongodb": "^6.16.0",
+    "prisma": "^7.4.2",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.18"

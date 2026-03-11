@@ -178,6 +178,7 @@ export function LocationFormDialog({
     <Modal 
       isOpen={open} 
       onClose={onClose} 
+      className="custom-dialog"
       size="lg"
       classNames={{
         wrapper: "z-[99999]"
@@ -395,7 +396,8 @@ export function LocationFormDialog({
           </ModalBody>
           <ModalFooter>
             <Button
-              variant="light"
+              variant="bordered"
+              color="danger"
               onPress={onClose}
               isDisabled={loading}
             >
@@ -404,6 +406,7 @@ export function LocationFormDialog({
             <Button
               type="submit"
               color="primary"
+              variant="solid"
               isDisabled={loading}
               isLoading={loading}
             >

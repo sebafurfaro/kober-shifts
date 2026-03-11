@@ -12,13 +12,16 @@ import {
   Card,
   CardBody,
   Spinner,
+  Divider,
 } from "@heroui/react";
 import { Pencil, Trash2 } from "lucide-react";
 import { LocationFormDialog } from "../components/LocationFormDialog";
 import { PanelHeader } from "../../components/PanelHeader";
+import Typography from "@/app/components/Typography";
 import { ConfirmationDialog } from "../../components/alerts/ConfirmationDialog";
 import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { useParams } from "next/navigation";
+import { Section } from "../../components/layout/Section";
 
 interface Location {
   id: string;
@@ -164,8 +167,7 @@ export default function AdminLocationsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto mt-8 px-4">
-      <div className="py-8">
+    <Section>
         <PanelHeader
           title="Sedes"
           subtitle="Configura todas las sedes que tengas asociadas"
@@ -177,56 +179,111 @@ export default function AdminLocationsPage() {
 
         <Card>
           <CardBody className="p-0">
-            <Table aria-label="Tabla de sedes" className="text-slate-800">
-              <TableHeader>
-                <TableColumn>Nombre del Centro</TableColumn>
-                <TableColumn>Dirección</TableColumn>
-                <TableColumn>Teléfono</TableColumn>
-                <TableColumn align="end">Citas Asociadas</TableColumn>
-                <TableColumn align="end">Acciones</TableColumn>
-              </TableHeader>
-              <TableBody
-                isLoading={loading}
-                loadingContent={<Spinner />}
-                emptyContent={
-                  loading ? "Cargando..." : "No hay sedes registradas"
-                }
-              >
-                {locations.map((location) => (
-                  <TableRow key={location.id}>
-                    <TableCell>{location.name}</TableCell>
-                    <TableCell>{location.address}</TableCell>
-                    <TableCell>{location.phone || "-"}</TableCell>
-                    <TableCell className="text-right">
-                      {location.appointmentCount ?? 0}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          isIconOnly
-                          size="sm"
-                          variant="light"
-                          onPress={() => handleEdit(location)}
-                          aria-label="editar"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          isIconOnly
-                          size="sm"
-                          variant="light"
-                          color="danger"
-                          onPress={() => handleDelete(location)}
-                          aria-label="eliminar"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+            <div className="hidden md:block">
+              <Table aria-label="Tabla de sedes" className="text-slate-800">
+                <TableHeader>
+                  <TableColumn>Nombre del Centro</TableColumn>
+                  <TableColumn>Dirección</TableColumn>
+                  <TableColumn>Teléfono</TableColumn>
+                  <TableColumn align="end">Citas Asociadas</TableColumn>
+                  <TableColumn align="end">Acciones</TableColumn>
+                </TableHeader>
+                <TableBody
+                  isLoading={loading}
+                  loadingContent={<Spinner />}
+                  emptyContent={
+                    loading ? "Cargando..." : "No hay sedes registradas"
+                  }
+                >
+                  {locations.map((location) => (
+                    <TableRow key={location.id}>
+                      <TableCell>{location.name}</TableCell>
+                      <TableCell>{location.address}</TableCell>
+                      <TableCell>{location.phone || "-"}</TableCell>
+                      <TableCell className="text-right">
+                        {location.appointmentCount ?? 0}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            onPress={() => handleEdit(location)}
+                            aria-label="editar"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            color="danger"
+                            onPress={() => handleDelete(location)}
+                            aria-label="eliminar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex md:hidden flex-col gap-4 p-4">
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <Spinner />
+                </div>
+              ) : locations.length === 0 ? (
+                <Typography variant="p" color="gray">No hay sedes registradas</Typography>
+              ) : (
+                locations.map((loc) => (
+                  <div key={loc.id} className="flex flex-col space-y-3">
+                    <Typography variant="h6" color="black">{loc.name}</Typography>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col space-y-1 col-span-2">
+                        <Typography variant="p" color="gray" opacity={50}>Dirección</Typography>
+                        <Typography variant="p">{loc.address ?? "—"}</Typography>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="p" color="gray" opacity={50}>Teléfono</Typography>
+                        <Typography variant="p">{loc.phone ?? "—"}</Typography>
+                      </div>
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="p" color="gray" opacity={50}>Citas Asociadas</Typography>
+                        <Typography variant="p">{loc.appointmentCount ?? 0}</Typography>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1 mt-3">
+                      <Button
+                        size="sm"
+                        variant="solid"
+                        color="primary"
+                        onPress={() => handleEdit(loc)}
+                        aria-label="Editar"
+                        startContent={<Pencil className="w-4 h-4" />}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="solid"
+                        color="danger"
+                        onPress={() => handleDelete(loc)}
+                        aria-label="Eliminar"
+                        startContent={<Trash2 className="w-4 h-4" />}
+                      >
+                        Eliminar
+                      </Button>
+                    </div>
+                    <Divider className="my-4" />
+                  </div>
+                ))
+              )}
+            </div>
           </CardBody>
         </Card>
 
@@ -262,8 +319,7 @@ export default function AdminLocationsPage() {
           message={alertDialog.message}
           type={alertDialog.type}
         />
-      </div>
-    </div>
+      </Section>
   );
 }
 

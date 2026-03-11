@@ -1,9 +1,10 @@
 "use client";
 
-import { Button, ButtonProps, Breadcrumbs, BreadcrumbItem, Card } from "@heroui/react";
+import { Button, ButtonProps, Breadcrumbs, BreadcrumbItem, Card, Tooltip } from "@heroui/react";
 import Link from "next/link";
 import { ReactNode } from "react";
 import { useParams } from "next/navigation";
+import { PlusIcon } from "lucide-react";
 
 interface PanelHeaderProps {
   title: string;
@@ -13,7 +14,6 @@ interface PanelHeaderProps {
     onClick: () => void;
     variant?: ButtonProps["variant"];
     color?: ButtonProps["color"];
-    startIcon?: ReactNode;
     disabled?: boolean;
   };
   showBreadcrumbs?: boolean;
@@ -40,34 +40,37 @@ export function PanelHeader({ title, subtitle, action, showBreadcrumbs = false }
               </BreadcrumbItem>
             </Breadcrumbs>
           )}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex flex-row justify-between items-center gap-4">
             <div>
               <h2 className="text-xl font-semibold text-gray-800 mb-1">
                 {title}
               </h2>
               {subtitle && (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 hidden md:block">
                   {subtitle}
                 </p>
               )}
             </div>
             {action && (
-              <Button
-                variant={
-                  (action.variant as string) === "outlined" 
-                    ? "bordered" 
-                    : (action.variant as string) === "text" 
-                    ? "light" 
-                    : action.variant || "solid"
-                }
-                color={action.color || "primary"}
-                onPress={action.onClick}
-                startContent={action.startIcon}
-                isDisabled={action.disabled}
-                className="button button-primary"
-              >
-                {action.label}
-              </Button>
+              <div className="flex items-center justify-center w-[50px] h-[50px]">
+                <Tooltip content={action.label} placement="top">
+                  <Button
+                    variant={
+                      (action.variant as string) === "outlined" 
+                        ? "bordered" 
+                        : (action.variant as string) === "text" 
+                        ? "light" 
+                        : action.variant || "solid"
+                    }
+                    color={action.color || "primary"}
+                    onPress={action.onClick}
+                    isDisabled={action.disabled}
+                    style={{width: "48px", height: "48px", minWidth: "48px", padding: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "7rem" }}
+                  >
+                    <PlusIcon className="w-4 h-4" />
+                  </Button>
+                </Tooltip>
+              </div>
             )}
           </div>
         </div>

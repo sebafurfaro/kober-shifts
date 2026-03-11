@@ -1,10 +1,10 @@
 "use client";
 
-import { LogOut, User, Menu, Bell } from "lucide-react";
+import { LogOut, User, Menu, Bell, MessageCircleQuestionMark } from "lucide-react";
 import { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from "@heroui/react";
-
-type Role = "PATIENT" | "PROFESSIONAL" | "ADMIN";
+import type { Role } from "@/lib/types";
+import Link from "next/link";
 
 interface AppBarProps {
     isMobile: boolean;
@@ -103,7 +103,11 @@ export default function AppBar({
                 {mounted && canNotify && (
                     <Dropdown onOpenChange={(open) => open && setUnreadCount(0)}>
                         <DropdownTrigger>
-                            <Button variant="bordered" isIconOnly aria-label="Notificaciones">
+                            <Button 
+                                variant="bordered" 
+                                isIconOnly 
+                                aria-label="Notificaciones" 
+                                className="text-orange-700 border-orange-700 bg-orange-50 hover:bg-orange-100">
                                 <span className="relative">
                                     <Bell className="w-4 h-4" />
                                     {unreadCount > 0 && (
@@ -117,6 +121,16 @@ export default function AppBar({
                         </DropdownMenu>
                     </Dropdown>
                 )}
+
+                <Button 
+                    variant="bordered" 
+                    className="text-emerald-800 border-emerald-800 bg-emerald-50 hover:bg-emerald-100"
+                    isIconOnly 
+                    as={Link} 
+                    href="https://wa.me/5491173740338?text=Hola, tengo una consulta sobre el funcionamiento de la plataforma." 
+                    target="_blank">
+                        <MessageCircleQuestionMark className="w-4 h-4" />
+                    </Button>
 
                 <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-100">
                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">

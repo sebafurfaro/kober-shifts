@@ -6,6 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PanelHeader } from "../../../../components/PanelHeader";
 import { ProfessionalForm } from "../../components/ProfessionalForm";
+import { Section } from "../../../../components/layout/Section";
 
 export default function ProfessionalEditPage() {
     const router = useRouter();
@@ -77,23 +78,21 @@ export default function ProfessionalEditPage() {
 
     if (loading) {
         return (
-            <div className="max-w-7xl mx-auto mt-8 text-center">
+            <Section>
                 <Spinner size="lg" />
-            </div>
+            </Section>
         );
     }
 
     if (error || !initialData) {
         return (
-            <div className="max-w-7xl mx-auto mt-8 mb-16">
+            <Section>
                 <PanelHeader
                     title="Editar Profesional"
                     subtitle="No se pudo cargar el profesional"
                     action={{
                         label: "Volver",
-                        onClick: () => router.push(`/plataforma/${tenantId}/panel/admin/profesionales`),
-                        variant: "bordered",
-                        startIcon: <ArrowLeft className="w-5 h-5" />,
+                        onClick: () => router.push(`/plataforma/${tenantId}/panel/admin/profesionales`)
                     }}
                 />
                 {error && (
@@ -102,20 +101,18 @@ export default function ProfessionalEditPage() {
                     </Alert>
                 )}
                 <p className="mt-4 text-slate-600">El profesional puede no existir o no tener perfil. Volvé a la lista e intentá de nuevo.</p>
-            </div>
+            </Section>
         );
     }
 
     return (
-        <div className="max-w-7xl mx-auto mt-8 mb-16">
+        <Section>
             <PanelHeader
                 title="Editar Profesional"
                 subtitle={`Modificando el perfil de ${initialData.name ?? ""}`}
                 action={{
                     label: "Volver",
-                    onClick: () => router.push(`/plataforma/${tenantId}/panel/admin/profesionales`),
-                    variant: "bordered",
-                    startIcon: <ArrowLeft className="w-4 h-4" />
+                    onClick: () => router.push(`/plataforma/${tenantId}/panel/admin/profesionales`)
                 }}
             />
 
@@ -134,6 +131,6 @@ export default function ProfessionalEditPage() {
                     showCoverage={showCoverage}
                 />
             </div>
-        </div>
+        </Section>
     );
 }
