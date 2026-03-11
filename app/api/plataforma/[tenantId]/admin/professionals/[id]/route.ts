@@ -12,6 +12,8 @@ import {
 import { hashPassword } from "@/lib/auth";
 import { Role } from "@/lib/types";
 
+type AvailabilityConfigWithHolidays = { days?: Record<string, unknown>; holidays?: unknown[] };
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string; tenantId: string }> }
@@ -87,20 +89,19 @@ export async function PUT(
     // Handle availabilityConfig - always include it if present in body, even if empty/null
     // This ensures we can clear availability by sending null
     // Also merge holidays if provided separately
-    let availabilityConfig = body.hasOwnProperty('availabilityConfig')
-      ? (body.availabilityConfig && typeof body.availabilityConfig === "object" ? body.availabilityConfig : null)
+    let availabilityConfig: AvailabilityConfigWithHolidays | null | undefined = body.hasOwnProperty('availabilityConfig')
+      ? (body.availabilityConfig && typeof body.availabilityConfig === "object" ? (body.availabilityConfig as AvailabilityConfigWithHolidays) : null)
       : undefined;
-    
+
     // If holidays are provided separately, merge them into availabilityConfig
     if (body.hasOwnProperty('holidays') && Array.isArray(body.holidays)) {
       if (!availabilityConfig || typeof availabilityConfig !== 'object') {
         availabilityConfig = { days: {}, holidays: [] };
       }
-      // Ensure holidays property exists
       if (!('holidays' in availabilityConfig)) {
-        (availabilityConfig as any).holidays = [];
+        availabilityConfig.holidays = [];
       }
-      (availabilityConfig as any).holidays = body.holidays;
+      availabilityConfig.holidays = body.holidays;
     }
 
     const availableDays = Array.isArray(body.availableDays) ? body.availableDays.filter((d): d is number => typeof d === "number") : undefined;
