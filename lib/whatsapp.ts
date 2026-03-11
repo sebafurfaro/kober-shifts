@@ -50,7 +50,8 @@ export function getDefaultReminderMessage(vars: DefaultReminderVars): string {
  * Arma las variables por defecto a partir de un appointment.
  */
 export function getDefaultReminderVars(data: ReminderAppointmentData): DefaultReminderVars {
-  const startAt = data.startAt instanceof Date ? data.startAt : new Date(data.startAt);
+  const startAtVal = data.startAt as Date | string;
+  const startAt = startAtVal instanceof Date ? startAtVal : new Date(startAtVal);
   const dateStr = format(startAt, "EEEE d 'de' MMMM", { locale: es });
   const timeStr = format(startAt, "HH:mm");
   return {

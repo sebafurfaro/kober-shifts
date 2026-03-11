@@ -1,10 +1,13 @@
 import crypto from "node:crypto";
 import type { Role } from "./types";
 
-const SECRET =
-  process.env.AUTH_SECRET ??
-  (process.env.NODE_ENV !== "production" ? "change_me_dev_only" : undefined);
-if (!SECRET) throw new Error("Missing AUTH_SECRET");
+function getSecret(): string {
+  const s =
+    process.env.AUTH_SECRET ??
+    (process.env.NODE_ENV !== "production" ? "change_me_dev_only" : undefined);
+  if (!s) throw new Error("Missing AUTH_SECRET");
+  return s;
+}
 
 export type SessionPayload = {
   userId: string;
@@ -21,7 +24,7 @@ function base64url(input: Buffer) {
 }
 
 function sign(data: string) {
-  return base64url(crypto.createHmac("sha256", SECRET as string).update(data).digest());
+  return base64url(crypto.createHmac("sha256", getSecret()).update(data).digest());
 }
 
 export function createSessionToken(payload: SessionPayload): string {

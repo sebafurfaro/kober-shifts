@@ -37,18 +37,20 @@ export function useCreateAppointment(tenantId: string) {
       body: CreateAppointmentBody,
       options?: CreateAppointmentOptions
     ): Promise<CreateAppointmentResult> => {
+      const startAtVal = body.startAt as string | Date;
       const startAt =
-        typeof body.startAt === "string"
-          ? body.startAt
-          : body.startAt instanceof Date
-            ? body.startAt.toISOString()
-            : String(body.startAt);
+        typeof startAtVal === "string"
+          ? startAtVal
+          : startAtVal instanceof Date
+            ? startAtVal.toISOString()
+            : String(startAtVal);
+      const endAtVal = body.endAt as string | Date;
       const endAt =
-        typeof body.endAt === "string"
-          ? body.endAt
-          : body.endAt instanceof Date
-            ? body.endAt.toISOString()
-            : String(body.endAt);
+        typeof endAtVal === "string"
+          ? endAtVal
+          : endAtVal instanceof Date
+            ? endAtVal.toISOString()
+            : String(endAtVal);
 
       const res = await fetch(`/api/plataforma/${tenantId}/appointments`, {
         method: "POST",

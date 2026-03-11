@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { Button, Input, Card, CardBody, Divider } from "@heroui/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Logo from "../../branding/Logo";
@@ -17,7 +17,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 const REDIRECT_URI_HELP_URL = "/api/store/auth/google/redirect-uri";
 
-export default function StoreLoginPage() {
+function StoreLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -78,7 +78,7 @@ export default function StoreLoginPage() {
   return (
     <div className="flex justify-center items-center min-h-screen bg-nodo">
       <div className="max-w-md w-full px-4">
-        <Card className="p-6">
+        <Card className="p-6" aria-label="Formulario de inicio de sesión">
           <CardBody>
             <div className="w-full flex flex-col gap-2 justify-center items-center mb-4">
               <Logo width={80} height={85} />
@@ -92,6 +92,7 @@ export default function StoreLoginPage() {
               className="w-full mb-4"
               variant="bordered"
               startContent={<GoogleIcon width={20} height={20} />}
+              aria-label="Ingresar con Google"
             >
               Ingresar con Google
             </Button>
@@ -105,6 +106,7 @@ export default function StoreLoginPage() {
                 value={email}
                 onValueChange={setEmail}
                 autoComplete="email"
+                aria-label="Email"
               />
               <Input
                 label="Contraseña"
@@ -112,6 +114,7 @@ export default function StoreLoginPage() {
                 value={password}
                 onValueChange={setPassword}
                 autoComplete="current-password"
+                aria-label="Contraseña"
               />
               {(error ?? urlError) ? (
                 <div className="space-y-2">
@@ -125,7 +128,13 @@ export default function StoreLoginPage() {
                   </p>
                 </div>
               ) : null}
-              <Button type="submit" isDisabled={loading} isLoading={loading} className="w-full button button-secondary">
+              <Button
+                type="submit"
+                isDisabled={loading}
+                isLoading={loading}
+                className="w-full button button-secondary"
+                aria-label={loading ? "Iniciando sesión..." : "Entrar con email"}
+              >
                 {loading ? "Iniciando sesión..." : "Entrar con email"}
               </Button>
             </form>
@@ -133,5 +142,24 @@ export default function StoreLoginPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function StoreLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center min-h-screen bg-nodo" aria-label="Cargando inicio de sesión">
+        <div className="max-w-md w-full px-4">
+          <Card className="p-6">
+            <CardBody className="flex flex-col gap-4 items-center">
+              <Logo width={80} height={85} />
+              <p className="text-sm text-gray-500">Cargando...</p>
+            </CardBody>
+          </Card>
+        </div>
+      </div>
+    }>
+      <StoreLoginContent />
+    </Suspense>
   );
 }
