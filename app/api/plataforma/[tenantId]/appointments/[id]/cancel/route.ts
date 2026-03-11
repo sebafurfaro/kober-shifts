@@ -34,7 +34,7 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     // Professional can cancel without reason, but if provided it's optional
-  } else if (session.role !== Role.ADMIN && session.role !== Role.PROFESSIONAL) {
+  } else if (session.role !== Role.ADMIN && session.role !== Role.SUPERVISOR) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

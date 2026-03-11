@@ -119,7 +119,7 @@ export function Toolbar({
                     }}
                     className="min-w-[200px] hidden"
                 >
-                    <SelectItem key="America/Argentina/Buenos_Aires" value="America/Argentina/Buenos_Aires">
+                    <SelectItem key="America/Argentina/Buenos_Aires" textValue="America/Argentina/Buenos_Aires">
                         Buenos Aires (GMT-3)
                     </SelectItem>
                 </Select>

@@ -340,10 +340,12 @@ export default function MisDatosPage() {
                 isLoading={loadingCoverages}
                 classNames={{ value: "text-slate-800", popoverContent: "text-slate-800" }}
               >
-                <SelectItem key="">Seleccionar...</SelectItem>
-                {coverages.map((c) => (
-                  <SelectItem key={c.name}>{c.name}</SelectItem>
-                ))}
+                <>
+                  <SelectItem key="">Seleccionar...</SelectItem>
+                  {coverages.map((c) => (
+                    <SelectItem key={c.name} textValue={c.name}>{c.name}</SelectItem>
+                  ))}
+                </>
               </Select>
               <Select
                 label="Plan"

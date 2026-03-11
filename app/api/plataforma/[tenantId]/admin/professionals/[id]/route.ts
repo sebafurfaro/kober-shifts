@@ -71,7 +71,7 @@ export async function PUT(
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : undefined;
     const dni = body.hasOwnProperty("dni") ? (typeof body.dni === "string" ? body.dni.trim() || null : null) : undefined;
-    const role =
+    const role: Role | undefined =
       body.role === "ADMIN"
         ? Role.ADMIN
         : body.role === "PROFESSIONAL"

@@ -6,12 +6,13 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrisma() {
-  return new PrismaClient({
+  const options = {
     log: process.env.NODE_ENV !== "production" ? ["query", "error", "warn"] : ["error"],
     ...(process.env.DATABASE_URL?.startsWith("prisma+")
       ? { accelerateUrl: process.env.DATABASE_URL }
       : {}),
-  }).$extends(withAccelerate());
+  };
+  return new PrismaClient(options as unknown as ConstructorParameters<typeof PrismaClient>[0]).$extends(withAccelerate());
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrisma();

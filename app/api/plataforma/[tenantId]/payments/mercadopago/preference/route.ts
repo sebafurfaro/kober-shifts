@@ -31,7 +31,7 @@ async function getAccessTokenForTenant(tenantId: string): Promise<string | null>
       : getMercadoPagoAccountByTenant;
   const account = await accountFetcher(tenantId);
   if (account?.accessToken) return account.accessToken;
-  const settings = await getTenantPaymentsSettings(tenantId);
+  const settings = await getTenantPaymentsSettings(tenantId) as { mercadoPago?: { accessToken?: string } } | null;
   if (settings?.mercadoPago?.accessToken) return settings.mercadoPago.accessToken;
   const fromEnv = process.env.MERCADOPAGO_ACCESS_TOKEN?.trim();
   return fromEnv || null;
@@ -114,6 +114,7 @@ export async function POST(
       body: {
         items: [
           {
+            id: appointmentId,
             title: description,
             quantity: 1,
             unit_price: Number(amount),

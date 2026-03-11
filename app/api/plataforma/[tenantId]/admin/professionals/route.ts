@@ -40,7 +40,10 @@ export async function POST(
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const dni = typeof body.dni === "string" ? body.dni.trim() : null;
-  const role = body.role === "ADMIN" || body.role === "PROFESSIONAL" || body.role === "SUPERVISOR" ? body.role : Role.PROFESSIONAL;
+  const role: Role =
+    body.role === "ADMIN" ? Role.ADMIN
+    : body.role === "SUPERVISOR" ? Role.SUPERVISOR
+    : Role.PROFESSIONAL;
   const color = typeof body.color === "string" ? body.color.trim() : "#2196f3";
   const tempPassword = typeof body.tempPassword === "string" ? body.tempPassword : (dni || "changeme123");
   const licenseNumber = typeof body.licenseNumber === "string" ? body.licenseNumber.trim() : null;

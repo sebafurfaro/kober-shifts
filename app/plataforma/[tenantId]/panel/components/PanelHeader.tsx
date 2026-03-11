@@ -15,6 +15,8 @@ interface PanelHeaderProps {
     variant?: ButtonProps["variant"];
     color?: ButtonProps["color"];
     disabled?: boolean;
+    startContent?: ReactNode;
+    startIcon?: ReactNode;
   };
   showBreadcrumbs?: boolean;
 }
@@ -65,9 +67,10 @@ export function PanelHeader({ title, subtitle, action, showBreadcrumbs = false }
                     color={action.color || "primary"}
                     onPress={action.onClick}
                     isDisabled={action.disabled}
+                    startContent={action.startContent ?? action.startIcon}
                     style={{width: "48px", height: "48px", minWidth: "48px", padding: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "7rem" }}
                   >
-                    <PlusIcon className="w-4 h-4" />
+                    {action.startContent ?? action.startIcon ?? <PlusIcon className="w-4 h-4" />}
                   </Button>
                 </Tooltip>
               </div>

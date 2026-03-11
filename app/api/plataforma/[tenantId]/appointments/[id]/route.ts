@@ -60,7 +60,14 @@ export async function PATCH(
     const utcDate = new Date(body.endAt);
     endAt = utcToMySQLDate(utcDate);
   }
-  const status = typeof body.status === "string" ? (body.status as AppointmentStatus) : undefined;
+  const status: AppointmentStatus | undefined = typeof body.status === "string"
+    ? (body.status === AppointmentStatus.REQUESTED ? AppointmentStatus.REQUESTED
+      : body.status === AppointmentStatus.PENDING_DEPOSIT ? AppointmentStatus.PENDING_DEPOSIT
+      : body.status === AppointmentStatus.CONFIRMED ? AppointmentStatus.CONFIRMED
+      : body.status === AppointmentStatus.CANCELLED ? AppointmentStatus.CANCELLED
+      : body.status === AppointmentStatus.ATTENDED ? AppointmentStatus.ATTENDED
+      : undefined)
+    : undefined;
   const notes = typeof body.notes === "string" ? body.notes : body.notes === null ? null : undefined;
   const patientId = typeof body.patientId === "string" ? body.patientId : undefined;
   const professionalId = typeof body.professionalId === "string" ? body.professionalId : undefined;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { findUsersWithProfessionalProfile, findUsersWithRoleIn } from "@/lib/db";
+import { Role } from "@/lib/types";
 
 /**
  * GET /api/plataforma/[tenantId]/professionals
@@ -32,7 +33,7 @@ export async function GET(
 
   // Fallback: si hay un solo usuario creado como profesional o admin, tomarlo como profesional
   if (availableProfessionals.length === 0) {
-    const adminOrProfessional = await findUsersWithRoleIn(["ADMIN", "PROFESSIONAL"], tenantId);
+    const adminOrProfessional = await findUsersWithRoleIn([Role.ADMIN, Role.PROFESSIONAL], tenantId);
     if (adminOrProfessional.length === 1) {
       const u = adminOrProfessional[0];
       availableProfessionals = [

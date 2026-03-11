@@ -24,7 +24,10 @@ interface Tenant {
 const defaultFeatures: TenantFeatureFlags = {
   show_coverage: true,
   show_mercado_pago: true,
+  calendar: true,
   payment_enabled: true,
+  whatsappNotifications: false,
+  whatsappCustomMessage: "",
 };
 
 const defaultLimits: TenantLimits = {

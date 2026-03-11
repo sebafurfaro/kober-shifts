@@ -148,10 +148,12 @@ export function LinkCollaboratorAside({
               }}
               classNames={{ label: "text-slate-800" }}
             >
-              <SelectItem key="" textValue="—">—</SelectItem>
-              {services.map((srv) => (
-                <SelectItem key={srv.id} textValue={srv.name}>{srv.name}</SelectItem>
-              ))}
+              <>
+                <SelectItem key="" textValue="—">—</SelectItem>
+                {services.map((srv) => (
+                  <SelectItem key={srv.id} textValue={srv.name}>{srv.name}</SelectItem>
+                ))}
+              </>
             </Select>
             <Switch
               isSelected={formData.linkEmail}

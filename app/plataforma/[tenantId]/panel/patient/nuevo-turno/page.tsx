@@ -565,7 +565,7 @@ export default function NewAppointment() {
                     classNames={{ value: "text-slate-800" }}
                   >
                     {locations.map((loc) => (
-                      <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                      <SelectItem key={loc.id} textValue={loc.name}>{loc.name}</SelectItem>
                     ))}
                   </Select>
                 </div>

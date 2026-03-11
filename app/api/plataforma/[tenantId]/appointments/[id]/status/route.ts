@@ -14,11 +14,15 @@ export async function PATCH(
   if (session.role !== "PROFESSIONAL") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-  const nextStatus = typeof body.status === "string" ? body.status : "";
+  const nextStatusStr = typeof body.status === "string" ? body.status : "";
 
-  if (!["CONFIRMED", "CANCELLED", "ATTENDED"].includes(nextStatus)) {
+  if (!["CONFIRMED", "CANCELLED", "ATTENDED"].includes(nextStatusStr)) {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
+  const nextStatus: AppointmentStatus =
+    nextStatusStr === "CONFIRMED" ? AppointmentStatus.CONFIRMED
+    : nextStatusStr === "CANCELLED" ? AppointmentStatus.CANCELLED
+    : AppointmentStatus.ATTENDED;
 
   const data = await findAppointmentWithRelations(id, tenantId);
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -34,7 +38,7 @@ export async function PATCH(
   const calendarId = professional.professional?.googleCalendarId ?? "primary";
 
   if (appointment.googleEventId) {
-    if (nextStatus === "CANCELLED") {
+    if (nextStatus === AppointmentStatus.CANCELLED) {
       await cancelAppointmentEvent({
         accessToken: professional.googleOAuth.accessToken,
         refreshToken: professional.googleOAuth.refreshToken,
@@ -42,7 +46,7 @@ export async function PATCH(
         eventId: appointment.googleEventId,
       });
     } else {
-      const suffix = nextStatus === "ATTENDED" ? " (Atendido)" : " (Confirmado)";
+      const suffix = nextStatus === AppointmentStatus.ATTENDED ? " (Atendido)" : " (Confirmado)";
       await updateAppointmentEventStatus({
         accessToken: professional.googleOAuth.accessToken,
         refreshToken: professional.googleOAuth.refreshToken,
@@ -54,7 +58,7 @@ export async function PATCH(
     }
   }
 
-  const updated = await updateAppointmentStatus(id, tenantId, nextStatus as AppointmentStatus);
+  const updated = await updateAppointmentStatus(id, tenantId, nextStatus);
 
   return NextResponse.json({ id: updated.id, status: updated.status });
 }
