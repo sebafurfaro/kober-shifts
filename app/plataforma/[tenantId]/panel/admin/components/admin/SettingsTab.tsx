@@ -108,9 +108,14 @@ export const SettingsTab = () => {
   return (
     <div className="flex flex-col p-4 space-y-4 bg-white">
       <Typography variant="h4" color="black">Ajustes</Typography>
-      <div className="flex flex-col space-y-4">
+      <Divider />
+      {/**
+      TODO: habilitar y mostrar estos campos en el futuro cuando se implementen las funcionalidades relacionadas a seña y reembolso
+       */}
+      <div className="hidden flex-col space-y-4"> 
         <Typography variant="h6" color="black">Porcentaje de la seña</Typography>
         <Slider
+          isDisabled
           className="w-full"
           value={form.depositPercent}
           onChange={(value) => setForm((f) => ({ ...f, depositPercent: Array.isArray(value) ? value[0] : value }))}
@@ -121,14 +126,14 @@ export const SettingsTab = () => {
           step={0.01}
           showTooltip={true}
           getValue={(val) => `${Math.round((val as number) * 100)}%`}
-          isDisabled={saving}
+          //isDisabled={saving}
         />
         <Typography variant="p" size="sm" color="gray" opacity={70}>
           Define el porcentaje del total de la reserva que se cobrará como seña al momento de reservar. Por ejemplo, si el porcentaje es 20% y un cliente reserva un turno de $1000, se le cobrará una seña de $200 al momento de la reserva.
         </Typography>
       </div>
-      <Divider />
-      <div className="flex flex-col space-y-4">
+      <Divider className="hidden" />
+      <div className="hidden flex-col space-y-4">
         <Typography variant="h6">Política de reembolso</Typography>
         <Textarea
           placeholder="Escribe la política de reembolso de tu negocio..."
@@ -136,9 +141,9 @@ export const SettingsTab = () => {
           onValueChange={(v) => setForm((f) => ({ ...f, refundPolicyMessage: v }))}
           isDisabled={saving}
         />
-        <p className="text-sm text-slate-500">Este mensaje se mostrará cuando exista política de reembolso (cancelación o modificación de turnos).</p>
+        <Typography variant="p" size="sm" color="gray" opacity={70}>Este mensaje se mostrará cuando exista política de reembolso (cancelación o modificación de turnos).</Typography>
       </div>
-      <Divider />
+      <Divider className="hidden" />
       <div className="flex flex-col space-y-4">
         <Typography variant="h6">Confirmación de turnos</Typography>
         <Switch
@@ -148,9 +153,9 @@ export const SettingsTab = () => {
         >
           Confirmación manual de turnos
         </Switch>
-        <p className="text-sm text-slate-500">
-          Si no tenés Mercado Pago vinculado para cobrar la seña, podés activar la confirmación manual: los turnos solicitados quedarán pendientes de confirmación. Si tenés Mercado Pago vinculado y el turno tiene seña, el turno pasará a confirmado al realizar el pago de la seña.
-        </p>
+        <Typography variant="p" size="sm" color="gray" opacity={70} >
+          Si lo mantenes desactivado, los turnos se confirmarán automáticamente al ser reservados por los clientes. Si lo activas, cada vez que un cliente reserve un turno, el turno quedará "pendiente" hasta que vos o tu equipo lo confirme manualmente desde el panel de administración. Esto te permite tener un control total sobre las reservas y evitar turnos no deseados o reservas duplicadas.
+        </Typography>
       </div>
       <Divider />
       <div className="">
@@ -166,9 +171,9 @@ export const SettingsTab = () => {
               endContent={<span className="text-sm text-slate-500">horas</span>}
               isDisabled={saving}
             />
-            <p className="text-sm text-slate-500">
+            <Typography variant="p" size="sm" color="gray" opacity={70}>
               Plazo en horas: un turno no puede ser tomado si queda menos de este tiempo. Ej.: si son las 15:00, el turno es a las 15:30 y el plazo es 1 h, el turno de las 15:30 no estará disponible.
-            </p>
+            </Typography>
           </div>
           <div className="flex flex-col space-y-4">
             <Input
@@ -182,9 +187,9 @@ export const SettingsTab = () => {
               endContent={<span className="text-sm text-slate-500">días</span>}
               isDisabled={saving}
             />
-            <p className="text-sm text-slate-500">
+            <Typography variant="p" size="sm" color="gray" opacity={70}>
               Cantidad de días a futuro que se muestran turnos disponibles.
-            </p>
+            </Typography>
           </div>
         </div>
       </div>

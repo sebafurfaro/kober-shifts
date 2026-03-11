@@ -15,7 +15,7 @@ export default function AdminPage() {
     <Section>
       <PanelHeader title="Administra tu negocio" subtitle="Gestiona los detalles de tu negocio, ajustes y configuraciones." />
       <Card className="p-4 hidden md:block">
-        <Tabs classNames={{
+        <Tabs disabledKeys={[ "tabwhatsapp", "tabintegrations" ]} classNames={{
           base: "w-full",
           tabList: "gap-2 md:gap-6 w-full relative bg-gray-100 rounded-lg p-1",
           cursor: "bg-white rounded-lg transition-all duration-300 ease-in-out font-medium",
@@ -23,7 +23,7 @@ export default function AdminPage() {
           tabContent: "group-data-[selected=true]:text-primary",
           panel: "p-0",
         }}>
-          <Tab key="details" title={
+          <Tab key="tabdetails" title={
             <div className="flex items-center gap-1">
               <CircleUser className="w-5 h-5" />
               <span className="text-medium">Detalles</span>
@@ -31,7 +31,7 @@ export default function AdminPage() {
           }>
             <DetailsTab />
           </Tab>
-          <Tab key="settings" title={
+          <Tab key="tabsettings" title={
             <div className="flex items-center gap-1">
               <Cog className="w-5 h-5" />
               <span className="text-medium">Ajustes</span>
@@ -39,7 +39,7 @@ export default function AdminPage() {
           }>
             <SettingsTab />
           </Tab>
-          <Tab key="integrations" title={
+          <Tab key="tabintegrations" title={
             <div className="flex items-center gap-1">
               <Blocks className="w-5 h-5" />
               <span className="text-medium">Integraciones</span>
@@ -47,7 +47,7 @@ export default function AdminPage() {
           }>
             <IntegrationsTab />
           </Tab>
-          <Tab key="whatsapp" title={
+          <Tab key="tabwhatsapp" title={
             <div className="flex items-center gap-1">
               <BellRing className="w-5 h-5" />
               <span className="text-medium">Recordatorios</span>
@@ -57,17 +57,17 @@ export default function AdminPage() {
           </Tab>
         </Tabs>
       </Card>
-      <Accordion variant="splitted" className="flex flex-col md:hidden space-y-2">
-        <AccordionItem startContent={<CircleUser className="w-5 h-5" />} title="Detalles">
+      <Accordion disabledKeys={["whatsapp", "integrations"]} variant="splitted" className="flex flex-col md:hidden space-y-2">
+        <AccordionItem key="details" startContent={<CircleUser className="w-5 h-5" />} title="Detalles">
           <DetailsTab />
         </AccordionItem>
-        <AccordionItem startContent={<Cog className="w-5 h-5" />} title="Ajustes">
+        <AccordionItem key="settings" startContent={<Cog className="w-5 h-5" />} title="Ajustes">
           <SettingsTab />
         </AccordionItem>
-        <AccordionItem startContent={<Blocks className="w-5 h-5" />} title="Integraciones">
+        <AccordionItem key="integrations" startContent={<Blocks className="w-5 h-5" />} title="Integraciones">
           <IntegrationsTab />
         </AccordionItem>
-        <AccordionItem startContent={<BellRing className="w-5 h-5" />} title="Recordatorios">
+        <AccordionItem key="whatsapp" startContent={<BellRing className="w-5 h-5" />} title="Recordatorios">
           <WhatsappTab />
         </AccordionItem>
       </Accordion>
