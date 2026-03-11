@@ -88,7 +88,11 @@ export async function PUT(
       if (!availabilityConfig || typeof availabilityConfig !== 'object') {
         availabilityConfig = { days: {}, holidays: [] };
       }
-      availabilityConfig.holidays = body.holidays;
+      // Ensure holidays property exists
+      if (!('holidays' in availabilityConfig)) {
+        (availabilityConfig as any).holidays = [];
+      }
+      (availabilityConfig as any).holidays = body.holidays;
     }
 
     const availableDays = Array.isArray(body.availableDays) ? body.availableDays.filter((d): d is number => typeof d === "number") : undefined;
