@@ -8,7 +8,7 @@ import type { NextRequest } from 'next/server';
  * and server components can read it without parsing the URL again.
  * If the tenantId is missing, the request is redirected to the root page.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     const pathname = url.pathname;
 

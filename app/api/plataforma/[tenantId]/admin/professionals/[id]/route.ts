@@ -10,6 +10,7 @@ import {
   deleteAppointmentsByProfessional,
 } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
+import { Role } from "@/lib/types";
 
 export async function GET(
   req: Request,
@@ -70,7 +71,7 @@ export async function PUT(
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : undefined;
     const dni = body.hasOwnProperty("dni") ? (typeof body.dni === "string" ? body.dni.trim() || null : null) : undefined;
-    const role = body.role === "ADMIN" || body.role === "PROFESSIONAL" || body.role === "SUPERVISOR" ? body.role : undefined;
+    const role = body.role === "ADMIN" || body.role === "PROFESSIONAL" || body.role === "SUPERVISOR" ? body.role as Role : undefined;
     const color = typeof body.color === "string" ? body.color.trim() : "#2196f3";
     const tempPassword = typeof body.tempPassword === "string" ? body.tempPassword : "";
     const licenseNumber = typeof body.licenseNumber === "string" ? body.licenseNumber.trim() : null;
@@ -104,7 +105,7 @@ export async function PUT(
 
     const profile = await findProfessionalProfileByUserId(id, tenantId);
 
-    const updateData: { name: string; email?: string; dni?: string | null; role?: string; passwordHash?: string } = { name };
+    const updateData: { name: string; email?: string; dni?: string | null; role?: Role; passwordHash?: string } = { name };
     if (email !== undefined) updateData.email = email;
     if (dni !== undefined) updateData.dni = dni;
     if (role !== undefined) updateData.role = role;

@@ -22,6 +22,9 @@ body {
 
 /* Animaciones personalizadas */
 @keyframes fadeIn {
+  .link-danger {
+    @apply text-red-500 hover:text-red-600 transition-colors duration-150;
+  }
   from {
     opacity: 0;
   }
@@ -34,12 +37,11 @@ body {
   from {
     transform: translateY(10px);
     opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
+    section[role="dialog"].custom-dialog {
+      border-radius: 0;
+      margin: 0;
+      overflow: scroll;
+    }
 
 .animate-fade-in {
   animation: fadeIn 0.3s ease-in-out;
