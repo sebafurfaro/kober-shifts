@@ -1,10 +1,9 @@
-// middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * Middleware to extract `tenantId` from the URL path `/plataforma/:tenantId/*`.
- * It adds the tenantId as a custom header `x-tenant-id` so that API routes
+ * Proxy: extracts `tenantId` from the URL path `/plataforma/:tenantId/*`.
+ * Adds the tenantId as a custom header `x-tenant-id` so that API routes
  * and server components can read it without parsing the URL again.
  * If the tenantId is missing, the request is redirected to the root page.
  */
@@ -12,9 +11,8 @@ export function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     const pathname = url.pathname;
 
-    // Store routes are completely excluded from this middleware
-    // They handle their own authentication in app/store/layout.tsx
-    // No need to check or process store routes here
+    // Store routes are not matched by config.matcher; they handle their own
+    // authentication in app/store/layout.tsx
 
     // Expected pattern: /plataforma/<tenantId>/...
     const match = pathname.match(/^\/plataforma\/([^\/]+)(\/.*)?$/);
@@ -32,8 +30,7 @@ export function proxy(request: NextRequest) {
 }
 
 /**
- * Apply middleware only to plataforma routes.
- * Store routes are completely excluded from middleware.
+ * Apply proxy only to plataforma routes.
  */
 export const config = {
     matcher: [
