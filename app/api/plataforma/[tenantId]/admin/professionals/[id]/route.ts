@@ -71,7 +71,14 @@ export async function PUT(
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : undefined;
     const dni = body.hasOwnProperty("dni") ? (typeof body.dni === "string" ? body.dni.trim() || null : null) : undefined;
-    const role = body.role === "ADMIN" || body.role === "PROFESSIONAL" || body.role === "SUPERVISOR" ? body.role as Role : undefined;
+    const role =
+      body.role === "ADMIN"
+        ? Role.ADMIN
+        : body.role === "PROFESSIONAL"
+        ? Role.PROFESSIONAL
+        : body.role === "SUPERVISOR"
+        ? Role.SUPERVISOR
+        : undefined;
     const color = typeof body.color === "string" ? body.color.trim() : "#2196f3";
     const tempPassword = typeof body.tempPassword === "string" ? body.tempPassword : "";
     const licenseNumber = typeof body.licenseNumber === "string" ? body.licenseNumber.trim() : null;
