@@ -9,12 +9,6 @@ let lastConnectionTest = 0;
 const CONNECTION_TEST_INTERVAL = 30000;
 
 function createPool(): mysql.Pool {
-  console.log('🔧 Creating MySQL pool with:', {
-    host: process.env.MYSQL_HOST,
-    port: process.env.MYSQL_PORT,
-    user: process.env.MYSQL_USER,
-    database: process.env.MYSQL_DATABASE,
-  });
   const pool = mysql.createPool({
     host: process.env.MYSQL_HOST || defaultHost,
     port: parseInt(process.env.MYSQL_PORT || defaultPort.toString()),
