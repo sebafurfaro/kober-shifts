@@ -14,8 +14,9 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: "Turnos NodoApp",
+  title: "Turnos Nodo App",
   description: "Nunca fue tan fácil gestionar tus turnos",
+  applicationName: "Turnos Nodo App"
 };
 
 export default function RootLayout({
