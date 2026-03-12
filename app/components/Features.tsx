@@ -30,7 +30,7 @@ export const Features = () => {
 
 
     return (
-        <section className="py-8 relative">
+        <section className="py-8 relative" id="beneficios">
             <div className="max-w-7xl mx-auto w-full px-4 md:px-0">
                 <div className="flex flex-col items-center justify-center space-y-6">
                     <Typography variant="h2" className="text-primary">La mejor solución para tu negocio</Typography>

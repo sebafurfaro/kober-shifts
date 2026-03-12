@@ -82,7 +82,7 @@ export const Plans = () => {
 
     return(
       <>
-        <section className="bg-white py-28">
+        <section className="bg-white py-28" id="precios">
           <div className="max-w-7xl w-full mx-auto px-4 grid grid-cols-1 md:grid-cols-2 items-center md:items-start gap-8">
             <div className="space-y-4">
               <Typography variant="h2" className="font-bold text-center md:text-left text-primary">Un plan simple que crece con tu negocio</Typography>
