@@ -4,12 +4,11 @@ import {
   findProfessionalProfileByUserId,
   findAppointmentsByDateRange,
   findGoogleOAuthTokenByUserId,
-  findUsersWithRoleIn,
   findServiceById,
 } from "@/lib/db";
 import { getTenantSettingsRow } from "@/lib/settings-db";
 import { getCalendarClient } from "@/lib/googleOAuth";
-import { AppointmentStatus, Role } from "@/lib/types";
+import { AppointmentStatus } from "@/lib/types";
 
 /**
  * GET /api/plataforma/[tenantId]/appointments/available-slots?professionalId=xxx&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
@@ -59,14 +58,8 @@ export async function GET(
       })()
     : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 30);
 
-  // Get professional profile
   const profile = await findProfessionalProfileByUserId(professionalId, tenantId);
-  // Si no hay perfil o está inactivo: si es el único usuario ADMIN o PROFESSIONAL del tenant, devolver slots vacíos (paciente puede elegirlo pero sin disponibilidad hasta que configure)
   if (!profile || !profile.isActive) {
-    const adminOrProfessional = await findUsersWithRoleIn([Role.ADMIN, Role.PROFESSIONAL], tenantId);
-    if (adminOrProfessional.length === 1 && adminOrProfessional[0].id === professionalId) {
-      return NextResponse.json([]);
-    }
     return NextResponse.json(
       { error: "Professional not found or inactive" },
       { status: 404 }

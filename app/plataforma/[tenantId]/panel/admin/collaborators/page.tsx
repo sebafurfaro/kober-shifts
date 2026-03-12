@@ -100,17 +100,21 @@ export default function AdminProfessionalsPage() {
   };
 
   const handleEditUserSubmit = async (data: EditUserFormData) => {
+    const body: Record<string, unknown> = {
+      name: data.name,
+      email: data.email,
+      dni: data.dni || null,
+      role: data.role,
+    };
+    if (data.role === "ADMIN" && data.alsoProfessional !== undefined) {
+      body.alsoProfessional = data.alsoProfessional;
+    }
     if (editUser) {
       const res = await fetch(`/api/plataforma/${tenantId}/admin/professionals/${editUser.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          name: data.name,
-          email: data.email,
-          dni: data.dni || null,
-          role: data.role,
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -121,12 +125,7 @@ export default function AdminProfessionalsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          name: data.name,
-          email: data.email,
-          dni: data.dni || null,
-          role: data.role,
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -376,7 +375,7 @@ export default function AdminProfessionalsPage() {
         open={editAsideOpen}
         onClose={() => { setEditAsideOpen(false); setEditUser(null); }}
         mode={editUser ? "edit" : "create"}
-        initialData={editUser ? { name: editUser.name, email: editUser.email, dni: editUser.dni ?? "", role: editUser.role } : null}
+        initialData={editUser ? { name: editUser.name, email: editUser.email, dni: editUser.dni ?? "", role: editUser.role, hasProfessionalProfile: !!editUser.professional } : null}
         onSubmit={handleEditUserSubmit}
       />
     </Section>

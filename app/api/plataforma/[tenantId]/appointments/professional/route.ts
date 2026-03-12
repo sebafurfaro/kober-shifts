@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { findAppointmentsByDateRange } from "@/lib/db";
+import { findAppointmentsByDateRange, hasProfessionalProfile } from "@/lib/db";
 import { mysqlDateToUTC } from "@/lib/timezone";
 import { Role } from "@/lib/types";
 
@@ -11,14 +11,15 @@ export async function GET(
   const { tenantId } = await params;
   const session = await getSession();
   if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== Role.PROFESSIONAL && session.role !== Role.ADMIN) {
+  const hasProfile = await hasProfessionalProfile(tenantId, session.userId);
+  if (session.role !== Role.ADMIN && session.role !== Role.PROFESSIONAL && !hasProfile) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const url = new URL(req.url);
   const professionalId =
     url.searchParams.get("professionalId") ||
-    (session.role === Role.PROFESSIONAL || session.role === Role.ADMIN ? session.userId : null);
+    (session.role === Role.ADMIN ? session.userId : hasProfile ? session.userId : null);
 
   if (!professionalId) {
     return NextResponse.json({ error: "professionalId is required" }, { status: 400 });

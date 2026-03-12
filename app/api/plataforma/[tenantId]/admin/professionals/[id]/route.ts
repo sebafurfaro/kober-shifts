@@ -5,6 +5,7 @@ import {
   findProfessionalProfileByUserId,
   updateUser,
   updateProfessionalProfile,
+  createProfessionalProfile,
   findUserByEmail,
   deleteUser,
   deleteAppointmentsByProfessional,
@@ -111,7 +112,21 @@ export async function PUT(
 
     if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
-    const profile = await findProfessionalProfileByUserId(id, tenantId);
+    let profile = await findProfessionalProfileByUserId(id, tenantId);
+    const alsoProfessional = body.alsoProfessional === true;
+    if (user.role === "ADMIN" && alsoProfessional && !profile) {
+      await createProfessionalProfile({
+        userId: id,
+        tenantId,
+        color: color || "#2196f3",
+        licenseNumber,
+        medicalCoverages,
+        availabilityConfig,
+        availableDays,
+        availableHours,
+      });
+      profile = await findProfessionalProfileByUserId(id, tenantId);
+    }
 
     const updateData: { name: string; email?: string; dni?: string | null; role?: Role; passwordHash?: string } = { name };
     if (email !== undefined) updateData.email = email;

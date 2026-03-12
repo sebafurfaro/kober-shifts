@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Button, Input, Select, SelectItem } from "@heroui/react";
+import { Button, Input, Select, SelectItem, Checkbox } from "@heroui/react";
 import { X } from "lucide-react";
 
 const ROLE_OPTIONS = [
@@ -15,13 +15,16 @@ export interface EditUserFormData {
   email: string;
   dni: string;
   role: string;
+  /** Solo aplica cuando role es ADMIN: si true, se crea/usa professional_profile para aparecer en agenda y recibir turnos. */
+  alsoProfessional?: boolean;
 }
 
 interface EditUserAsideProps {
   open: boolean;
   onClose: () => void;
   mode: "create" | "edit";
-  initialData: EditUserFormData | null;
+  /** initialData.alsoProfessional / hasProfessionalProfile: en edit, true si el usuario ya tiene professional_profile. */
+  initialData: (EditUserFormData & { hasProfessionalProfile?: boolean }) | null;
   onSubmit: (data: EditUserFormData) => Promise<void>;
   loading?: boolean;
 }
@@ -39,6 +42,7 @@ export function EditUserAside({
     email: "",
     dni: "",
     role: "PROFESSIONAL",
+    alsoProfessional: false,
   });
   const [errors, setErrors] = React.useState<Partial<Record<keyof EditUserFormData, string>>>({});
   const [submitting, setSubmitting] = React.useState(false);
@@ -52,9 +56,10 @@ export function EditUserAside({
           email: initialData.email ?? "",
           dni: initialData.dni ?? "",
           role: initialData.role && ROLE_OPTIONS.some((r) => r.value === initialData.role) ? initialData.role : "PROFESSIONAL",
+          alsoProfessional: initialData.role === "ADMIN" ? !!(initialData as any).hasProfessionalProfile : false,
         });
       } else {
-        setFormData({ name: "", email: "", dni: "", role: "PROFESSIONAL" });
+        setFormData({ name: "", email: "", dni: "", role: "PROFESSIONAL", alsoProfessional: false });
       }
       setErrors({});
       setSubmitError(null);
@@ -148,7 +153,7 @@ export function EditUserAside({
               selectedKeys={formData.role ? [formData.role] : []}
               onSelectionChange={(keys) => {
                 const v = Array.from(keys)[0] as string;
-                if (v) setFormData((prev) => ({ ...prev, role: v }));
+                if (v) setFormData((prev) => ({ ...prev, role: v, alsoProfessional: v === "ADMIN" ? prev.alsoProfessional : false }));
               }}
               isRequired
               classNames={{ label: "text-slate-800" }}
@@ -159,6 +164,15 @@ export function EditUserAside({
                 </SelectItem>
               ))}
             </Select>
+            {formData.role === "ADMIN" && (
+              <Checkbox
+                isSelected={formData.alsoProfessional === true}
+                onValueChange={(checked) => setFormData((prev) => ({ ...prev, alsoProfessional: checked }))}
+                classNames={{ label: "text-slate-800" }}
+              >
+                También es profesional (aparece en la agenda y puede recibir turnos)
+              </Checkbox>
+            )}
           </div>
           <div className="p-4 border-t border-gray-200 grid grid-cols-2 md:flex gap-2 md:justify-end">
             <Button variant="bordered" color="danger" onPress={onClose} isDisabled={submitting}>

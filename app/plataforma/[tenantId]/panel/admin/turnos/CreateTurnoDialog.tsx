@@ -147,12 +147,14 @@ export function CreateTurnoDialog({
         ]);
         setPatients(Array.isArray(pData) ? pData : []);
         const normalizedProfessionals = Array.isArray(profData)
-          ? profData.map((p: any) => ({
-              id: p.id,
-              name: p.name,
-              availableDays: p.professional?.availableDays ?? p.availableDays ?? null,
-              availabilityConfig: p.professional?.availabilityConfig ?? p.availabilityConfig ?? null,
-            }))
+          ? profData
+              .filter((p: any) => p.professional && p.professional.isActive !== false)
+              .map((p: any) => ({
+                id: p.id,
+                name: p.name,
+                availableDays: p.professional?.availableDays ?? p.availableDays ?? null,
+                availabilityConfig: p.professional?.availabilityConfig ?? p.availabilityConfig ?? null,
+              }))
           : [];
         setProfessionals(normalizedProfessionals);
         setLocations(Array.isArray(locData) ? locData : []);

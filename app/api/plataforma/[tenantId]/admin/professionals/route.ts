@@ -44,6 +44,7 @@ export async function POST(
     body.role === "ADMIN" ? Role.ADMIN
     : body.role === "SUPERVISOR" ? Role.SUPERVISOR
     : Role.PROFESSIONAL;
+  const alsoProfessional = body.alsoProfessional === true;
   const color = typeof body.color === "string" ? body.color.trim() : "#2196f3";
   const tempPassword = typeof body.tempPassword === "string" ? body.tempPassword : (dni || "changeme123");
   const licenseNumber = typeof body.licenseNumber === "string" ? body.licenseNumber.trim() : null;
@@ -81,7 +82,7 @@ export async function POST(
     passwordHash: hashPassword(tempPassword),
   });
 
-  if (role === Role.PROFESSIONAL) {
+  if (role === Role.PROFESSIONAL || (role === Role.ADMIN && alsoProfessional)) {
     await createProfessionalProfile({
       userId,
       tenantId,

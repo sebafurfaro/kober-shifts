@@ -6,6 +6,7 @@ import {
   findUsersByIds,
   findLocationsByIds,
   findServicesByIds,
+  hasProfessionalProfile,
 } from "@/lib/db";
 import { AppointmentStatus } from "@/lib/types";
 import { mysqlDateToUTC } from "@/lib/timezone";
@@ -73,6 +74,7 @@ export async function GET(
       orderBy = "startAt_asc";
   }
 
+  const userHasProfile = await hasProfessionalProfile(tenantId, session.userId);
   const listOptions = {
     startDate,
     endDate,
@@ -80,7 +82,7 @@ export async function GET(
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
     orderBy,
-    professionalId: session.role === "PROFESSIONAL" ? session.userId : undefined,
+    professionalId: userHasProfile ? session.userId : undefined,
   };
   const { list: appointmentList, total } = search
     ? await listAppointmentsForAdminRawWithSearch(tenantId, { ...listOptions, search })

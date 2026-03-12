@@ -788,6 +788,15 @@ export async function findProfessionalProfileByUserId(userId: string, tenantId: 
   return result.length > 0 ? rowToProfessionalProfile(result[0]) : null;
 }
 
+/** True si el usuario tiene un registro en professional_profiles (puede aparecer en agenda y recibir turnos). */
+export async function hasProfessionalProfile(tenantId: string, userId: string): Promise<boolean> {
+  const [rows] = await mysql.execute(
+    'SELECT 1 FROM professional_profiles WHERE userId = ? AND tenantId = ? LIMIT 1',
+    [userId, tenantId]
+  );
+  return (rows as any[]).length > 0;
+}
+
 export async function createProfessionalProfile(data: {
   userId: string;
   tenantId: string;

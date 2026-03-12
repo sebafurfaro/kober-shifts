@@ -243,6 +243,7 @@ export function Calendar() {
             lastName: p.lastName ?? null,
             email: p.email,
             hasProfessionalProfile: !!p.professional,
+            isActive: p.professional?.isActive !== false,
             color: (p.professional?.color && typeof p.professional.color === "string" && p.professional.color.trim() !== "")
               ? p.professional.color.trim()
               : "#2196f3",
@@ -812,7 +813,7 @@ export function Calendar() {
                 eventDialogData={eventDialogData}
                 onDataChange={setEventDialogData}
                 patients={patients}
-                professionals={professionals}
+                professionals={professionals.filter((p) => p.hasProfessionalProfile && p.isActive)}
                 locations={locations}
                 timezone={timezone}
                 statusColors={statusColors}
