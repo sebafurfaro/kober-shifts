@@ -13,7 +13,27 @@ import {
 import { hashPassword } from "@/lib/auth";
 import { Role } from "@/lib/types";
 
-type AvailabilityConfigWithHolidays = { days?: Record<string, unknown>; holidays?: unknown[] };
+//type AvailabilityConfigWithHolidays = { days?: Record<string, unknown>; holidays?: unknown[] };
+type AvailabilityConfigWithHolidays = {
+  days: {
+    [key: number]: {
+      slots: {
+        id: string;
+        startTime: string;
+        endTime: string;
+        fromDate: string;
+        toDate: string | null;
+        repeat: "weekly" | "biweekly" | "monthly";
+      }[];
+    };
+  };
+  holidays?: {
+    id: string;
+    startDate: string;
+    endDate: string;
+    description?: string;
+  }[];
+};
 
 export async function GET(
   req: Request,
