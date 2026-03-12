@@ -37,6 +37,7 @@ export async function GET(
   }
 
   // Build filters based on user role
+  // Calendario: solo pacientes ven sus turnos; staff (ADMIN, PROFESSIONAL, SUPERVISOR) ve todos los turnos de todos los profesionales
   const filters: {
     patientId?: string;
     professionalId?: string;
@@ -44,13 +45,11 @@ export async function GET(
 
   if (session.role === Role.PATIENT) {
     filters.patientId = session.userId;
-  } else if (session.role === Role.PROFESSIONAL) {
-    filters.professionalId = session.userId;
   } else if (session.role === Role.ADMIN) {
-    // Admin can filter by professionalId or patientId if provided
     if (professionalId) filters.professionalId = professionalId;
     if (patientId) filters.patientId = patientId;
   }
+  // PROFESSIONAL y SUPERVISOR: sin filtro por profesional → se muestran todos los turnos en el calendario
 
   const appointments = await findAppointmentsByDateRange(tenantId, startDate, endDate, filters);
 

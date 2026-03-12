@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
 import { findTenantById } from "@/lib/db";
+import { TenantNotFound } from "./components/TenantNotFound";
 
 export default async function TenantLayout({
   children,
@@ -10,13 +10,11 @@ export default async function TenantLayout({
 }) {
   const { tenantId } = await params;
   if (!tenantId || typeof tenantId !== "string") {
-    notFound();
-    return null;
+    return <TenantNotFound />;
   }
   const tenant = await findTenantById(tenantId.trim());
-  if (!tenant) {
-    notFound();
-    return null;
+  if (!tenant || !tenant.isActive) {
+    return <TenantNotFound />;
   }
   return <>{children}</>;
 }

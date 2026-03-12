@@ -25,7 +25,8 @@ export default function RegisterPage() {
   const router = useRouter();
   const params = useParams();
   const tenantId = params.tenantId as string;
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -55,7 +56,7 @@ export default function RegisterPage() {
       const res = await fetch(`/api/plataforma/${tenantId}/auth/register`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ firstName, lastName, email, password }),
       });
       if (!res.ok) {
         const json = (await res.json().catch(() => ({}))) as { error?: string };
@@ -85,9 +86,17 @@ export default function RegisterPage() {
           <form onSubmit={onSubmit} className="space-y-4">
             <h2 className="text-2xl font-bold">Crear cuenta</h2>
             <Input
-              label="Nombre y apellido"
-              value={name}
-              onValueChange={setName}
+              label="Nombre"
+              value={firstName}
+              onValueChange={setFirstName}
+              autoComplete="given-name"
+              isRequired
+            />
+            <Input
+              label="Apellido"
+              value={lastName}
+              onValueChange={setLastName}
+              autoComplete="family-name"
               isRequired
             />
             <Input

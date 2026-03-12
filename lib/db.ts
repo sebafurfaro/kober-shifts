@@ -1231,14 +1231,19 @@ export async function listAppointmentsForAdminRaw(
     startDate?: Date;
     endDate?: Date;
     statuses?: AppointmentStatus[];
+    professionalId?: string;
     limit: number;
     offset: number;
     orderBy: 'startAt_asc' | 'startAt_desc';
   }
 ): Promise<{ list: Appointment[]; total: number }> {
-  const { startDate, endDate, statuses, limit, offset, orderBy } = options;
+  const { startDate, endDate, statuses, professionalId, limit, offset, orderBy } = options;
   let whereClause = 'tenantId = ?';
   const params: any[] = [tenantId];
+  if (professionalId) {
+    whereClause += ' AND professionalId = ?';
+    params.push(professionalId);
+  }
   if (startDate != null) {
     whereClause += ' AND startAt >= ?';
     params.push(startDate);
@@ -1277,15 +1282,20 @@ export async function listAppointmentsForAdminRawWithSearch(
     startDate?: Date;
     endDate?: Date;
     statuses?: AppointmentStatus[];
+    professionalId?: string;
     limit: number;
     offset: number;
     orderBy: 'startAt_asc' | 'startAt_desc';
   }
 ): Promise<{ list: Appointment[]; total: number }> {
-  const { search, startDate, endDate, statuses, limit, offset, orderBy } = options;
+  const { search, startDate, endDate, statuses, professionalId, limit, offset, orderBy } = options;
   const searchPattern = `%${search.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
   let whereClause = `a.tenantId = ? AND (p.name LIKE ? OR prof.name LIKE ? OR l.name LIKE ? OR srv.name LIKE ?)`;
   const params: any[] = [tenantId, searchPattern, searchPattern, searchPattern, searchPattern];
+  if (professionalId) {
+    whereClause += ' AND a.professionalId = ?';
+    params.push(professionalId);
+  }
   if (startDate != null) {
     whereClause += ' AND a.startAt >= ?';
     params.push(startDate);

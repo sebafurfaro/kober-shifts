@@ -239,8 +239,13 @@ export function Calendar() {
           ? data.map((p: any) => ({
             id: p.id,
             name: p.name,
+            firstName: p.firstName ?? null,
+            lastName: p.lastName ?? null,
             email: p.email,
-            // Only store holidays from availabilityConfig, not the entire config
+            hasProfessionalProfile: !!p.professional,
+            color: (p.professional?.color && typeof p.professional.color === "string" && p.professional.color.trim() !== "")
+              ? p.professional.color.trim()
+              : "#2196f3",
             holidays: p.professional?.availabilityConfig?.holidays || [],
             availableDays: p.professional?.availableDays || null,
             availableHours: p.professional?.availableHours || null,
@@ -712,6 +717,33 @@ export function Calendar() {
         timezone={timezone}
         onTimezoneChange={setTimezone}
       />
+
+      {/* Leyenda: solo profesionales con perfil (color + nombre), no admins sin perfil */}
+      {(() => {
+        const professionalsWithProfile = professionals.filter((pro) => pro.hasProfessionalProfile);
+        return professionalsWithProfile.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          {professionalsWithProfile.map((pro) => (
+            <div
+              key={pro.id}
+              className="flex items-center gap-2 shrink-0 rounded-md border border-gray-200 bg-white px-3 py-1.5 shadow-sm"
+            >
+              <span
+                className="block w-3 h-3 rounded-full shrink-0"
+                style={{ backgroundColor: pro.color ?? "#2196f3" }}
+                aria-hidden
+              />
+              <span
+                className="text-sm font-medium text-slate-800 truncate max-w-[180px]"
+                title={[pro.firstName, pro.lastName].filter(Boolean).join(" ").trim() || pro.name || ""}
+              >
+                {[pro.firstName, pro.lastName].filter(Boolean).join(" ").trim() || pro.name || "Sin nombre"}
+              </span>
+            </div>
+          ))}
+        </div>
+        ) : null;
+      })()}
 
       {/* Calendar */}
       <Card className="p-4 mb-4">

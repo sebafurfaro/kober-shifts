@@ -20,6 +20,7 @@ import { Alert } from "@heroui/react";
 import Logo from "@/app/branding/Logo";
 import { Dispatch, SetStateAction } from "react";
 import type { Role } from "@/lib/types";
+import { canAccess, type PermissionsMap, type PermKey } from "@/lib/panel-permissions";
 
 const DRAWER_WIDTH = 210;
 const DRAWER_COLLAPSED_WIDTH = 64;
@@ -76,6 +77,8 @@ interface AsideProps {
   onWidthChange: (width: number) => void;
   /** Si se pasa, evita una segunda llamada a /features (viene del shell). */
   usage?: { used: number; max: number } | null;
+  /** Matriz de permisos por sección y rol. Si no está cargada, se usan los defaults (staff ve según su rol). */
+  permissions?: PermissionsMap | null;
 }
 
 export function Aside({
@@ -92,10 +95,12 @@ export function Aside({
   setIsCollapsed,
   onWidthChange,
   usage: usageFromProp,
+  permissions,
 }: AsideProps) {
   const [isHovered, setIsHovered] = React.useState(false);
   const [isManuallyToggled, setIsManuallyToggled] = React.useState(false);
   const [usageLocal, setUsageLocal] = React.useState<{ used: number; max: number } | null>(null);
+  const can = (permKey: PermKey) => canAccess(permissions ?? null, role, permKey);
 
   React.useEffect(() => {
     if (usageFromProp !== undefined || !currentTenantId || role === "PATIENT") return;
@@ -139,7 +144,7 @@ export function Aside({
   };
 
   const effectiveIsCollapsed = isCollapsed && !isHovered;
-  const canManage = role === "ADMIN" || role === "PROFESSIONAL" || role === "SUPERVISOR";
+  const isStaff = role === "ADMIN" || role === "PROFESSIONAL" || role === "SUPERVISOR";
   const base = `/plataforma/${currentTenantId}/panel`;
 
   return (
@@ -192,7 +197,7 @@ export function Aside({
 
         <nav className="space-y-1 px-2">
           {/* Métricas */}
-          {role !== "PATIENT" && (
+          {role !== "PATIENT" && can("analytics") && (
             <>
               <SectionTitle label="Métricas" isCollapsed={effectiveIsCollapsed} />
               <NavItem
@@ -204,8 +209,8 @@ export function Aside({
             </>
           )}
 
-          {/* Recursos: Calendario, Profesionales, Servicios */}
-          {(role !== "PATIENT" && calendarEnabled) || canManage ? (
+          {/* Recursos: Calendario, Turnos Profesional, Servicios, Clientes */}
+          {role !== "PATIENT" && (calendarEnabled || can("turnosProfessional") || can("servicios") || can("patients")) ? (
             <SectionTitle label="Recursos" isCollapsed={effectiveIsCollapsed} />
           ) : null}
           {role !== "PATIENT" && calendarEnabled && (
@@ -216,7 +221,7 @@ export function Aside({
               isCollapsed={effectiveIsCollapsed}
             />
           )}
-          {(role === "PROFESSIONAL" || role === "ADMIN" || role === "SUPERVISOR") && (
+          {isStaff && can("turnosProfessional") && (
             <NavItem
               href={`${base}/professional`}
               label="Profesionales"
@@ -224,7 +229,7 @@ export function Aside({
               isCollapsed={effectiveIsCollapsed}
             />
           )}
-          {canManage && (
+          {isStaff && can("servicios") && (
             <NavItem
               href={`${base}/admin/servicios`}
               label="Servicios"
@@ -232,7 +237,7 @@ export function Aside({
               isCollapsed={effectiveIsCollapsed}
             />
           )}
-          {canManage && (
+          {isStaff && can("patients") && (
             <NavItem
               href={pacientesItem.href}
               label={pacientesItem.label}
@@ -241,30 +246,41 @@ export function Aside({
             />
           )}
 
-          {/* Gestión */}
-          {canManage && (
+          {/* Gestión: Admin, Pagos, Turnos, Sedes, Coberturas */}
+          {(isStaff && (can("admin") || can("pagos") || can("turnos") || can("locations") || can("coberturas"))) && (
             <>
               <SectionTitle label="Gestión" isCollapsed={effectiveIsCollapsed} />
-              <NavItem
-                href={`${base}/admin`}
-                label="Admin"
-                icon={<Settings className="w-5 h-5" />}
-                isCollapsed={effectiveIsCollapsed}
-              />
-              <NavItem
-                href={`${base}/admin/payments`}
-                label="Pagos"
-                icon={<CircleDollarSign className="w-5 h-5" />}
-                isCollapsed={effectiveIsCollapsed}
-              />
-              <NavItem
-                href={`${base}/admin/turnos`}
-                label="Turnos"
-                icon={<CalendarCheck2 className="w-5 h-5" />}
-                isCollapsed={effectiveIsCollapsed}
-              />
+              {can("admin") && (
+                <NavItem
+                  href={`${base}/admin`}
+                  label="Admin"
+                  icon={<Settings className="w-5 h-5" />}
+                  isCollapsed={effectiveIsCollapsed}
+                />
+              )}
+              {can("pagos") && (
+                <NavItem
+                  href={`${base}/admin/payments`}
+                  label="Pagos"
+                  icon={<CircleDollarSign className="w-5 h-5" />}
+                  isCollapsed={effectiveIsCollapsed}
+                />
+              )}
+              {can("turnos") && (
+                <NavItem
+                  href={`${base}/admin/turnos`}
+                  label="Turnos"
+                  icon={<CalendarCheck2 className="w-5 h-5" />}
+                  isCollapsed={effectiveIsCollapsed}
+                />
+              )}
               {gestionItems
-                .filter((item) => item.show !== false)
+                .filter((item) => {
+                  if (item.show === false) return false;
+                  if (item.href.includes("/locations")) return can("locations");
+                  if (item.href.includes("/coberturas")) return can("coberturas");
+                  return true;
+                })
                 .map((item) => (
                   <NavItem
                     key={item.href}
@@ -278,7 +294,7 @@ export function Aside({
           )}
 
           {/* Colaboradores */}
-          {canManage && colaboradoresItems.length > 0 && (
+          {isStaff && can("collaborators") && colaboradoresItems.length > 0 && (
             <>
               <SectionTitle label="Colaboradores" isCollapsed={effectiveIsCollapsed} />
               {colaboradoresItems.map((item) => (
@@ -300,15 +316,13 @@ export function Aside({
                 isCollapsed={effectiveIsCollapsed}
               />
           )}
-          {canManage && (
-            <>
-              <NavItem
-                href={`${base}/admin/profesionales`}
-                label="Profesionales"
-                icon={<User className="w-5 h-5" />}
-                isCollapsed={effectiveIsCollapsed}
-              />
-            </>
+          {isStaff && can("profesionales") && (
+            <NavItem
+              href={`${base}/admin/profesionales`}
+              label="Profesionales"
+              icon={<User className="w-5 h-5" />}
+              isCollapsed={effectiveIsCollapsed}
+            />
           )}
 
           {/* Mis turnos y Mis datos (solo rol PATIENT) */}

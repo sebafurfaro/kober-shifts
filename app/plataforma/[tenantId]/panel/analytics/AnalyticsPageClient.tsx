@@ -79,7 +79,7 @@ export default function AnalyticsPageClient() {
   }, [tenantId]);
 
   return (
-    <Section>
+    <Section className="md:mt-8">
       {metricsLoading ? (
         <div className="flex justify-center items-center py-16">
           <Spinner size="lg" />

@@ -4,6 +4,7 @@ import { Card, CardHeader, CardBody, CardFooter, Button, Table, TableHeader, Tab
 import { ChessQueen, Check } from "lucide-react";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import Link from "next/link";
+import Typography from "./Typography";
 
 const BASE_PRICE = 9900;
 const PRICE_PER_EXTRA_USER = 3900;
@@ -67,31 +68,38 @@ export const Plans = () => {
 
       const message = `Hola, estoy interesado en el plan $ARS ${formattedPrice} para ${userCount} usuarios.`;
 
+      const features = [
+        "Turnos ilimitados",
+        "Link personalizado de reservas",
+        "Confirmación de turnos por mail",
+        "Métricas de la plataforma",
+        "Franjas horarias de disponibilidad",
+        "Tiempo de vacaciones",
+        "Asistencia técnica",
+        "¿Usas planes de cobertura médica? También disponible"
+      ];
+
 
     return(
       <>
         <section className="bg-white py-28">
           <div className="max-w-7xl w-full mx-auto px-4 grid grid-cols-1 md:grid-cols-2 items-center md:items-start gap-8">
             <div className="space-y-4">
-              <h2 className="text-4xl font-bold text-center md:text-left text-primary">Un plan simple que crece con tu negocio</h2>
-              <p className="text-base font-medium text-center md:text-left text-slate-900">Empeza con un usuario y suma profesionales y recordatorios cuando necesites. Sin limites de turnos. Sin sorpresas.</p>
-              <p className="italic text-[10px] text-center md:text-left text-slate-900 mt-4">El paquete de WhatsApp tiene un límite mensual segun el plan. Los turnos son ilimitados en todos los casos.</p>
+              <Typography variant="h2" className="font-bold text-center md:text-left text-primary">Un plan simple que crece con tu negocio</Typography>
+              <Typography variant="p" className="font-medium! text-center md:text-left text-slate-900">Empezá con un usuario y sumá profesionales y recordatorios cuando necesités. Sin límites de turnos. Sin sorpresas.</Typography>
             </div>
             <Card className="max-w-lg mx-auto w-full p-5">
               <CardHeader>
-                  <h2 className="text-2xl font-bold text-center text-slate-900">Todo Incluido</h2>
-                
+                  <Typography variant="h5" className="text-2xl font-bold text-center text-slate-900">Todo Incluido</Typography>
               </CardHeader>
               <CardBody>
                 <ul className="list-none list-inside text-sm font-medium text-slate-800 space-y-1">
-                  <li className="flex items-center"><Check className="h-3 w-3 text-green-600 mr-1" />Turnos ilimitados</li>
-                  <li className="flex items-center"><Check className="h-3 w-3 text-green-600 mr-1" />Confirmacion de turno por mail</li>
-                  <li className="flex items-center"><Check className="h-3 w-3 text-green-600 mr-1" />1 Pack de 50 recordatorios por WhatsApp de Regalo</li>
-                  <li className="flex items-center"><Check className="h-3 w-3 text-green-600 mr-1" />Metricas de la plataforma</li>
-                  <li className="flex items-center"><Check className="h-3 w-3 text-green-600 mr-1" />Señas con MercadoPago</li>
-                  <li className="flex items-center"><Check className="h-3 w-3 text-green-600 mr-1" />Franjas horarias de disponibilidad</li>
-                  <li className="flex items-center"><Check className="h-3 w-3 text-green-600 mr-1" />Tiempo de vacaciones</li>
-                  <li className="flex items-center"><Check className="h-3 w-3 text-green-600 mr-1" />Defini tu politica de cancelacion</li>
+                  {features.map((feature) => (
+                    <li key={feature} className="flex items-center">
+                      <Check className="h-3 w-3 text-green-600 mr-1" />
+                      {feature}
+                    </li>
+                  ))}
                 </ul>
               </CardBody>
               <CardFooter className="flex flex-col gap-4">
@@ -128,7 +136,7 @@ export const Plans = () => {
             </Card>
           </div>
         </section>
-        <section className="bg-slate-100 py-8">
+        <section className="bg-slate-100 py-8 hidden">
           <div className="max-w-7xl mx-auto w-full px-4 md:px-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="relative flex items-center justify-center min-h-[260px] bg-white rounded-2xl shadow-sm border border-slate-100">
@@ -154,7 +162,7 @@ export const Plans = () => {
               </div>
           </div>
         </section>
-        <section className="bg-white py-24">
+        <section className="bg-white py-24 hidden">
           <div className="max-w-7xl mx-auto w-full px-4 md:px-0 space-y-6">
             <h2 className="text-4xl font-bold text-center text-primary">Todos los packs de recordatorios</h2>
             <div className="max-w-2xl mx-auto w-full">

@@ -6,6 +6,7 @@ import { PanelHeader } from "../../components/PanelHeader";
 import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { useParams } from "next/navigation";
 import { Section } from "../../components/layout/Section";
+import { DEFAULT_PERMISSIONS, type RoleKey } from "@/lib/panel-permissions";
 
 const PERMISSIONS = [
   { key: "analytics", label: "Analíticas", path: "/analytics", text: "Acceso a la sección de métricas" },
@@ -20,22 +21,6 @@ const PERMISSIONS = [
   { key: "collaborators", label: "Añadir Colaboradores", path: "/collaborators", text: "Acceso a la sección de colaboradores" },
   { key: "profesionales", label: "Añadir Profesionales", path: "/profesionales", text: "Acceso a la sección de profesionales" },
 ] as const;
-
-type RoleKey = "ADMIN" | "PROFESSIONAL" | "SUPERVISOR";
-
-const DEFAULT_PERMISSIONS: Record<string, Record<RoleKey, number>> = {
-  analytics: { ADMIN: 1, PROFESSIONAL: 0, SUPERVISOR: 1 },
-  turnosProfessional: { ADMIN: 1, PROFESSIONAL: 1, SUPERVISOR: 1 },
-  patients: { ADMIN: 1, PROFESSIONAL: 0, SUPERVISOR: 1 },
-  servicios: { ADMIN: 1, PROFESSIONAL: 1, SUPERVISOR: 1 },
-  admin: { ADMIN: 1, PROFESSIONAL: 0, SUPERVISOR: 0 },
-  pagos: { ADMIN: 1, PROFESSIONAL: 0, SUPERVISOR: 1 },
-  turnos: { ADMIN: 1, PROFESSIONAL: 1, SUPERVISOR: 1 },
-  locations: { ADMIN: 1, PROFESSIONAL: 1, SUPERVISOR: 1 },
-  coberturas: { ADMIN: 1, PROFESSIONAL: 1, SUPERVISOR: 1 },
-  collaborators: { ADMIN: 1, PROFESSIONAL: 0, SUPERVISOR: 0 },
-  profesionales: { ADMIN: 1, PROFESSIONAL: 1, SUPERVISOR: 1 },
-};
 
 const COLUMN_TOOLTIPS: Record<string, string> = {
   permission: "Cada fila es una sección del panel. Activa o desactiva el acceso por rol.",

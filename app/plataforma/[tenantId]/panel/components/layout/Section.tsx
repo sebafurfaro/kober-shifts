@@ -1,7 +1,7 @@
-export const Section = ({ children }: { children: React.ReactNode }) => {
+export const Section = ({ children, className }: { children: React.ReactNode, className?: string }) => {
   return (
-    <div className="max-w-7xl mx-auto md:mt-8">
-        <div className="md:py-8 py-3">
+    <div className={(`max-w-7xl mx-auto` + ` ` + className).trim()}>
+        <div className="py-3">
             {children}
         </div>
     </div>

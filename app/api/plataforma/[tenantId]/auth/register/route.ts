@@ -12,10 +12,12 @@ export async function POST(
   const { tenantId } = await params;
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const firstName = typeof body.firstName === "string" ? body.firstName.trim() : "";
+  const lastName = typeof body.lastName === "string" ? body.lastName.trim() : "";
   const password = typeof body.password === "string" ? body.password : "";
+  const name = `${firstName} ${lastName}`.trim();
 
-  if (!email || !name || password.length < 6) {
+  if (!email || !firstName || !lastName || password.length < 6) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
@@ -27,7 +29,8 @@ export async function POST(
       // Update existing pending user
       user = await updateUser(exists.id, tenantId, {
         name,
-        // We don't update email as it matches
+        firstName: firstName || null,
+        lastName: lastName || null,
         passwordHash: hashPassword(password),
         role: Role.PATIENT,
       });
@@ -42,12 +45,21 @@ export async function POST(
       tenantId,
       email,
       name,
+      firstName: firstName || null,
+      lastName: lastName || null,
       passwordHash: hashPassword(password),
       role,
     });
   }
 
-  const res = NextResponse.json({ id: user.id, email: user.email, name: user.name, role: user.role });
+  const res = NextResponse.json({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+  });
   res.cookies.set(SESSION_COOKIE, createSessionCookieValue({
     userId: user.id,
     role: user.role,

@@ -80,6 +80,7 @@ export async function GET(
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
     orderBy,
+    professionalId: session.role === "PROFESSIONAL" ? session.userId : undefined,
   };
   const { list: appointmentList, total } = search
     ? await listAppointmentsForAdminRawWithSearch(tenantId, { ...listOptions, search })

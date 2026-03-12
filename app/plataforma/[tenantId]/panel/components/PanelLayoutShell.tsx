@@ -14,6 +14,7 @@ import { Aside } from "./layout/Aside";
 import { useTenantLabels } from "@/lib/use-tenant-labels";
 import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
 import type { Role } from "@/lib/types";
+import { DEFAULT_PERMISSIONS, type PermissionsMap } from "@/lib/panel-permissions";
 
 const DRAWER_WIDTH = 260;
 
@@ -38,6 +39,7 @@ export function PanelLayoutShell({
   const [usage, setUsage] = React.useState<{ used: number; max: number } | null>(null);
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [asideWidth, setAsideWidth] = React.useState(DRAWER_WIDTH);
+  const [permissions, setPermissions] = React.useState<PermissionsMap | null>(null);
   const { patientLabel, professionalLabel } = useTenantLabels();
   const loadTranslations = useTenantSettingsStore((state) => state.loadTranslations);
 
@@ -95,6 +97,26 @@ export function PanelLayoutShell({
       loadTranslations(currentTenantId);
     }
   }, [mounted, currentTenantId, loadTranslations]);
+
+  // Load permissions for staff roles (para que el Aside respete la matriz de permisos)
+  React.useEffect(() => {
+    if (!mounted || !currentTenantId || role === "PATIENT") return;
+    let cancelled = false;
+    fetch(`/api/plataforma/${currentTenantId}/admin/permissions`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        const raw = data?.permissions;
+        if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+          setPermissions({ ...DEFAULT_PERMISSIONS, ...raw });
+        } else {
+          setPermissions({ ...DEFAULT_PERMISSIONS });
+        }
+      })
+      .catch(() => setPermissions({ ...DEFAULT_PERMISSIONS }));
+    return () => { cancelled = true; };
+  }, [mounted, currentTenantId, role]);
+
   const base = `/plataforma/${currentTenantId}/panel`;
 
   const gestionItems = [
@@ -167,6 +189,7 @@ export function PanelLayoutShell({
         setIsCollapsed={setIsCollapsed}
         onWidthChange={setAsideWidth}
         usage={usage}
+        permissions={permissions}
       />
 
       {/* Main Content */}

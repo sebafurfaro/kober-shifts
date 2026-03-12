@@ -3,6 +3,7 @@
 import { Card, CardHeader, CardBody } from "@heroui/react";
 import { ArrowLeftIcon, ArrowRightIcon, BubblesIcon, CarIcon, CrossIcon, PawPrintIcon, SmileIcon, UserStarIcon } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
+import Typography from "./Typography";
 
 export const Business = () => {
 
@@ -73,7 +74,9 @@ export const Business = () => {
         <section className="bg-blue-50 py-24">
             <div className="max-w-7xl mx-auto w-full px-4 md:px-0">
                 <div className="flex flex-col items-center justify-center space-y-6">
-                    <h2 className="text-3xl md:text-4xl font-bold text-center text-primary">Para todo tipo de negocio</h2>
+                    <Typography variant="h2" className="text-center text-primary">
+                        Para todo tipo de negocio
+                    </Typography>
                 </div>
                 <div className="hidden lg:grid lg:grid-cols-3 gap-8 mt-12 max-w-5xl mx-auto w-full">
                     {business.map((feature) => (
@@ -81,7 +84,7 @@ export const Business = () => {
                             <CardHeader>
                             <div className="flex flex-col justify-start space-y-4">
                                 <div className={`p-2 w-16 h-16 flex items-center justify-center rounded-md ${feature.color} ${feature.bgColor}`}>{feature.icon}</div>
-                                <h3 className="text-lg font-bold text-primary">{feature.title}</h3>
+                                <Typography variant="h5" className="text-primary">{feature.title}</Typography>
                             </div>
                             </CardHeader>
                             <CardBody>
@@ -91,7 +94,7 @@ export const Business = () => {
                                     <li key={item}>{item}</li>
                                 ))}
                             </ul>
-                            <p className="text-sm font-medium text-slate-900">{feature.description}</p>
+                            <Typography variant="p" className="font-medium! text-slate-900">{feature.description}</Typography>
                             </div>
                             </CardBody>
                         </Card>
@@ -131,8 +134,8 @@ export const Business = () => {
                         </button>
                     </div>
                 </div>
-                <h3 className="text-xl md:text-2xl font-medium text-center text-slate-900 mt-16">Distintos negocios, una misma necesidad: orden y control del tiempo. <br />
-                    Elegí el plan según cuánto querés crecer, no según tu rubro.</h3>
+                <Typography variant="h4" className="font-medium! text-center text-slate-900 mt-16">Distintos negocios, una misma necesidad: orden y control del tiempo. <br />
+                    Elegí el plan según cuánto querés crecer, no según tu rubro.</Typography>
             </div>
         </section>
     )
