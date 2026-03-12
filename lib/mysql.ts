@@ -1,14 +1,12 @@
 import mysql from 'mysql2/promise';
 
-// Si la aplicación corre localmente (no en Docker), usar localhost:3309
-// Si corre en Docker, usar mysql:3306
-const isDocker = process.env.MYSQL_HOST === 'mysql' || process.env.NODE_ENV === 'production';
+const isDocker = process.env.MYSQL_HOST === 'mysql';
 const defaultHost = isDocker ? 'mysql' : 'localhost';
 const defaultPort = isDocker ? 3306 : 3309;
 
 let pool: mysql.Pool | null = null;
 let lastConnectionTest = 0;
-const CONNECTION_TEST_INTERVAL = 30000; // Test cada 30 segundos
+const CONNECTION_TEST_INTERVAL = 30000;
 
 function createPool(): mysql.Pool {
   const pool = mysql.createPool({
@@ -24,19 +22,14 @@ function createPool(): mysql.Pool {
     queueLimit: 0,
     enableKeepAlive: true,
     keepAliveInitialDelay: 0,
-    connectTimeout: 10000, // 10 segundos
-    /**
-     * MySQL 8 usa `caching_sha2_password` por defecto. En algunos entornos (host->docker),
-     * mysql2 puede fallar el handshake sin TLS. Forzamos TLS en modo local.
-     */
+    connectTimeout: 10000, 
     ...(isDocker ? {} : { ssl: { rejectUnauthorized: false } }),
-    // Configure timezone for the connection
-    timezone: '+00:00', // Store dates in UTC, but we'll handle conversion in application code
+    
+    timezone: '+00:00', 
   });
   
-  // Set session timezone to match application timezone (Buenos Aires)
   pool.query("SET time_zone = '-03:00'").catch(() => {
-    // Ignore errors, timezone might not be critical
+    
   });
   
   return pool;
@@ -45,7 +38,6 @@ function createPool(): mysql.Pool {
 // Inicializar el pool
 pool = createPool();
 
-// Función para verificar la conexión
 async function testConnection(retryCount = 0): Promise<boolean> {
   if (!pool) {
     pool = createPool();
@@ -64,17 +56,14 @@ async function testConnection(retryCount = 0): Promise<boolean> {
     const errorMessage = error?.message || 'Unknown error';
     console.error(`❌ MySQL connection error (attempt ${retryCount + 1}):`, errorMessage);
     
-    // Si el pool está roto, recrearlo
     if (error.code === 'PROTOCOL_CONNECTION_LOST' || error.code === 'ECONNREFUSED') {
       try {
         await pool.end();
       } catch (e) {
-        // Ignorar errores al cerrar
       }
       pool = createPool();
     }
 
-    // Reintentar hasta 3 veces con backoff
     if (retryCount < 3) {
       const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
       await new Promise(resolve => setTimeout(resolve, delay));
@@ -85,11 +74,9 @@ async function testConnection(retryCount = 0): Promise<boolean> {
   }
 }
 
-// Función para asegurar conexión antes de usar
 async function ensureConnection(): Promise<mysql.Pool> {
   const now = Date.now();
   
-  // Testear conexión periódicamente o si no hay pool
   if (!pool || (now - lastConnectionTest) > CONNECTION_TEST_INTERVAL) {
     const isConnected = await testConnection();
     lastConnectionTest = now;
@@ -106,19 +93,16 @@ async function ensureConnection(): Promise<mysql.Pool> {
   return pool;
 }
 
-// Testear conexión al iniciar (no bloqueante)
 if (isDocker || process.env.NODE_ENV === 'production') {
   testConnection().catch(() => {
     console.warn('⚠️  MySQL initial connection test failed, will retry on first query');
   });
 }
 
-// Exportar función helper para asegurar conexión
 export async function ensureMySQLConnection(): Promise<mysql.Pool> {
   return ensureConnection();
 }
 
-// Crear un wrapper del pool que asegura conexión antes de cada operación
 const poolWrapper = {
   async execute(...args: Parameters<mysql.Pool['execute']>) {
     const activePool = await ensureConnection();
@@ -143,6 +127,5 @@ const poolWrapper = {
   },
 } as mysql.Pool;
 
-// Exportar pool wrapper que asegura conexión
 export default poolWrapper;
 
