@@ -153,20 +153,6 @@ export default function AdminRolesPage() {
           title="Roles"
           subtitle="Activa o desactiva permisos por rol. Controla los accesos de tus colaboradores al panel de administracion."
         />
-
-        {features && (!features.show_pagos || !features.show_servicios) && (
-          <Card className="mb-4 border border-amber-200 bg-amber-50">
-            <div className="p-4 text-sm text-amber-800">
-              <p className="font-medium mb-1">Módulos desactivados:</p>
-              <ul className="list-disc list-inside">
-                {!features.show_pagos && <li>Pagos - Los permisos de esta sección no se muestran hasta que esté habilitada.</li>}
-                {!features.show_servicios && <li>Servicios - Los permisos de esta sección no se muestran hasta que esté habilitada.</li>}
-              </ul>
-              <p className="mt-2 text-xs text-amber-700">Actívalos en la configuración de tenant para que aparezcan aquí.</p>
-            </div>
-          </Card>
-        )}
-
         <Card className="card">
           <Table aria-label="Permisos por rol">
             <TableHeader>
