@@ -29,22 +29,6 @@ export const Header = ({ mobileMenuOpen, setMobileMenuOpen, navItems }: { mobile
             <nav className="">
                 <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
                     <div className="relative flex h-16 items-center justify-between">
-                        <div className="relative inset-y-0 right-0 flex items-center sm:hidden order-2">
-                            <Button
-                                isIconOnly
-                                variant="light"
-                                onPress={() => setMobileMenuOpen(!mobileMenuOpen)}
-                                className="relative inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-white/5 hover:text-white"
-                                aria-label="Toggle menu"
-                            >
-                                {mobileMenuOpen ? (
-                                    <X className="size-6" />
-                                ) : (
-                                    <Menu className="size-6" />
-                                )}
-                            </Button>
-                        </div>
-
                         {/* Logo and desktop menu */}
                         <div className="flex flex-1 items-center justify-start sm:items-stretch md:justify-start">
                             <div className="flex shrink-0 items-center gap-2">
@@ -67,7 +51,7 @@ export const Header = ({ mobileMenuOpen, setMobileMenuOpen, navItems }: { mobile
                         </div>
 
                         {/* Right side actions */}
-                        <div className="absolute inset-y-0 right-0 hidden md:flex items-center pr-2 md:static sm:inset-auto sm:ml-6 sm:pr-0">
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-2 md:static sm:inset-auto sm:ml-6 sm:pr-0">
 
                             <Button as={Link} href="/register" className="button button-secondary rounded-full!">
                                 Comenzar ahora!
@@ -75,42 +59,6 @@ export const Header = ({ mobileMenuOpen, setMobileMenuOpen, navItems }: { mobile
                         </div>
                     </div>
                 </div>
-
-                {/* Mobile menu */}
-                {mobileMenuOpen && (
-                    <div className="block sm:hidden">
-                        <div className="space-y-1 px-2 pt-2 pb-3 border-t border-white/10">
-                            <Link
-                                href="#"
-                                className="block rounded-md bg-gray-950/50 px-3 py-2 text-base font-medium text-white"
-                                onClick={() => setMobileMenuOpen(false)}
-                            >
-                                Dashboard
-                            </Link>
-                            <Link
-                                href="#"
-                                className="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-white/5 hover:text-white"
-                                onClick={() => setMobileMenuOpen(false)}
-                            >
-                                Team
-                            </Link>
-                            <Link
-                                href="#"
-                                className="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-white/5 hover:text-white"
-                                onClick={() => setMobileMenuOpen(false)}
-                            >
-                                Projects
-                            </Link>
-                            <Link
-                                href="#"
-                                className="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-white/5 hover:text-white"
-                                onClick={() => setMobileMenuOpen(false)}
-                            >
-                                Calendar
-                            </Link>
-                        </div>
-                    </div>
-                )}
             </nav>
         </header>
     )
