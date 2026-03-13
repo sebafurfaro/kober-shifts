@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { findAllMedicalCoveragesWithPlans, createMedicalCoverage } from "@/lib/db";
 import { randomUUID } from "crypto";
-import { coberturas } from "@/lib/coverage";
 
 export async function GET(
     req: Request,
@@ -15,6 +14,7 @@ export async function GET(
 
     try {
         try {
+            const { coberturas } = await import("@/lib/coverage");
             const existingCoverages = await findAllMedicalCoveragesWithPlans(tenantId);
             const existingCoverageNames = new Set(existingCoverages.map(c => c.name.toLowerCase().trim()));
 
