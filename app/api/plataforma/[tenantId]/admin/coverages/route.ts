@@ -6,9 +6,9 @@ import { coberturas } from "@/lib/coverage";
 
 export async function GET(
     req: Request,
-    { params }: { params: { tenantId: string } }
+    context: { params: Promise<{ tenantId: string }> }
 ) {
-    const { tenantId } = params;
+    const { tenantId } = await context.params;
     const session = await getSession();
     if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL" && session.role !== "PATIENT") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
