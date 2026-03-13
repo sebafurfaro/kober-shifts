@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { createMedicalCoverage, findAllMedicalCoveragesWithPlans } from "@/lib/db";
 import { randomUUID } from "crypto";
+import { coberturas } from "@/lib/coverage";
 
 export async function POST(
     req: Request,
@@ -13,7 +14,6 @@ export async function POST(
     if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     try {
-        const { coberturas } = await import("@/lib/coverage");
 
         const existingCoverages = await findAllMedicalCoveragesWithPlans(tenantId);
         const existingCoverageNames = new Set(existingCoverages.map(c => c.name.toLowerCase().trim()));
