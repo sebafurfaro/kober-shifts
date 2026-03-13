@@ -22,6 +22,7 @@ import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { PanelHeader } from "../../components/PanelHeader";
 import { useParams } from "next/navigation";
 import { Section } from "../../components/layout/Section";
+import { useFeatureGate } from "@/lib/use-feature-gate";
 
 interface Service {
   id: string;
@@ -36,6 +37,7 @@ interface Service {
 export default function ServiciosPage() {
   const params = useParams();
   const tenantId = params.tenantId as string;
+  const { isLoading: featureGateLoading } = useFeatureGate("show_servicios");
   const [services, setServices] = React.useState<Service[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [dialogOpen, setDialogOpen] = React.useState(false);

@@ -26,8 +26,127 @@ import { AlertDialog } from "./alerts/AlertDialog";
 import { useCreateAppointment } from "@/lib/use-create-appointment";
 import { useAppointmentsInvalidationStore } from "@/lib/appointments-invalidation-store";
 import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
+import { Clock } from "lucide-react";
 
 type ViewType = "dayGridMonth" | "timeGridWeek" | "timeGridDay";
+
+const SPANISH_LOCALE = {
+  code: "es",
+  buttonText: {
+    today: "Hoy",
+    month: "Mes",
+    week: "Semana",
+    day: "Día",
+  },
+  allDayText: "Todo el día",
+  moreLinkText: "más",
+  noEventsText: "No hay eventos",
+  weekText: "Sem",
+} as const;
+
+const AVAILABILITY_DAYS_NAMES: Record<number, string> = {
+  1: "Lunes",
+  2: "Martes",
+  3: "Miércoles",
+  4: "Jueves",
+  5: "Viernes",
+  6: "Sábado",
+  0: "Domingo",
+};
+const AVAILABILITY_DAYS_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const REPEAT_LABEL: Record<string, string> = {
+  weekly: "Semanal",
+  biweekly: "Quincenal",
+  monthly: "Mensual",
+};
+
+function AvailabilitySidebar({ pro, onClose }: { pro: any | null; onClose: () => void }) {
+  const days = pro?.availabilityConfig?.days ?? {};
+  const daysWithSlots = AVAILABILITY_DAYS_ORDER.filter(
+    (d) => days[d]?.slots && days[d].slots.length > 0
+  );
+  const proName = pro
+    ? [pro.firstName, pro.lastName].filter(Boolean).join(" ").trim() || pro.name || "Sin nombre"
+    : "";
+
+  return (
+    <Modal isOpen={!!pro} onClose={onClose} size="md" scrollBehavior="inside" placement="center">
+      <ModalContent>
+        <ModalHeader className="flex items-center gap-3 pb-2">
+          <span
+            className="block w-3 h-3 rounded-full shrink-0"
+            style={{ backgroundColor: pro?.color ?? "#2196f3" }}
+          />
+          <div>
+            <p className="text-base font-semibold text-slate-900 leading-tight">{proName}</p>
+            <p className="text-xs font-normal text-slate-500 flex items-center gap-1 mt-0.5">
+              <Clock className="w-3 h-3" />
+              Franjas horarias
+            </p>
+          </div>
+        </ModalHeader>
+        <ModalBody className="pb-6">
+          {daysWithSlots.length === 0 ? (
+            <div className="flex flex-col items-center justify-center text-center py-10">
+              <Clock className="w-10 h-10 text-gray-300 mb-3" />
+              <p className="text-sm text-gray-500">Sin franjas horarias configuradas.</p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {daysWithSlots.map((dayNum) => {
+                const slots = days[dayNum].slots as Array<{
+                  id: string;
+                  startTime: string;
+                  endTime: string;
+                  fromDate?: string;
+                  toDate?: string | null;
+                  repeat?: string;
+                }>;
+                return (
+                  <div key={dayNum}>
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                      {AVAILABILITY_DAYS_NAMES[dayNum]}
+                    </p>
+                    <div className="space-y-2">
+                      {slots.map((slot) => (
+                        <div
+                          key={slot.id}
+                          className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span
+                              className="text-sm font-semibold"
+                              style={{ color: pro?.color ?? "#2196f3" }}
+                            >
+                              {slot.startTime} – {slot.endTime}
+                            </span>
+                            {slot.repeat && (
+                              <span className="text-xs bg-white border border-gray-200 text-slate-500 rounded-full px-2 py-0.5">
+                                {REPEAT_LABEL[slot.repeat] ?? slot.repeat}
+                              </span>
+                            )}
+                          </div>
+                          {slot.fromDate && (
+                            <p className="text-xs text-slate-400 mt-1">
+                              Desde {slot.fromDate.split("-").reverse().join("/")}
+                              {slot.toDate
+                                ? ` hasta ${slot.toDate.split("-").reverse().join("/")}`
+                                : " (sin fecha de fin)"}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </ModalBody>
+      </ModalContent>
+    </Modal>
+  );
+}
 
 interface CalendarEvent {
   id: string;
@@ -97,6 +216,7 @@ export function Calendar() {
   const [locations, setLocations] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [availabilitySidebarPro, setAvailabilitySidebarPro] = useState<any | null>(null);
 
   // Flag to prevent multiple dateClick handlers from firing
   const dateClickProcessingRef = useRef(false);
@@ -660,49 +780,6 @@ export function Calendar() {
   };
 
   // Spanish locale configuration for FullCalendar
-  const spanishLocale = {
-    code: "es",
-    buttonText: {
-      today: "Hoy",
-      month: "Mes",
-      week: "Semana",
-      day: "Día",
-    },
-    allDayText: "Todo el día",
-    moreLinkText: "más",
-    noEventsText: "No hay eventos",
-    weekText: "Sem",
-    dayNames: ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"],
-    dayNamesShort: ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"],
-    monthNames: [
-      "Enero",
-      "Febrero",
-      "Marzo",
-      "Abril",
-      "Mayo",
-      "Junio",
-      "Julio",
-      "Agosto",
-      "Septiembre",
-      "Octubre",
-      "Noviembre",
-      "Diciembre",
-    ],
-    monthNamesShort: [
-      "Ene",
-      "Feb",
-      "Mar",
-      "Abr",
-      "May",
-      "Jun",
-      "Jul",
-      "Ago",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dic",
-    ],
-  } as const;
 
   return (
     <div className="h-full flex flex-col mt-8">
@@ -719,15 +796,16 @@ export function Calendar() {
         onTimezoneChange={setTimezone}
       />
 
-      {/* Leyenda: solo profesionales con perfil (color + nombre), no admins sin perfil */}
       {(() => {
         const professionalsWithProfile = professionals.filter((pro) => pro.hasProfessionalProfile);
         return professionalsWithProfile.length > 0 ? (
         <div className="flex flex-wrap items-center gap-3 mb-4">
           {professionalsWithProfile.map((pro) => (
-            <div
+            <button
               key={pro.id}
-              className="flex items-center gap-2 shrink-0 rounded-md border border-gray-200 bg-white px-3 py-1.5 shadow-sm"
+              onClick={() => setAvailabilitySidebarPro(pro)}
+              className="flex items-center gap-2 shrink-0 rounded-md border border-gray-200 bg-white px-3 py-1.5 shadow-sm hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
+              title="Ver franjas horarias"
             >
               <span
                 className="block w-3 h-3 rounded-full shrink-0"
@@ -740,10 +818,46 @@ export function Calendar() {
               >
                 {[pro.firstName, pro.lastName].filter(Boolean).join(" ").trim() || pro.name || "Sin nombre"}
               </span>
-            </div>
+            </button>
           ))}
         </div>
         ) : null;
+      })()}
+
+      {(() => {
+        const professionalsWithHolidays = professionals.filter(
+          (pro) => pro.hasProfessionalProfile && Array.isArray(pro.holidays) && pro.holidays.length > 0
+        );
+        if (professionalsWithHolidays.length === 0) return null;
+        const formatDate = (dateStr: string) => {
+          const [year, month, day] = dateStr.split("-");
+          return `${day}/${month}/${year}`;
+        };
+        return (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {professionalsWithHolidays.flatMap((pro) =>
+              (pro.holidays as Array<{ id: string; startDate: string; endDate: string; description?: string }>).map((h) => (
+                <div
+                  key={`${pro.id}-${h.id}`}
+                  className="flex items-center gap-2 rounded-md border border-orange-200 bg-orange-50 px-3 py-1.5 text-sm shadow-sm"
+                >
+                  <span
+                    className="block w-2 h-2 rounded-full shrink-0 bg-orange-400"
+                    aria-hidden
+                  />
+                  <span className="font-medium text-orange-800 truncate max-w-[140px]" title={pro.name || ""}>
+                    {[pro.firstName, pro.lastName].filter(Boolean).join(" ").trim() || pro.name || "Sin nombre"}
+                  </span>
+                  <span className="font-semibold text-orange-700 uppercase tracking-wide text-xs">OFF</span>
+                  <span className="text-orange-600">
+                    {formatDate(h.startDate)}
+                    {h.startDate !== h.endDate && ` → ${formatDate(h.endDate)}`}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        );
       })()}
 
       {/* Calendar */}
@@ -769,7 +883,7 @@ export function Calendar() {
                 datesSet={handleDatesSet}
                 timeZone={timezone}
                 firstDay={1}
-                locale={spanishLocale as any}
+                locale={SPANISH_LOCALE as any}
                 height="auto"
                 slotMinTime="08:00:00"
                 slotMaxTime="20:00:00"
@@ -1062,6 +1176,12 @@ export function Calendar() {
         onClose={() => setAlertDialog({ ...alertDialog, open: false })}
         message={alertDialog.message}
         type={alertDialog.type}
+      />
+
+      {/* Availability Sidebar */}
+      <AvailabilitySidebar
+        pro={availabilitySidebarPro}
+        onClose={() => setAvailabilitySidebarPro(null)}
       />
     </div>
   );

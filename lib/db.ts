@@ -120,7 +120,8 @@ function rowToProfessionalProfile(row: any): ProfessionalProfile {
         }
         
         return {
-          days: normalizedDays
+          days: normalizedDays,
+          ...(Array.isArray(parsed.holidays) ? { holidays: parsed.holidays } : {}),
         };
       } catch (e) {
         console.error("Error parsing availabilityConfig:", e);

@@ -112,6 +112,7 @@ export function Toolbar({
 
                 <Select
                     size="sm"
+                    aria-label="Zona horaria"
                     selectedKeys={[timezone]}
                     onSelectionChange={(keys) => {
                         const selected = Array.from(keys)[0] as string;

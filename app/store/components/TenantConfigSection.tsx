@@ -311,6 +311,32 @@ export function TenantConfigSection({
               </div>
 
               <Divider className="my-2" />
+              <h3 className="text-sm font-semibold text-gray-700 mb-1">Módulos Avanzados</h3>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-slate-800">Mostrar Pagos</span>
+                <Button
+                  variant={features.show_pagos ? "solid" : "bordered"}
+                  color={features.show_pagos ? "success" : ("info" as "primary")}
+                  isDisabled={loading}
+                  onPress={() => setFeature("show_pagos", !features.show_pagos)}
+                >
+                  {features.show_pagos ? "Habilitado" : "Deshabilitado"}
+                </Button>
+              </div>
+              <Divider className="my-2" />
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-slate-800">Mostrar Servicios</span>
+                <Button
+                  variant={features.show_servicios ? "solid" : "bordered"}
+                  color={features.show_servicios ? "success" : ("info" as "primary")}
+                  isDisabled={loading}
+                  onPress={() => setFeature("show_servicios", !features.show_servicios)}
+                >
+                  {features.show_servicios ? "Habilitado" : "Deshabilitado"}
+                </Button>
+              </div>
+
+              <Divider className="my-2" />
               <h3 className="text-sm font-semibold text-gray-700 mb-1">WhatsApp</h3>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-slate-800">Notificaciones WhatsApp</span>

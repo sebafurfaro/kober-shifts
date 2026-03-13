@@ -40,6 +40,7 @@ export function PanelLayoutShell({
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [asideWidth, setAsideWidth] = React.useState(DRAWER_WIDTH);
   const [permissions, setPermissions] = React.useState<PermissionsMap | null>(null);
+  const [features, setFeatures] = React.useState<{ show_pagos?: boolean; show_servicios?: boolean } | null>(null);
   const { patientLabel, professionalLabel } = useTenantLabels();
   const loadTranslations = useTenantSettingsStore((state) => state.loadTranslations);
 
@@ -68,21 +69,27 @@ export function PanelLayoutShell({
         });
         if (cancelled) return;
         if (res.ok) {
-          const features = await res.json();
-          setCalendarEnabled(features.calendar ?? true);
-          setShowCoverage(features.show_coverage ?? true);
-          const used = typeof features.usedUsers === "number" ? features.usedUsers : 0;
-          const max = typeof features.maxUsers === "number" ? features.maxUsers : 0;
+          const featureData = await res.json();
+          setCalendarEnabled(featureData.calendar ?? true);
+          setShowCoverage(featureData.show_coverage ?? true);
+          setFeatures({
+            show_pagos: featureData.show_pagos ?? false,
+            show_servicios: featureData.show_servicios ?? false,
+          });
+          const used = typeof featureData.usedUsers === "number" ? featureData.usedUsers : 0;
+          const max = typeof featureData.maxUsers === "number" ? featureData.maxUsers : 0;
           setUsage({ used, max });
         } else {
           setCalendarEnabled(true);
           setShowCoverage(true);
+          setFeatures({ show_pagos: false, show_servicios: false });
           setUsage(null);
         }
       } catch (error) {
         if (!cancelled) {
           setCalendarEnabled(true);
           setShowCoverage(true);
+          setFeatures({ show_pagos: false, show_servicios: false });
           setUsage(null);
         }
       }
@@ -190,6 +197,7 @@ export function PanelLayoutShell({
         onWidthChange={setAsideWidth}
         usage={usage}
         permissions={permissions}
+        features={features}
       />
 
       {/* Main Content */}

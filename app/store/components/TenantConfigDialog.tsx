@@ -20,6 +20,8 @@ export interface TenantFeatureFlags {
   payment_enabled: boolean;
   whatsappNotifications: boolean;
   whatsappCustomMessage: string;
+  show_pagos: boolean;
+  show_servicios: boolean;
 }
 
 export interface TenantLimits {
@@ -53,6 +55,8 @@ const defaultFeatures: TenantFeatureFlags = {
   payment_enabled: true,
   whatsappNotifications: false,
   whatsappCustomMessage: "",
+  show_pagos: false,
+  show_servicios: false,
 };
 
 const defaultLimits: TenantLimits = {

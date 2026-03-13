@@ -43,6 +43,8 @@ export async function POST(req: Request) {
   const features = body.features as {
     show_coverage?: boolean;
     show_mercado_pago?: boolean;
+    show_servicios?: boolean;
+    show_pagos?: Boolean;
     calendar?: boolean;
     payment_enabled?: boolean;
   } | undefined;
@@ -66,6 +68,8 @@ export async function POST(req: Request) {
     const featureFlags = {
       show_coverage: features?.show_coverage ?? true,
       show_mercado_pago: features?.show_mercado_pago ?? true,
+      show_pagos: features?.show_pagos ?? false,
+      show_servicios: features?.show_servicios ?? false,
       calendar: features?.calendar ?? true,
       payment_enabled: features?.payment_enabled ?? true,
     };

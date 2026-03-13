@@ -6,6 +6,7 @@ import * as React from "react";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { Section } from "../../../components/layout/Section";
+import { useFeatureGate } from "@/lib/use-feature-gate";
 
 type PaymentRecord = {
     _id: string;
@@ -32,6 +33,7 @@ type MercadoPagoPOS = {
 export default function AdminPaymentsDetailsPage() {
     const params = useParams();
     const tenantId = params.tenantId as string;
+    const { isLoading: featureGateLoading } = useFeatureGate("show_pagos");
     const [records, setRecords] = React.useState<PaymentRecord[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [page, setPage] = React.useState(1);

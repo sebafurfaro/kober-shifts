@@ -62,6 +62,15 @@ interface NavItemConfig {
   show?: boolean;
 }
 
+interface TenantFeatures {
+  show_pagos?: boolean;
+  show_servicios?: boolean;
+  show_coverage?: boolean;
+  show_mercado_pago?: boolean;
+  calendar?: boolean;
+  payment_enabled?: boolean;
+}
+
 interface AsideProps {
   role: Role;
   currentTenantId: string;
@@ -79,6 +88,8 @@ interface AsideProps {
   usage?: { used: number; max: number } | null;
   /** Matriz de permisos por sección y rol. Si no está cargada, se usan los defaults (staff ve según su rol). */
   permissions?: PermissionsMap | null;
+  /** Feature flags del tenant */
+  features?: TenantFeatures | null;
 }
 
 export function Aside({
@@ -96,6 +107,7 @@ export function Aside({
   onWidthChange,
   usage: usageFromProp,
   permissions,
+  features,
 }: AsideProps) {
   const [isHovered, setIsHovered] = React.useState(false);
   const [isManuallyToggled, setIsManuallyToggled] = React.useState(false);
@@ -146,6 +158,11 @@ export function Aside({
   const effectiveIsCollapsed = isCollapsed && !isHovered;
   const isStaff = role === "ADMIN" || role === "PROFESSIONAL" || role === "SUPERVISOR";
   const base = `/plataforma/${currentTenantId}/panel`;
+
+  // Helper function to check if a service is enabled
+  const isFeatureEnabled = (featureName: keyof TenantFeatures): boolean => {
+    return features ? (features[featureName] ?? true) : true;
+  };
 
   return (
     <aside
@@ -210,7 +227,7 @@ export function Aside({
           )}
 
           {/* Recursos: Calendario, Turnos Profesional, Servicios, Clientes */}
-          {role !== "PATIENT" && (calendarEnabled || can("turnosProfessional") || can("servicios") || can("patients")) ? (
+          {role !== "PATIENT" && (calendarEnabled || can("turnosProfessional") || (can("servicios") && isFeatureEnabled("show_servicios")) || can("patients")) ? (
             <SectionTitle label="Recursos" isCollapsed={effectiveIsCollapsed} />
           ) : null}
           {role !== "PATIENT" && calendarEnabled && (
@@ -229,7 +246,7 @@ export function Aside({
               isCollapsed={effectiveIsCollapsed}
             />
           )}
-          {isStaff && can("servicios") && (
+          {isStaff && can("servicios") && isFeatureEnabled("show_servicios") && (
             <NavItem
               href={`${base}/admin/servicios`}
               label="Servicios"
@@ -247,7 +264,7 @@ export function Aside({
           )}
 
           {/* Gestión: Admin, Pagos, Turnos, Sedes, Coberturas */}
-          {(isStaff && (can("admin") || can("pagos") || can("turnos") || can("locations") || can("coberturas"))) && (
+          {(isStaff && (can("admin") || (can("pagos") && isFeatureEnabled("show_pagos")) || can("turnos") || can("locations") || can("coberturas"))) && (
             <>
               <SectionTitle label="Gestión" isCollapsed={effectiveIsCollapsed} />
               {can("admin") && (
@@ -258,7 +275,7 @@ export function Aside({
                   isCollapsed={effectiveIsCollapsed}
                 />
               )}
-              {can("pagos") && (
+              {can("pagos") && isFeatureEnabled("show_pagos") && (
                 <NavItem
                   href={`${base}/admin/payments`}
                   label="Pagos"

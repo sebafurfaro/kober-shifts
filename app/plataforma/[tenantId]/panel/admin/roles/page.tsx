@@ -36,6 +36,7 @@ export default function AdminRolesPage() {
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [currentUserRole, setCurrentUserRole] = React.useState<RoleKey | null>(null);
+  const [features, setFeatures] = React.useState<{ show_pagos?: boolean; show_servicios?: boolean } | null>(null);
   const [alert, setAlert] = React.useState<{ open: boolean; message: string; type: "success" | "error" | "warning" }>({ open: false, message: "", type: "success" });
 
   /** El admin no puede modificar la columna Administrador (sus propios permisos). */
@@ -46,14 +47,21 @@ export default function AdminRolesPage() {
     Promise.all([
       fetch(`/api/plataforma/${tenantId}/auth/me`, { credentials: "include" }).then((r) => (r.ok ? r.json() : null)),
       fetch(`/api/plataforma/${tenantId}/admin/permissions`, { credentials: "include" }).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/plataforma/${tenantId}/features`, { credentials: "include" }).then((r) => (r.ok ? r.json() : null)),
     ])
-      .then(([meData, permData]) => {
+      .then(([meData, permData, featureData]) => {
         if (cancelled) return;
         if (meData?.role === "ADMIN" || meData?.role === "PROFESSIONAL" || meData?.role === "SUPERVISOR") {
           setCurrentUserRole(meData.role);
         }
         if (permData?.permissions && typeof permData.permissions === "object" && !Array.isArray(permData.permissions)) {
           setPermissions((prev) => ({ ...DEFAULT_PERMISSIONS, ...prev, ...permData.permissions }));
+        }
+        if (featureData) {
+          setFeatures({
+            show_pagos: featureData.show_pagos ?? false,
+            show_servicios: featureData.show_servicios ?? false,
+          });
         }
       })
       .finally(() => {
@@ -76,7 +84,7 @@ export default function AdminRolesPage() {
   const handleSelectAllForRole = (role: RoleKey, checked: boolean) => {
     setPermissions((prev) => {
       const next = { ...prev };
-      PERMISSIONS.forEach((perm) => {
+      visiblePermissions.forEach((perm) => {
         next[perm.key] = { ...next[perm.key], [role]: checked ? 1 : 0 };
       });
       return next;
@@ -96,10 +104,17 @@ export default function AdminRolesPage() {
     }));
   };
 
+  // Filter permissions based on enabled features
+  const visiblePermissions = PERMISSIONS.filter((perm) => {
+    if (perm.key === "pagos") return features?.show_pagos ?? false;
+    if (perm.key === "servicios") return features?.show_servicios ?? false;
+    return true;
+  });
+
   const allSelectedForRole = (role: RoleKey) =>
-    PERMISSIONS.every((perm) => (permissions[perm.key]?.[role] ?? (role === "ADMIN" ? 1 : 0)) === 1);
+    visiblePermissions.every((perm) => (permissions[perm.key]?.[role] ?? (role === "ADMIN" ? 1 : 0)) === 1);
   const noneSelectedForRole = (role: RoleKey) =>
-    PERMISSIONS.every((perm) => (permissions[perm.key]?.[role] ?? 0) === 0);
+    visiblePermissions.every((perm) => (permissions[perm.key]?.[role] ?? 0) === 0);
   const someSelectedForRole = (role: RoleKey) => !allSelectedForRole(role) && !noneSelectedForRole(role);
 
   const allSelectedForPermission = (permKey: string) =>
@@ -139,6 +154,19 @@ export default function AdminRolesPage() {
           subtitle="Activa o desactiva permisos por rol. Controla los accesos de tus colaboradores al panel de administracion."
         />
 
+        {features && (!features.show_pagos || !features.show_servicios) && (
+          <Card className="mb-4 border border-amber-200 bg-amber-50">
+            <div className="p-4 text-sm text-amber-800">
+              <p className="font-medium mb-1">Módulos desactivados:</p>
+              <ul className="list-disc list-inside">
+                {!features.show_pagos && <li>Pagos - Los permisos de esta sección no se muestran hasta que esté habilitada.</li>}
+                {!features.show_servicios && <li>Servicios - Los permisos de esta sección no se muestran hasta que esté habilitada.</li>}
+              </ul>
+              <p className="mt-2 text-xs text-amber-700">Actívalos en la configuración de tenant para que aparezcan aquí.</p>
+            </div>
+          </Card>
+        )}
+
         <Card className="card">
           <Table aria-label="Permisos por rol">
             <TableHeader>
@@ -164,7 +192,7 @@ export default function AdminRolesPage() {
               </TableColumn>
             </TableHeader>
             <TableBody
-              isLoading={loading}
+              isLoading={loading || !features}
               loadingContent={<Spinner label="Cargando..." />}
               emptyContent={null}
             >
@@ -207,7 +235,7 @@ export default function AdminRolesPage() {
                 </TableCell>
               </TableRow>
               <>
-              {PERMISSIONS.map((perm) => (
+              {visiblePermissions.map((perm) => (
                 <TableRow key={perm.key}>
                   <TableCell>
                     <div className="flex items-center gap-2">
