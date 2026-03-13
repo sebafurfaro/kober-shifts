@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { findAllMedicalCoveragesWithPlans, createMedicalCoverage } from "@/lib/db";
 import { randomUUID } from "crypto";
+import { coberturas } from "@/lib/coverge";
 
 export async function GET(
     req: Request,
@@ -14,36 +15,32 @@ export async function GET(
 
     try {
         try {
-            const response = await fetch(`${process.env.NEXTAUTH_URL}/docs/coberturas.json`);
-            if (response.ok) {
-                const coveragesData = await response.json();
-                const existingCoverages = await findAllMedicalCoveragesWithPlans(tenantId);
-                const existingCoverageNames = new Set(existingCoverages.map(c => c.name.toLowerCase().trim()));
+            const existingCoverages = await findAllMedicalCoveragesWithPlans(tenantId);
+            const existingCoverageNames = new Set(existingCoverages.map(c => c.name.toLowerCase().trim()));
 
-                for (const coverageItem of coveragesData) {
-                    const coverageName = coverageItem.title?.trim();
-                    if (!coverageName || existingCoverageNames.has(coverageName.toLowerCase())) continue;
+            for (const coverageItem of coberturas) {
+                const coverageName = coverageItem.title?.trim();
+                if (!coverageName || existingCoverageNames.has(coverageName.toLowerCase())) continue;
 
-                    try {
-                        const plans = (coverageItem.plans || []).map((plan: any) => ({
-                            id: randomUUID(),
-                            name: typeof plan === 'string' ? plan : (plan.name || plan).trim()
-                        })).filter((p: any) => p.name);
+                try {
+                    const plans = (coverageItem.plans || []).map((plan: any) => ({
+                        id: randomUUID(),
+                        name: typeof plan === 'string' ? plan : (plan.name || plan).trim()
+                    })).filter((p: any) => p.name);
 
-                        await createMedicalCoverage({
-                            id: randomUUID(),
-                            tenantId,
-                            name: coverageName,
-                            plans,
-                        });
-                    } catch (error: any) {
-                        if (error?.code === 'ER_DUP_ENTRY') continue;
-                        console.error(`Error importing coverage "${coverageName}":`, error);
-                    }
+                    await createMedicalCoverage({
+                        id: randomUUID(),
+                        tenantId,
+                        name: coverageName,
+                        plans,
+                    });
+                } catch (error: any) {
+                    if (error?.code === 'ER_DUP_ENTRY') continue;
+                    console.error(`Error importing coverage "${coverageName}":`, error);
                 }
             }
         } catch (error: any) {
-            console.error("Error syncing coverages from JSON:", error);
+            console.error("Error syncing coverages:", error);
         }
 
         const coverages = await findAllMedicalCoveragesWithPlans(tenantId);

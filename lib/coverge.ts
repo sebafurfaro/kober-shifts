@@ -1,4 +1,4 @@
-[
+export const coberturas = [
     {
         "title": "Sin cobertura"
     },
