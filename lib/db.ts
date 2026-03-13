@@ -1536,21 +1536,100 @@ export async function deleteAppointmentsByPatient(patientId: string, tenantId: s
 
 
 // MedicalCoverage and MedicalPlan operations
+
+/** Trae todas las coberturas con sus planes en una sola query JOIN (evita N+1). */
 export async function findAllMedicalCoveragesWithPlans(tenantId: string): Promise<MedicalCoverageWithPlans[]> {
-  const [coverageRows] = await mysql.execute('SELECT * FROM medical_coverages WHERE tenantId = ? ORDER BY name ASC', [tenantId]);
-  const coverages = coverageRows as any[];
+  const [rows] = await mysql.execute(
+    `SELECT mc.id, mc.tenantId, mc.name,
+            mp.id as plan_id, mp.tenantId as plan_tenantId, mp.coverageId as plan_coverageId, mp.name as plan_name
+     FROM medical_coverages mc
+     LEFT JOIN medical_plans mp ON mc.id = mp.coverageId AND mc.tenantId = mp.tenantId
+     WHERE mc.tenantId = ?
+     ORDER BY mc.name ASC, mp.name ASC`,
+    [tenantId]
+  );
 
-  const results: MedicalCoverageWithPlans[] = [];
+  const rowsArray = rows as any[];
+  const coverageMap = new Map<string, MedicalCoverageWithPlans>();
 
-  for (const coverage of coverages) {
-    const [planRows] = await mysql.execute('SELECT * FROM medical_plans WHERE coverageId = ? AND tenantId = ? ORDER BY name ASC', [coverage.id, tenantId]);
-    results.push({
-      ...coverage,
-      plans: planRows as MedicalPlan[]
-    });
+  for (const row of rowsArray) {
+    if (!coverageMap.has(row.id)) {
+      coverageMap.set(row.id, {
+        id: row.id,
+        tenantId: row.tenantId,
+        name: row.name,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        plans: [],
+      });
+    }
+    if (row.plan_id) {
+      coverageMap.get(row.id)!.plans.push({
+        id: row.plan_id,
+        tenantId: row.plan_tenantId,
+        coverageId: row.plan_coverageId,
+        name: row.plan_name,
+      } as MedicalPlan);
+    }
   }
 
-  return results;
+  return Array.from(coverageMap.values());
+}
+
+/**
+ * Inserta coberturas y planes en bulk (INSERT IGNORE) desde una lista estática.
+ * Solo inserta las que no existen todavía para el tenant.
+ * Mucho más eficiente que insertar una a una en serverless.
+ */
+export async function seedCoveragesFromList(
+  tenantId: string,
+  items: Array<{ title?: string; plans?: Array<{ name: string }> }>
+): Promise<void> {
+  const { randomUUID } = await import("crypto");
+
+  const [existingRows] = await mysql.execute(
+    'SELECT name FROM medical_coverages WHERE tenantId = ?',
+    [tenantId]
+  );
+  const existingNames = new Set((existingRows as any[]).map((r: any) => (r.name as string).toLowerCase().trim()));
+
+  const newItems = items.filter(item => {
+    const name = item.title?.trim();
+    return name && !existingNames.has(name.toLowerCase());
+  });
+
+  if (newItems.length === 0) return;
+
+  // Bulk insert coberturas
+  const coverageValues: unknown[] = [];
+  const coverageEntries: Array<{ id: string; plans: Array<{ name: string }> }> = [];
+  for (const item of newItems) {
+    const id = randomUUID();
+    coverageValues.push(id, tenantId, item.title!.trim());
+    coverageEntries.push({ id, plans: item.plans || [] });
+  }
+  const cPlaceholders = newItems.map(() => '(?, ?, ?)').join(', ');
+  await mysql.execute(
+    `INSERT IGNORE INTO medical_coverages (id, tenantId, name) VALUES ${cPlaceholders}`,
+    coverageValues
+  );
+
+  // Bulk insert planes
+  const planValues: unknown[] = [];
+  for (const entry of coverageEntries) {
+    for (const plan of entry.plans) {
+      const planName = (plan.name ?? '').trim();
+      if (planName) planValues.push(randomUUID(), tenantId, entry.id, planName);
+    }
+  }
+  if (planValues.length > 0) {
+    const planCount = planValues.length / 4;
+    const pPlaceholders = Array.from({ length: planCount }, () => '(?, ?, ?, ?)').join(', ');
+    await mysql.execute(
+      `INSERT IGNORE INTO medical_plans (id, tenantId, coverageId, name) VALUES ${pPlaceholders}`,
+      planValues
+    );
+  }
 }
 
 export async function findMedicalCoverageById(id: string, tenantId: string): Promise<MedicalCoverageWithPlans | null> {
