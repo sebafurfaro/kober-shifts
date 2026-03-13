@@ -37,6 +37,7 @@ export async function GET(
                             plans,
                         });
                     } catch (error: any) {
+                        if (error?.code === 'ER_DUP_ENTRY') continue;
                         console.error(`Error importing coverage "${coverageName}":`, error);
                     }
                 }
