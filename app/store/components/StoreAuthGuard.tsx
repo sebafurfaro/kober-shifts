@@ -3,48 +3,58 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
+type AuthStatus = "pending" | "authenticated" | "unauthenticated";
+
 export function StoreAuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+  const [authStatus, setAuthStatus] = useState<AuthStatus>("pending");
   const isLoginPage = pathname === "/store/login";
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-
     if (isLoginPage) {
-      // Login page handles its own redirect if already logged in
+      setAuthStatus("authenticated");
       return;
     }
 
-    // For other pages, check session via API
-    // Add a small delay to avoid race condition with cookie setting after login
+    let cancelled = false;
     const checkSession = async () => {
-      // Small delay to ensure cookies are available after redirect
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
       try {
         const res = await fetch("/api/store/tenants", {
-          credentials: "include", // Important: include cookies
+          credentials: "include",
         });
-        if (!res.ok) {
-          if (res.status === 401 || res.status === 403) {
-            router.push("/store/login");
-          }
+        if (cancelled) return;
+        if (res.ok) {
+          setAuthStatus("authenticated");
+        } else if (res.status === 401 || res.status === 403) {
+          setAuthStatus("unauthenticated");
+          router.replace("/store/login");
+        } else {
+          setAuthStatus("authenticated");
         }
       } catch {
-        router.push("/store/login");
+        if (!cancelled) {
+          setAuthStatus("unauthenticated");
+          router.replace("/store/login");
+        }
       }
     };
 
     checkSession();
-  }, [isLoginPage, router, mounted]);
+    return () => { cancelled = true; };
+  }, [isLoginPage, router]);
 
-  // Always render children to avoid hydration mismatch
-  // The API check will redirect if needed
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
+
+  if (authStatus === "pending" || authStatus === "unauthenticated") {
+    return (
+      <div className="min-h-screen bg-nodo flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
   return <>{children}</>;
 }

@@ -165,7 +165,7 @@ export default function RegisterPage() {
               variant="bordered"
               onPress={() => window.location.href = `/api/plataforma/${tenantId}/auth/google`}
               isDisabled={loading}
-              className="w-full"
+              className="w-full hidden"
             >
               Registrarse con Google
             </Button>
