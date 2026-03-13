@@ -36,6 +36,8 @@ const defaultFeatures: TenantFeatureFlags = {
   payment_enabled: true,
   whatsappNotifications: false,
   whatsappCustomMessage: "",
+  show_pagos: false,
+  show_servicios: false,
 };
 
 const defaultLimits: TenantLimits = {
