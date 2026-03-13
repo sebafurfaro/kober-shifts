@@ -3,6 +3,9 @@ import path from "path";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  outputFileTracingIncludes: {
+    "/**": ["./docs/**/*"],
+  },
   turbopack: {
     root: path.resolve(process.cwd()),
   },

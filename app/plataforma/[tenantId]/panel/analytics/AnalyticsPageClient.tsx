@@ -86,14 +86,16 @@ export default function AnalyticsPageClient() {
         </div>
       ) : (
         <>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        <div className="grid grid-cols-1 gap-4 items-start">
           <div className="md:col-span-2 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start content-start auto-rows-max">
-              <RevenueMetricCard
-                totalMonth={metrics?.revenue?.totalMonth ?? 0}
-                totalYear={metrics?.revenue?.totalYear ?? 0}
-                byMonth={metrics?.revenue?.byMonth ?? []}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start content-start auto-rows-max">
+              <div className="hidden">
+                <RevenueMetricCard
+                  totalMonth={metrics?.revenue?.totalMonth ?? 0}
+                  totalYear={metrics?.revenue?.totalYear ?? 0}
+                  byMonth={metrics?.revenue?.byMonth ?? []}
+                />
+              </div>
               <AppointmentsMetricCard
                 totalMonth={metrics?.appointments?.totalMonth ?? 0}
                 totalYear={metrics?.appointments?.totalYear ?? 0}
@@ -122,7 +124,7 @@ export default function AnalyticsPageClient() {
               top10Only
             />
           </div>
-          <div className="md:col-span-1">
+          <div className="hidden md:col-span-1">
             <RevenueChart metrics={metrics} />
           </div>
         </div>
