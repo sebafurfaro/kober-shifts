@@ -4,6 +4,7 @@ import { Button } from "@heroui/react";
 import { Menu, X } from "lucide-react";
 import Logo from "@/app/branding/Logo";
 import Link from "next/link";
+import React from "react";
 import { useState, useEffect } from "react";
 
 const SCROLL_THRESHOLD = 100;
@@ -31,21 +32,41 @@ export const Header = ({ mobileMenuOpen, setMobileMenuOpen, navItems }: { mobile
                     <div className="relative flex h-16 items-center justify-between">
                         {/* Logo and desktop menu */}
                         <div className="flex flex-1 items-center justify-start sm:items-stretch md:justify-start">
-                            <div className="flex shrink-0 items-center gap-2">
-                                <Logo width={32} height={32} />
-                                <h2 className="text-base font-bold text-center text-black">NODO <span className="bg-linear-to-r from-[#1A237E] via-[#1497B5] to-[#26A69A] bg-clip-text text-transparent">App</span> </h2>
-                            </div>
+                            <Link href="/">
+                                <div className="flex shrink-0 items-center gap-2">
+                                    <Logo width={32} height={32} />
+                                    <h2 className="text-base font-bold text-center text-black">NODO <span className="bg-linear-to-r from-[#1A237E] via-[#1497B5] to-[#26A69A] bg-clip-text text-transparent">App</span> </h2>
+                                </div>
+                            </Link>
                             <div className="hidden sm:ml-6 sm:block md:mx-auto">
                                 <div className="flex space-x-4">
-                                    {navItems.map((item) => (
-                                        <Link
-                                            key={item.href}
-                                            href={item.href}
-                                            className="text-[#1A237E] hover:text-[#1497B5] transition-colors duration-300 font-medium"
-                                        >
-                                            {item.label}
-                                        </Link>
-                                    ))}
+                                    {navItems.map((item) => {
+                                        // Si el href comienza con #, usar scroll handler
+                                        if (item.href.startsWith("#")) {
+                                            return (
+                                                <button
+                                                    key={item.href}
+                                                    className="text-[#1A237E] hover:text-[#1497B5] transition-colors duration-300 font-medium bg-transparent border-none cursor-pointer"
+                                                    onClick={() => {
+                                                        const el = document.getElementById(item.href.slice(1));
+                                                        if (el) el.scrollIntoView({ behavior: "smooth" });
+                                                    }}
+                                                >
+                                                    {item.label}
+                                                </button>
+                                            );
+                                        }
+                                        // Si es navegación normal, usar Link
+                                        return (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                className="text-[#1A237E] hover:text-[#1497B5] transition-colors duration-300 font-medium"
+                                            >
+                                                {item.label}
+                                            </Link>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
