@@ -74,7 +74,7 @@ export const Header = ({ mobileMenuOpen, setMobileMenuOpen, navItems }: { mobile
                         {/* Right side actions */}
                         <div className="absolute inset-y-0 right-0 flex items-center pr-2 md:static sm:inset-auto sm:ml-6 sm:pr-0">
 
-                            <Button as={Link} href="/register" className="button button-secondary rounded-full!">
+                            <Button as={Link} href="https://wa.me/5491173740338?text=Hola, quiero saber más sobre NODO App Turnos" className="button button-secondary rounded-full!">
                                 Comenzar ahora!
                             </Button>
                         </div>
