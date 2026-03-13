@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { findAllMedicalCoveragesWithPlans, createMedicalCoverage } from "@/lib/db";
 import { randomUUID } from "crypto";
-import { coberturas } from "@/lib/coverge";
+import { coberturas } from "@/lib/coverage";
 
 export async function GET(
     req: Request,
-    { params }: { params: Promise<{ tenantId: string }> }
+    { params }: { params: { tenantId: string } }
 ) {
-    const { tenantId } = await params;
+    const { tenantId } = params;
     const session = await getSession();
     if (!session || session.tenantId !== tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (session.role !== "ADMIN" && session.role !== "PROFESSIONAL" && session.role !== "PATIENT") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
