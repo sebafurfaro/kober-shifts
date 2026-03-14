@@ -14,6 +14,7 @@ import { ContactTab } from "./ContactTab";
 import { CoveragesTab } from "./CoveragesTab";
 import { AvailabilityTab } from "./AvailabilityTab";
 import { HolidaysTab } from "./HolidaysTab";
+import { validatePassword } from "@/lib/auth";
 
 interface ProfessionalFormProps {
     initialData?: Partial<ProfessionalFormData>;
@@ -63,6 +64,23 @@ export function ProfessionalForm({
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             newErrors.email = "El formato del email no es válido";
         }
+
+        if (mode === "create") {
+            if (!formData.tempPassword?.trim()) {
+                newErrors.tempPassword = "La contraseña es requerida";
+            } else {
+                const passwordValidation = validatePassword(formData.tempPassword);
+                if (!passwordValidation.isValid) {
+                    newErrors.tempPassword = passwordValidation.errors.join(", ");
+                }
+            }
+        } else if (mode === "edit" && formData.tempPassword?.trim()) {
+            const passwordValidation = validatePassword(formData.tempPassword);
+            if (!passwordValidation.isValid) {
+                newErrors.tempPassword = passwordValidation.errors.join(", ");
+            }
+        }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -71,7 +89,8 @@ export function ProfessionalForm({
         if (e) e.preventDefault();
         if (validate()) {
             let dataToSubmit = formData;
-            if (mode === "create" && dataToSubmit.dni?.trim()) {
+            // Solo usar DNI como contraseña si no se proporcionó una contraseña explícita en modo creación
+            if (mode === "create" && !dataToSubmit.tempPassword?.trim() && dataToSubmit.dni?.trim()) {
                 dataToSubmit = { ...dataToSubmit, tempPassword: dataToSubmit.dni.trim() };
             }
             onSubmit(dataToSubmit);

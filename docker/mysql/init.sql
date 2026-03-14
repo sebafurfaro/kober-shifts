@@ -5,7 +5,8 @@ USE kober_shifts;
 -- Tabla de Usuarios
 CREATE TABLE IF NOT EXISTS users (
   id VARCHAR(255) PRIMARY KEY,
-  email VARCHAR(255) NOT NULL UNIQUE,
+  email VARCHAR(255) NOT NULL,
+  UNIQUE INDEX unique_email_per_tenant (email, tenantId),
   name VARCHAR(255) NOT NULL,
   passwordHash VARCHAR(255) NOT NULL,
   role ENUM('PATIENT', 'PROFESSIONAL', 'ADMIN', 'SUPERVISOR') NOT NULL,

@@ -54,6 +54,22 @@ export function ContactTab({ formData, handleChange, errors, mode }: ContactTabP
                     inputWrapper: "text-slate-800",
                 }}
             />
+            {mode === "create" && (
+                <Input
+                    label="Contraseña"
+                    type="password"
+                    value={formData.tempPassword ?? ""}
+                    onValueChange={(value) => handleChange("tempPassword", value)}
+                    isInvalid={!!errors.tempPassword}
+                    errorMessage={errors.tempPassword}
+                    isRequired
+                    description="Mínimo 8 caracteres, una mayúscula, un número y un caracter especial"
+                    classNames={{
+                        input: "text-slate-800",
+                        inputWrapper: "text-slate-800",
+                    }}
+                />
+            )}
             {mode === "edit" && (
                 <Input
                     label="Nueva Contraseña (opcional)"

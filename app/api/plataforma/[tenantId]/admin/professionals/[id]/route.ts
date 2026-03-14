@@ -11,7 +11,7 @@ import {
   deleteAppointmentsByProfessional,
   deleteProfessionalProfile,
 } from "@/lib/db";
-import { hashPassword } from "@/lib/auth";
+import { hashPassword, validatePassword } from "@/lib/auth";
 import { Role } from "@/lib/types";
 
 //type AvailabilityConfigWithHolidays = { days?: Record<string, unknown>; holidays?: unknown[] };
@@ -178,7 +178,10 @@ export async function PUT(
     if (dni !== undefined) updateData.dni = dni;
     if (role !== undefined) updateData.role = role;
     if (tempPassword) {
-      if (tempPassword.length < 6) return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
+      const passwordValidation = validatePassword(tempPassword);
+      if (!passwordValidation.isValid) {
+        return NextResponse.json({ error: `Contraseña inválida: ${passwordValidation.errors.join(", ")}` }, { status: 400 });
+      }
       updateData.passwordHash = hashPassword(tempPassword);
     }
     if (email !== undefined) {

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Button, Input, Select, SelectItem, Checkbox } from "@heroui/react";
 import { X } from "lucide-react";
+import { validatePassword } from "@/lib/auth";
 
 const ROLE_OPTIONS = [
   { value: "ADMIN", label: "Administrador" },
@@ -15,6 +16,7 @@ export interface EditUserFormData {
   email: string;
   dni: string;
   role: string;
+  tempPassword?: string;
   /** Solo aplica cuando role es ADMIN: si true, se crea/usa professional_profile para aparecer en agenda y recibir turnos. */
   alsoProfessional?: boolean;
 }
@@ -42,6 +44,7 @@ export function EditUserAside({
     email: "",
     dni: "",
     role: "PROFESSIONAL",
+    tempPassword: "",
     alsoProfessional: false,
   });
   const [errors, setErrors] = React.useState<Partial<Record<keyof EditUserFormData, string>>>({});
@@ -56,10 +59,11 @@ export function EditUserAside({
           email: initialData.email ?? "",
           dni: initialData.dni ?? "",
           role: initialData.role && ROLE_OPTIONS.some((r) => r.value === initialData.role) ? initialData.role : "PROFESSIONAL",
+          tempPassword: "",
           alsoProfessional: initialData.role === "ADMIN" ? !!(initialData as any).hasProfessionalProfile : false,
         });
       } else {
-        setFormData({ name: "", email: "", dni: "", role: "PROFESSIONAL", alsoProfessional: false });
+        setFormData({ name: "", email: "", dni: "", role: "PROFESSIONAL", tempPassword: "", alsoProfessional: false });
       }
       setErrors({});
       setSubmitError(null);
@@ -71,6 +75,19 @@ export function EditUserAside({
     if (!formData.name.trim()) newErrors.name = "El nombre es requerido";
     if (!formData.email.trim()) newErrors.email = "El correo es requerido";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = "Correo no válido";
+
+    // Validar contraseña solo en modo creación
+    if (mode === "create") {
+      if (!formData.tempPassword?.trim()) {
+        newErrors.tempPassword = "La contraseña es requerida";
+      } else {
+        const passwordValidation = validatePassword(formData.tempPassword);
+        if (!passwordValidation.isValid) {
+          newErrors.tempPassword = passwordValidation.errors.join(", ");
+        }
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -148,6 +165,20 @@ export function EditUserAside({
               autoComplete="off"
               classNames={{ label: "text-slate-800" }}
             />
+            {mode === "create" && (
+              <Input
+                label="Contraseña"
+                type="password"
+                value={formData.tempPassword ?? ""}
+                onValueChange={(v) => setFormData((prev) => ({ ...prev, tempPassword: v }))}
+                isInvalid={!!errors.tempPassword}
+                errorMessage={errors.tempPassword}
+                isRequired
+                description="Mínimo 8 caracteres, una mayúscula, un número y un caracter especial"
+                autoComplete="new-password"
+                classNames={{ label: "text-slate-800" }}
+              />
+            )}
             <Select
               label="Rol"
               selectedKeys={formData.role ? [formData.role] : []}

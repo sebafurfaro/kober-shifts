@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { findUsersWithProfessionalProfile, findUsersWithRoleIn, findUserByEmail, createUser, createProfessionalProfile } from "@/lib/db";
 import { getTenantFeatureFlagsAndLimits } from "@/lib/tenant-features";
-import { hashPassword } from "@/lib/auth";
+import { hashPassword, validatePassword } from "@/lib/auth";
 import { Role } from "@/lib/types";
 import { randomUUID } from "crypto";
 
@@ -58,6 +58,12 @@ export async function POST(
     : undefined;
 
   if (!name || !email) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+
+  // Validar contraseña
+  const passwordValidation = validatePassword(tempPassword);
+  if (!passwordValidation.isValid) {
+    return NextResponse.json({ error: `Contraseña inválida: ${passwordValidation.errors.join(", ")}` }, { status: 400 });
+  }
 
   const limits = await getTenantFeatureFlagsAndLimits(tenantId);
   const staffUsers = await findUsersWithRoleIn([Role.ADMIN, Role.PROFESSIONAL, Role.SUPERVISOR], tenantId);

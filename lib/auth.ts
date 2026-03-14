@@ -63,4 +63,29 @@ export function verifyPassword(password: string, stored: string): boolean {
   return crypto.timingSafeEqual(expected, actual);
 }
 
+export function validatePassword(password: string): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  if (password.length < 8) {
+    errors.push("Debe tener al menos 8 caracteres");
+  }
+
+  if (!/[A-Z]/.test(password)) {
+    errors.push("Debe contener al menos una letra mayúscula");
+  }
+
+  if (!/\d/.test(password)) {
+    errors.push("Debe contener al menos un número");
+  }
+
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push("Debe contener al menos un caracter especial");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
 
