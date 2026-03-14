@@ -109,6 +109,9 @@ export default function AdminProfessionalsPage() {
     if (data.role === "ADMIN") {
       body.alsoProfessional = data.alsoProfessional ?? false;
     }
+    if (data.tempPassword?.trim()) {
+      body.tempPassword = data.tempPassword.trim();
+    }
     if (editUser) {
       const res = await fetch(`/api/plataforma/${tenantId}/admin/professionals/${editUser.id}`, {
         method: "PUT",

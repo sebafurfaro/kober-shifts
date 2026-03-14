@@ -78,7 +78,7 @@ export function validatePassword(password: string): { isValid: boolean; errors: 
     errors.push("Debe contener al menos un número");
   }
 
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+  if (!/[^a-zA-Z0-9]/.test(password)) {
     errors.push("Debe contener al menos un caracter especial");
   }
 

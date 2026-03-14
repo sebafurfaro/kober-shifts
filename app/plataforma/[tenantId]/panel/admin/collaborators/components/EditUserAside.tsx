@@ -76,7 +76,6 @@ export function EditUserAside({
     if (!formData.email.trim()) newErrors.email = "El correo es requerido";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = "Correo no válido";
 
-    // Validar contraseña solo en modo creación
     if (mode === "create") {
       if (!formData.tempPassword?.trim()) {
         newErrors.tempPassword = "La contraseña es requerida";
@@ -85,6 +84,11 @@ export function EditUserAside({
         if (!passwordValidation.isValid) {
           newErrors.tempPassword = passwordValidation.errors.join(", ");
         }
+      }
+    } else if (mode === "edit" && formData.tempPassword?.trim()) {
+      const passwordValidation = validatePassword(formData.tempPassword);
+      if (!passwordValidation.isValid) {
+        newErrors.tempPassword = passwordValidation.errors.join(", ");
       }
     }
 
@@ -175,6 +179,19 @@ export function EditUserAside({
                 errorMessage={errors.tempPassword}
                 isRequired
                 description="Mínimo 8 caracteres, una mayúscula, un número y un caracter especial"
+                autoComplete="new-password"
+                classNames={{ label: "text-slate-800" }}
+              />
+            )}
+            {mode === "edit" && (
+              <Input
+                label="Nueva contraseña (opcional)"
+                type="password"
+                value={formData.tempPassword ?? ""}
+                onValueChange={(v) => setFormData((prev) => ({ ...prev, tempPassword: v }))}
+                isInvalid={!!errors.tempPassword}
+                errorMessage={errors.tempPassword}
+                description="Dejar en blanco para mantener la contraseña actual. Mínimo 8 caracteres, una mayúscula, un número y un caracter especial"
                 autoComplete="new-password"
                 classNames={{ label: "text-slate-800" }}
               />
