@@ -896,6 +896,10 @@ export async function updateProfessionalProfile(
   return profile;
 }
 
+export async function deleteProfessionalProfile(userId: string, tenantId: string): Promise<void> {
+  await mysql.execute('DELETE FROM professional_profiles WHERE userId = ? AND tenantId = ?', [userId, tenantId]);
+}
+
 // GoogleOAuthToken operations
 export async function findGoogleOAuthTokenByUserId(userId: string, tenantId: string): Promise<GoogleOAuthToken | null> {
   const [rows] = await mysql.execute('SELECT * FROM google_oauth_tokens WHERE userId = ? AND tenantId = ?', [userId, tenantId]);

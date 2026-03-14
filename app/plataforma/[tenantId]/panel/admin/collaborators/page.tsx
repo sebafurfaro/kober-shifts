@@ -106,8 +106,8 @@ export default function AdminProfessionalsPage() {
       dni: data.dni || null,
       role: data.role,
     };
-    if (data.role === "ADMIN" && data.alsoProfessional !== undefined) {
-      body.alsoProfessional = data.alsoProfessional;
+    if (data.role === "ADMIN") {
+      body.alsoProfessional = data.alsoProfessional ?? false;
     }
     if (editUser) {
       const res = await fetch(`/api/plataforma/${tenantId}/admin/professionals/${editUser.id}`, {

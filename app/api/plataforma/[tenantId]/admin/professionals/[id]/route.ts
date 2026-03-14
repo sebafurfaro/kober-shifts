@@ -9,6 +9,7 @@ import {
   findUserByEmail,
   deleteUser,
   deleteAppointmentsByProfessional,
+  deleteProfessionalProfile,
 } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
 import { Role } from "@/lib/types";
@@ -134,7 +135,27 @@ export async function PUT(
 
     let profile = await findProfessionalProfileByUserId(id, tenantId);
     const alsoProfessional = body.alsoProfessional === true;
-    if (user.role === "ADMIN" && alsoProfessional && !profile) {
+
+    // Handle professional profile based on role changes
+    if (role === Role.SUPERVISOR && user.role !== Role.SUPERVISOR) {
+      // Role changed to SUPERVISOR - remove professional profile
+      await deleteProfessionalProfile(id, tenantId);
+      profile = null;
+    } else if (role === Role.PROFESSIONAL && user.role !== Role.PROFESSIONAL && !profile) {
+      // Role changed to PROFESSIONAL - create professional profile if doesn't exist
+      await createProfessionalProfile({
+        userId: id,
+        tenantId,
+        color: color || "#2196f3",
+        licenseNumber: null,
+        medicalCoverages: null,
+        availabilityConfig: null,
+        availableDays: null,
+        availableHours: null,
+      });
+      profile = await findProfessionalProfileByUserId(id, tenantId);
+    } else if (role === Role.ADMIN && alsoProfessional && !profile) {
+      // ADMIN with alsoProfessional - create profile if doesn't exist
       await createProfessionalProfile({
         userId: id,
         tenantId,
@@ -146,6 +167,10 @@ export async function PUT(
         availableHours,
       });
       profile = await findProfessionalProfileByUserId(id, tenantId);
+    } else if (role === Role.ADMIN && !alsoProfessional && profile) {
+      // ADMIN without alsoProfessional - remove profile if exists
+      await deleteProfessionalProfile(id, tenantId);
+      profile = null;
     }
 
     const updateData: { name: string; email?: string; dni?: string | null; role?: Role; passwordHash?: string } = { name };
@@ -162,6 +187,7 @@ export async function PUT(
     }
 
     const updatedUser = await updateUser(id, tenantId, updateData);
+
     const profileUpdateData: { color?: string; availableDays?: number[] | null; availableHours?: { start: string; end: string } | null } = {};
 
     if (profile) {
