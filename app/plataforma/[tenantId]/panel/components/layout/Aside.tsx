@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Calendar,
   User,
@@ -31,18 +32,29 @@ interface NavItemProps {
   icon: React.ReactNode;
   isCollapsed: boolean;
   onNavigate?: () => void;
+  pathname: string;
+  /** Si true, solo activo en coincidencia exacta. Usar para rutas raíz como /panel o /admin. */
+  exact?: boolean;
 }
 
-function NavItem({ href, label, icon, isCollapsed, onNavigate }: NavItemProps) {
+function NavItem({ href, label, icon, isCollapsed, onNavigate, pathname, exact }: NavItemProps) {
+  const isActive = exact
+    ? pathname === href
+    : pathname === href || pathname.startsWith(href + "/");
+
   return (
     <Link
       href={href}
       onClick={onNavigate}
-      className={`flex items-center gap-3 py-3 text-slate-800 hover:bg-[#0288D1]/10 transition-all duration-300 ease-in-out rounded-md font-primary ${isCollapsed ? "justify-center px-2" : "px-4"
+      className={`flex items-center gap-3 py-3 transition-all duration-200 ease-in-out rounded-md font-primary
+        ${isCollapsed ? "justify-center px-2" : "px-4"}
+        ${isActive
+          ? "bg-[#0288D1]/15 text-[#0288D1] font-semibold"
+          : "text-slate-800 hover:bg-[#0288D1]/10"
         }`}
       title={isCollapsed ? label : undefined}
     >
-      <span className="w-5 h-5 shrink-0">{icon}</span>
+      <span className={`w-5 h-5 shrink-0 ${isActive ? "text-[#0288D1]" : ""}`}>{icon}</span>
       {!isCollapsed && <span className="text-sm font-medium">{label}</span>}
     </Link>
   );
@@ -92,6 +104,8 @@ interface AsideProps {
   permissions?: PermissionsMap | null;
   /** Feature flags del tenant */
   features?: TenantFeatures | null;
+  /** Si el usuario logueado tiene un professional_profile (puede ser ADMIN con perfil). */
+  hasProfessionalProfile?: boolean;
 }
 
 export function Aside({
@@ -110,16 +124,19 @@ export function Aside({
   usage: usageFromProp,
   permissions,
   features,
+  hasProfessionalProfile,
 }: AsideProps) {
   const [isHovered, setIsHovered] = React.useState(false);
   const [isManuallyToggled, setIsManuallyToggled] = React.useState(false);
   const [usageLocal, setUsageLocal] = React.useState<{ used: number; max: number } | null>(null);
+  const [transitionReady, setTransitionReady] = React.useState(false);
   const can = (permKey: PermKey) => canAccess(permissions ?? null, role, permKey);
+  const pathname = usePathname();
 
   const handleNavClick = isMobile ? () => setMobileDrawerOpen(false) : undefined;
 
   React.useEffect(() => {
-    // Component mounted
+    setTransitionReady(true);
   }, []);
 
   React.useEffect(() => {
@@ -226,6 +243,7 @@ export function Aside({
                 icon={<BarChart3 className="w-5 h-5" />}
                 isCollapsed={effectiveIsCollapsed}
                 onNavigate={handleNavClick}
+                pathname={pathname}
               />
             </>
           )}
@@ -241,15 +259,18 @@ export function Aside({
               icon={<Calendar className="w-5 h-5" />}
               isCollapsed={effectiveIsCollapsed}
               onNavigate={handleNavClick}
+              pathname={pathname}
+              exact
             />
           )}
-          {isStaff && can("turnosProfessional") && (
+          {isStaff && can("turnosProfessional") && (role === "PROFESSIONAL" || hasProfessionalProfile) && (
             <NavItem
               href={`${base}/professional`}
-              label="Profesionales"
-              icon={<User className="w-5 h-5" />}
+              label="Mis turnos"
+              icon={<CalendarCheck2 className="w-5 h-5" />}
               isCollapsed={effectiveIsCollapsed}
               onNavigate={handleNavClick}
+              pathname={pathname}
             />
           )}
           {isStaff && can("servicios") && isFeatureEnabled("show_servicios") && (
@@ -259,6 +280,7 @@ export function Aside({
               icon={<LayoutGrid className="w-5 h-5" />}
               isCollapsed={effectiveIsCollapsed}
               onNavigate={handleNavClick}
+              pathname={pathname}
             />
           )}
           {isStaff && can("patients") && (
@@ -268,6 +290,7 @@ export function Aside({
               icon={pacientesItem.icon}
               isCollapsed={effectiveIsCollapsed}
               onNavigate={handleNavClick}
+              pathname={pathname}
             />
           )}
 
@@ -282,6 +305,8 @@ export function Aside({
                   icon={<Settings className="w-5 h-5" />}
                   isCollapsed={effectiveIsCollapsed}
                   onNavigate={handleNavClick}
+                  pathname={pathname}
+                  exact
                 />
               )}
               {can("pagos") && isFeatureEnabled("show_pagos") && (
@@ -291,6 +316,7 @@ export function Aside({
                   icon={<CircleDollarSign className="w-5 h-5" />}
                   isCollapsed={effectiveIsCollapsed}
                   onNavigate={handleNavClick}
+                  pathname={pathname}
                 />
               )}
               {can("turnos") && (
@@ -300,6 +326,7 @@ export function Aside({
                   icon={<CalendarCheck2 className="w-5 h-5" />}
                   isCollapsed={effectiveIsCollapsed}
                   onNavigate={handleNavClick}
+                  pathname={pathname}
                 />
               )}
               {gestionItems
@@ -317,6 +344,7 @@ export function Aside({
                     icon={item.icon}
                     isCollapsed={effectiveIsCollapsed}
                     onNavigate={handleNavClick}
+                    pathname={pathname}
                   />
                 ))}
             </>
@@ -334,6 +362,7 @@ export function Aside({
                   icon={item.icon}
                   isCollapsed={effectiveIsCollapsed}
                   onNavigate={handleNavClick}
+                  pathname={pathname}
                 />
               ))}
             </>
@@ -345,6 +374,7 @@ export function Aside({
               icon={<User className="w-5 h-5" />}
               isCollapsed={effectiveIsCollapsed}
               onNavigate={handleNavClick}
+              pathname={pathname}
             />
           )}
           {isStaff && can("profesionales") && (
@@ -354,6 +384,7 @@ export function Aside({
               icon={<User className="w-5 h-5" />}
               isCollapsed={effectiveIsCollapsed}
               onNavigate={handleNavClick}
+              pathname={pathname}
             />
           )}
 
@@ -367,6 +398,8 @@ export function Aside({
                 icon={<CalendarDays className="w-5 h-5" />}
                 isCollapsed={effectiveIsCollapsed}
                 onNavigate={handleNavClick}
+                pathname={pathname}
+                exact
               />
               <NavItem
                 href={`${base}/patient/mis-datos`}
@@ -374,6 +407,7 @@ export function Aside({
                 icon={<User className="w-5 h-5" />}
                 isCollapsed={effectiveIsCollapsed}
                 onNavigate={handleNavClick}
+                pathname={pathname}
               />
             </>
           )}
@@ -388,6 +422,7 @@ export function Aside({
                 icon={<BookOpen className="w-5 h-5" />}
                 isCollapsed={effectiveIsCollapsed}
                 onNavigate={handleNavClick}
+                pathname={pathname}
               />
               {!effectiveIsCollapsed && usage !== null && (
                 <div className="px-4 pt-2 pb-2">

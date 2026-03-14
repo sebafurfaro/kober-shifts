@@ -22,11 +22,13 @@ export function PanelLayoutShell({
   role,
   userName,
   tenantId,
+  hasProfessionalProfile,
   children,
 }: {
   role: Role;
   userName: string;
   tenantId: string;
+  hasProfessionalProfile?: boolean;
   children: React.ReactNode;
 }) {
   const params = useParams();
@@ -190,6 +192,7 @@ export function PanelLayoutShell({
         usage={usage}
         permissions={permissions}
         features={features}
+        hasProfessionalProfile={hasProfessionalProfile}
       />
 
       {/* Main Content */}

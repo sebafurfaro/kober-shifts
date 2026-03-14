@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { findUserById } from "@/lib/db";
+import { findUserById, hasProfessionalProfile } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { PanelLayoutShell } from "./components/PanelLayoutShell";
 
@@ -22,8 +22,15 @@ export default async function PanelLayout({
     redirect(`/plataforma/${tenantId}/login`);
   }
 
+  const userHasProfessionalProfile = await hasProfessionalProfile(tenantId, session.userId);
+
   return (
-    <PanelLayoutShell role={user.role} userName={user.name} tenantId={tenantId}>
+    <PanelLayoutShell
+      role={user.role}
+      userName={user.name}
+      tenantId={tenantId}
+      hasProfessionalProfile={userHasProfessionalProfile}
+    >
       {children}
     </PanelLayoutShell>
   );
