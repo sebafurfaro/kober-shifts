@@ -112,3 +112,12 @@ body {
     gap: 1rem;
   }
 }
+
+.responsive-margin {
+  margin-left: 0;
+}
+@media (min-width: 768px) {
+  .responsive-margin {
+    margin-left: var(--dynamic-aside-width, 210px);
+  }
+}

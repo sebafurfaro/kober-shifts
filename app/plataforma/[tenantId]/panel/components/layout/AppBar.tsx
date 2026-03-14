@@ -81,11 +81,9 @@ export default function AppBar({
     }, [notifications]);
 
     return (
-        <header 
-            className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-40 flex items-center justify-between px-4 md:px-6 shadow-sm transition-all duration-300"
-            style={{
-                marginLeft: isMobile ? 0 : `${asideWidth}px`,
-            }}
+        <header
+            className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-40 flex items-center justify-between px-4 md:px-6 shadow-sm transition-all duration-300 responsive-margin"
+            style={{ '--dynamic-aside-width': `${asideWidth}px` } as React.CSSProperties}
         >
             <div className="flex items-center gap-4">
                 {isMobile && (
@@ -103,10 +101,10 @@ export default function AppBar({
                 {mounted && canNotify && (
                     <Dropdown onOpenChange={(open) => open && setUnreadCount(0)}>
                         <DropdownTrigger>
-                            <Button 
-                                variant="bordered" 
-                                isIconOnly 
-                                aria-label="Notificaciones" 
+                            <Button
+                                variant="bordered"
+                                isIconOnly
+                                aria-label="Notificaciones"
                                 className="text-orange-700 border-orange-700 bg-orange-50 hover:bg-orange-100">
                                 <span className="relative">
                                     <Bell className="w-4 h-4" />
@@ -122,15 +120,15 @@ export default function AppBar({
                     </Dropdown>
                 )}
 
-                <Button 
-                    variant="bordered" 
+                <Button
+                    variant="bordered"
                     className="text-emerald-800 border-emerald-800 bg-emerald-50 hover:bg-emerald-100"
-                    isIconOnly 
-                    as={Link} 
-                    href="https://wa.me/5491173740338?text=Hola, tengo una consulta sobre el funcionamiento de la plataforma." 
+                    isIconOnly
+                    as={Link}
+                    href="https://wa.me/5491173740338?text=Hola, tengo una consulta sobre el funcionamiento de la plataforma."
                     target="_blank">
-                        <MessageCircleQuestionMark className="w-4 h-4" />
-                    </Button>
+                    <MessageCircleQuestionMark className="w-4 h-4" />
+                </Button>
 
                 <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-100">
                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">

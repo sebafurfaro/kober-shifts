@@ -30,12 +30,14 @@ interface NavItemProps {
   label: string;
   icon: React.ReactNode;
   isCollapsed: boolean;
+  onNavigate?: () => void;
 }
 
-function NavItem({ href, label, icon, isCollapsed }: NavItemProps) {
+function NavItem({ href, label, icon, isCollapsed, onNavigate }: NavItemProps) {
   return (
     <Link
       href={href}
+      onClick={onNavigate}
       className={`flex items-center gap-3 py-3 text-slate-800 hover:bg-[#0288D1]/10 transition-all duration-300 ease-in-out rounded-md font-primary ${isCollapsed ? "justify-center px-2" : "px-4"
         }`}
       title={isCollapsed ? label : undefined}
@@ -114,6 +116,12 @@ export function Aside({
   const [usageLocal, setUsageLocal] = React.useState<{ used: number; max: number } | null>(null);
   const can = (permKey: PermKey) => canAccess(permissions ?? null, role, permKey);
 
+  const handleNavClick = isMobile ? () => setMobileDrawerOpen(false) : undefined;
+
+  React.useEffect(() => {
+    // Component mounted
+  }, []);
+
   React.useEffect(() => {
     if (usageFromProp !== undefined || !currentTenantId || role === "PATIENT") return;
     let cancelled = false;
@@ -125,17 +133,17 @@ export function Aside({
         const max = typeof data.maxUsers === "number" ? data.maxUsers : 0;
         setUsageLocal({ used, max });
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => { cancelled = true; };
   }, [currentTenantId, role, usageFromProp]);
 
   const usage = usageFromProp !== undefined ? usageFromProp : usageLocal;
 
   const currentWidth = React.useMemo(() => {
-    if (isMobile) return mobileDrawerOpen ? DRAWER_WIDTH : 0;
+    if (isMobile) return DRAWER_WIDTH;
     if (isCollapsed && !isHovered) return DRAWER_COLLAPSED_WIDTH;
     return DRAWER_WIDTH;
-  }, [isMobile, mobileDrawerOpen, isCollapsed, isHovered]);
+  }, [isMobile, isCollapsed, isHovered]);
 
   React.useEffect(() => {
     onWidthChange(currentWidth);
@@ -166,12 +174,7 @@ export function Aside({
 
   return (
     <aside
-      className={`fixed top-0 left-0 h-screen bg-white text-slate-900 z-49 transition-all duration-300 ${isMobile
-        ? mobileDrawerOpen
-          ? "translate-x-0"
-          : "-translate-x-full"
-        : "translate-x-0"
-        }`}
+      className={`fixed top-0 left-0 h-screen bg-white text-slate-900 z-49 transition-transform duration-300 ${mobileDrawerOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       style={{ width: `${currentWidth}px` }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -222,6 +225,7 @@ export function Aside({
                 label="Analíticas"
                 icon={<BarChart3 className="w-5 h-5" />}
                 isCollapsed={effectiveIsCollapsed}
+                onNavigate={handleNavClick}
               />
             </>
           )}
@@ -236,6 +240,7 @@ export function Aside({
               label="Calendario"
               icon={<Calendar className="w-5 h-5" />}
               isCollapsed={effectiveIsCollapsed}
+              onNavigate={handleNavClick}
             />
           )}
           {isStaff && can("turnosProfessional") && (
@@ -244,6 +249,7 @@ export function Aside({
               label="Profesionales"
               icon={<User className="w-5 h-5" />}
               isCollapsed={effectiveIsCollapsed}
+              onNavigate={handleNavClick}
             />
           )}
           {isStaff && can("servicios") && isFeatureEnabled("show_servicios") && (
@@ -252,6 +258,7 @@ export function Aside({
               label="Servicios"
               icon={<LayoutGrid className="w-5 h-5" />}
               isCollapsed={effectiveIsCollapsed}
+              onNavigate={handleNavClick}
             />
           )}
           {isStaff && can("patients") && (
@@ -260,6 +267,7 @@ export function Aside({
               label={pacientesItem.label}
               icon={pacientesItem.icon}
               isCollapsed={effectiveIsCollapsed}
+              onNavigate={handleNavClick}
             />
           )}
 
@@ -273,6 +281,7 @@ export function Aside({
                   label="Admin"
                   icon={<Settings className="w-5 h-5" />}
                   isCollapsed={effectiveIsCollapsed}
+                  onNavigate={handleNavClick}
                 />
               )}
               {can("pagos") && isFeatureEnabled("show_pagos") && (
@@ -281,6 +290,7 @@ export function Aside({
                   label="Pagos"
                   icon={<CircleDollarSign className="w-5 h-5" />}
                   isCollapsed={effectiveIsCollapsed}
+                  onNavigate={handleNavClick}
                 />
               )}
               {can("turnos") && (
@@ -289,6 +299,7 @@ export function Aside({
                   label="Turnos"
                   icon={<CalendarCheck2 className="w-5 h-5" />}
                   isCollapsed={effectiveIsCollapsed}
+                  onNavigate={handleNavClick}
                 />
               )}
               {gestionItems
@@ -305,6 +316,7 @@ export function Aside({
                     label={item.label}
                     icon={item.icon}
                     isCollapsed={effectiveIsCollapsed}
+                    onNavigate={handleNavClick}
                   />
                 ))}
             </>
@@ -321,17 +333,19 @@ export function Aside({
                   label={item.label}
                   icon={item.icon}
                   isCollapsed={effectiveIsCollapsed}
+                  onNavigate={handleNavClick}
                 />
               ))}
             </>
           )}
           {role === "ADMIN" && (
-              <NavItem
-                href={`${base}/admin/roles`}
-                label="Roles"
-                icon={<User className="w-5 h-5" />}
-                isCollapsed={effectiveIsCollapsed}
-              />
+            <NavItem
+              href={`${base}/admin/roles`}
+              label="Roles"
+              icon={<User className="w-5 h-5" />}
+              isCollapsed={effectiveIsCollapsed}
+              onNavigate={handleNavClick}
+            />
           )}
           {isStaff && can("profesionales") && (
             <NavItem
@@ -339,6 +353,7 @@ export function Aside({
               label="Profesionales"
               icon={<User className="w-5 h-5" />}
               isCollapsed={effectiveIsCollapsed}
+              onNavigate={handleNavClick}
             />
           )}
 
@@ -351,12 +366,14 @@ export function Aside({
                 label="Mis turnos"
                 icon={<CalendarDays className="w-5 h-5" />}
                 isCollapsed={effectiveIsCollapsed}
+                onNavigate={handleNavClick}
               />
               <NavItem
                 href={`${base}/patient/mis-datos`}
                 label="Mis datos"
                 icon={<User className="w-5 h-5" />}
                 isCollapsed={effectiveIsCollapsed}
+                onNavigate={handleNavClick}
               />
             </>
           )}
@@ -370,6 +387,7 @@ export function Aside({
                 label="Documentación"
                 icon={<BookOpen className="w-5 h-5" />}
                 isCollapsed={effectiveIsCollapsed}
+                onNavigate={handleNavClick}
               />
               {!effectiveIsCollapsed && usage !== null && (
                 <div className="px-4 pt-2 pb-2">

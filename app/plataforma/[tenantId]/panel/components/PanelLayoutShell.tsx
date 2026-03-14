@@ -44,21 +44,13 @@ export function PanelLayoutShell({
   const { patientLabel, professionalLabel } = useTenantLabels();
   const loadTranslations = useTenantSettingsStore((state) => state.loadTranslations);
 
-  // Set mounted flag to prevent hydration errors
   React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  React.useEffect(() => {
-    if (!mounted) return;
-
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
+    setMounted(true);
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
-  }, [mounted]);
+  }, []);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -202,11 +194,11 @@ export function PanelLayoutShell({
 
       {/* Main Content */}
       <main
-        className="flex-1 py-16 px-6 w-full text-slate-900 transition-all duration-300"
+        className="flex-1 py-16 px-6 w-full text-slate-900 transition-all duration-300 responsive-margin"
         style={{
-          marginLeft: isMobile ? 0 : `${asideWidth}px`,
+          '--dynamic-aside-width': `${asideWidth}px`,
           backgroundImage: "linear-gradient(to bottom, #F3F8FC, #f4f8fa)",
-        }}
+        } as React.CSSProperties}
       >
         {children}
       </main>
