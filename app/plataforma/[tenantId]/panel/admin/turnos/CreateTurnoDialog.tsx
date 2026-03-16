@@ -20,7 +20,9 @@ import { useCreateAppointment } from "@/lib/use-create-appointment";
 import {
   getProfessionalAvailableDayNumbers,
   createIsDateUnavailableForProfessional,
+  findHolidayForDate,
   type ProfessionalAvailabilitySource,
+  type ProfessionalHoliday,
 } from "@/lib/professional-availability";
 import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
 
@@ -49,6 +51,7 @@ type Professional = {
   name: string;
   availableDays?: number[] | null;
   availabilityConfig?: ProfessionalAvailabilitySource["availabilityConfig"];
+  holidays?: ProfessionalHoliday[];
 };
 type Location = { id: string; name: string; address: string };
 type Service = { id: string; name: string; durationMinutes?: number; marginMinutes?: number };
@@ -114,9 +117,13 @@ export function CreateTurnoDialog({
     () => getProfessionalAvailableDayNumbers(selectedProfessional ?? undefined),
     [selectedProfessional]
   );
+  const professionalHolidays = React.useMemo(
+    () => selectedProfessional?.holidays ?? [],
+    [selectedProfessional]
+  );
   const isDateUnavailable = React.useMemo(
-    () => createIsDateUnavailableForProfessional(availableDayNumbers),
-    [availableDayNumbers]
+    () => createIsDateUnavailableForProfessional(availableDayNumbers, professionalHolidays),
+    [availableDayNumbers, professionalHolidays]
   );
 
   const startValue = React.useMemo(
@@ -154,6 +161,7 @@ export function CreateTurnoDialog({
                 name: p.name,
                 availableDays: p.professional?.availableDays ?? p.availableDays ?? null,
                 availabilityConfig: p.professional?.availabilityConfig ?? p.availabilityConfig ?? null,
+                holidays: p.professional?.availabilityConfig?.holidays ?? p.availabilityConfig?.holidays ?? [],
               }))
           : [];
         setProfessionals(normalizedProfessionals);
@@ -183,6 +191,15 @@ export function CreateTurnoDialog({
     if (endDate.getTime() <= startDate.getTime()) {
       setError("La fecha de fin debe ser posterior al inicio.");
       return;
+    }
+    if (professionalHolidays.length > 0) {
+      const startDateValue = { year: startDate.getFullYear(), month: startDate.getMonth() + 1, day: startDate.getDate() };
+      const holiday = findHolidayForDate(startDateValue, professionalHolidays);
+      if (holiday) {
+        const desc = holiday.description ? ` (${holiday.description})` : "";
+        setError(`El profesional tiene vacaciones del ${holiday.startDate.split("-").reverse().join("/")} al ${holiday.endDate.split("-").reverse().join("/")}${desc}. No se puede crear un turno en ese período.`);
+        return;
+      }
     }
     setSubmitting(true);
     try {
