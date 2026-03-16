@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { getGoogleAuthUrl } from "@/lib/googleOAuth";
+import { getGoogleCalendarAuthUrl } from "@/lib/googleOAuth";
 
 export async function GET() {
   const session = await getSession();
@@ -13,7 +13,7 @@ export async function GET() {
   const stateObj = { userId: session.userId, tenantId: session.tenantId };
   const state = Buffer.from(JSON.stringify(stateObj)).toString("base64");
 
-  const url = getGoogleAuthUrl(state);
+  const url = getGoogleCalendarAuthUrl(state);
   return NextResponse.redirect(url);
 }
 

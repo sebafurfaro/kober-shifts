@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { exchangeCodeForTokens } from "@/lib/googleOAuth";
+import { exchangeCodeForCalendarTokens } from "@/lib/googleOAuth";
 import { findGoogleOAuthTokenByUserId, upsertGoogleOAuthToken } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { randomUUID } from "crypto";
@@ -34,7 +34,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const tokens = await exchangeCodeForTokens(code);
+    const tokens = await exchangeCodeForCalendarTokens(code);
     const existing = await findGoogleOAuthTokenByUserId(session.userId, session.tenantId);
 
     await upsertGoogleOAuthToken({
