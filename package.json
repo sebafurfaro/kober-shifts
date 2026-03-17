@@ -27,6 +27,7 @@
     "@lottiefiles/dotlottie-react": "^0.17.13",
     "@prisma/extension-accelerate": "^3.0.1",
     "@railway/cli": "^4.31.0",
+    "aos": "^2.3.4",
     "apexcharts": "^5.3.6",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
@@ -47,6 +48,7 @@
   "devDependencies": {
     "@prisma/client": "^7.4.2",
     "@tailwindcss/postcss": "^4",
+    "@types/aos": "^3.0.7",
     "@types/node": "^20",
     "@types/nodemailer": "^7.0.5",
     "@types/react": "^19",

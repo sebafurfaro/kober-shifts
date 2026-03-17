@@ -1,10 +1,8 @@
 "use client";
 
-import { Button } from "@heroui/react";
-import { CircleArrowRight } from "lucide-react";
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import Link from "next/link";
 import Typography from "./Typography";
+
 
 export const Hero = () => {
     return (
@@ -34,11 +32,11 @@ export const Hero = () => {
         </div>
         <div className="mt-[-50px] flex h-screen items-center justify-center">
           <div className="max-w-full flex-shrink-0 px-4 text-center lg:mx-0 lg:max-w-3xl lg:pt-8 flex flex-col gap-6">
-            <Typography variant="h1" color="white" className="md:text-5xl">Nunca fue tan fácil gestionar tus turnos</Typography>
-            <Typography variant="h5" color="white">
+            <Typography variant="h1" color="white" className="md:text-5xl" data-aos="zoom-in">Nunca fue tan fácil gestionar tus turnos</Typography>
+            <Typography variant="h5" color="white" data-aos="zoom-in" data-aos-delay="100">
               En NODO App, creemos que la agenda es el corazón del negocio, no una función premium. Por eso, nuestro plan incluye sin restricciones las herramientas fundamentales para organizarte y crecer.
             </Typography>
-            <div className="mt-5 flex items-center justify-center gap-x-6">
+            <div className="mt-5 flex items-center justify-center gap-x-6" data-aos="zoom-in" data-aos-delay="200">
               <Link href={"https://wa.me/5491173740338?text=Hola, quiero saber más sobre NODO App Turnos"} className="font-bold text-xl bg-white px-6 py-3 rounded-full relative w-fit">Comenzar ahora</Link>
             </div>
           </div>

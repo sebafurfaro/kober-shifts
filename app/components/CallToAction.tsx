@@ -8,7 +8,7 @@ export const CallToAction = () => {
 
     const supportList = [
         {
-            title: "Atencion personalizada",
+            title: "Atención personalizada",
             icon: <HeadsetIcon className="text-white w-4 h-4" />
         },
         {
@@ -28,12 +28,12 @@ export const CallToAction = () => {
     return (
         <section className="bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 py-32">
             <div className="max-w-5xl mx-auto w-full px-4">
-                <div className="border border-white/10 rounded-4xl bg-white/10">
+                <div className="border border-white/10 rounded-4xl bg-white/10" data-aos="zoom-in">
                     <div className="p-8">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div className="flex flex-col space-y-3">
                                 <Typography variant="h4" color="white">Soporte humano 24/7</Typography>
-                                <Typography variant="p" color="white">Contas con una persona para que te asesora con lo que necesites, cuando lo necesites.</Typography>
+                                <Typography variant="p" color="white">Contás con una persona para que te asesore con lo que necesités, cuando lo necesités.</Typography>
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
                                     {supportList.map((item, index) => (
                                         <div className="flex items-center gap-2" key={index}>

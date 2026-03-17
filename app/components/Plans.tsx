@@ -85,10 +85,10 @@ export const Plans = () => {
           <img src="/glow-hero.svg" alt="" className="absolute bottom-0 z-0" />
           <div className="max-w-7xl w-full mx-auto px-4 flex flex-col items-center gap-8">
             <div className="space-y-4">
-              <Typography variant="h2" color="white" className="font-bold text-center">Un plan simple que crece con tu negocio</Typography>
-              <Typography variant="p" color="white" className="font-medium! text-center">Empezá con un usuario y sumá colaboradores. Sin límites de turnos. Sin sorpresas.</Typography>
+              <Typography variant="h2" color="white" className="font-bold text-center" data-aos="zoom-in">Un plan simple que crece con tu negocio</Typography>
+              <Typography variant="p" color="white" className="font-medium! text-center" data-aos="zoom-in" data-aos-delay="150">Empezá con un usuario y sumá colaboradores. Sin límites de turnos. Sin sorpresas.</Typography>
             </div>
-            <Card className="max-w-lg mx-auto w-full p-5 bg-white/10 border border-white/10 backdrop-blur-md shadow-xl">
+            <Card className="max-w-lg mx-auto w-full p-5 bg-white/10 border border-white/10 backdrop-blur-md shadow-xl mb-10" data-aos="zoom-in" data-aos-delay="300">
               <CardHeader>
                   <Typography variant="h4" color="white" className="text-center mx-auto">Todo Incluido</Typography>
               </CardHeader>
@@ -140,6 +140,10 @@ export const Plans = () => {
                   href={`https://wa.me/5491173740338?text=${message}`} 
                   variant="solid" 
                   className="w-full uppercase font-medium bg-accent text-white">Comprar</Button>
+                  <div className="my-4 text-center">
+                    <Typography variant="p" color="white">¿Necesitás más colaboradores?</Typography>
+                    <Link className="text-white font-semibold transition-all duration-300 ease hover:underline" href="https://wa.me/5491173740338?text=Hola, necesito más colaboradores en el plan." target="_blank">Escribinos</Link>
+                  </div>
               </CardFooter>
             </Card>
           </div>

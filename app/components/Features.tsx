@@ -3,12 +3,12 @@
 import { useRef, MouseEvent } from "react";
 import { Typography } from "./Typography";
 
-interface BentoCardProps {
+interface BentoCardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   className?: string;
 }
 
-function BentoCard({ children, className = "" }: BentoCardProps) {
+function BentoCard({ children, className = "", ...rest }: BentoCardProps) {
   const spotlightRef = useRef<HTMLDivElement>(null);
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
@@ -31,12 +31,12 @@ function BentoCard({ children, className = "" }: BentoCardProps) {
 
   return (
     <div
+      {...rest}
       className={`relative overflow-hidden border border-white/10 bg-white/10 transition-all duration-300 ease-in-out cursor-pointer hover:border-accent/30 flex items-center justify-center ${className}`}
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Spotlight */}
       <div
         ref={spotlightRef}
         className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full opacity-0 transition-opacity duration-150"
@@ -44,7 +44,6 @@ function BentoCard({ children, className = "" }: BentoCardProps) {
           background: "radial-gradient(circle, rgba(var(--accent-rgb, 120,100,255), 0.15) 0%, transparent 70%)",
         }}
       />
-
       {children}
     </div>
   );
@@ -57,7 +56,10 @@ export const Features = () => {
 
         {/* Header */}
         <div className="flex flex-col gap-6 items-center">
-          <div className="border border-accent p-1 w-60 mx-auto rounded-full flex items-center justify-between mb-4">
+          <div
+            className="border border-accent p-1 w-60 mx-auto rounded-full flex items-center justify-between mb-4"
+            data-aos="fade-in"
+          >
             <Typography variant="p" color="white" className="font-inter font-medium! ml-3">
               NODO App Turnos
             </Typography>
@@ -70,8 +72,10 @@ export const Features = () => {
               </svg>
             </div>
           </div>
-          <Typography variant="h1" color="white" className="text-center">La mejor solución para tu negocio</Typography>
-          <Typography variant="p" color="white" className="text-center">
+          <Typography variant="h1" color="white" className="text-center" data-aos="fade-in" data-aos-delay="100">
+            La mejor solución para tu negocio
+          </Typography>
+          <Typography variant="p" color="white" className="text-center" data-aos="fade-in" data-aos-delay="300">
             NODO App Turnos centraliza la gestión de turnos, clientes y cobros en una sola plataforma.<br />
             Diseñada para adaptarse a cualquier tipo de servicio que trabaje con agenda, sin importar el tamaño ni el rubro.
           </Typography>
@@ -81,7 +85,11 @@ export const Features = () => {
         <div className="w-full max-w-5xl mx-auto mt-10 grid grid-cols-1 lg:grid-cols-3 lg:grid-rows-2 gap-4">
 
           {/* Card 1 — col 1, row-span-2 */}
-          <BentoCard className="rounded-xl lg:rounded-l-4xl lg:rounded-r-xl lg:row-span-2">
+          <BentoCard
+            className="rounded-xl lg:rounded-l-4xl lg:rounded-r-xl lg:row-span-2"
+            data-aos="fade-right"
+            data-aos-delay="500"
+          >
             <div className="p-8 flex flex-col gap-4">
               <Typography variant="h3" color="white">Link personalizado a tu agenda</Typography>
               <Typography variant="p" color="white">
@@ -91,7 +99,11 @@ export const Features = () => {
           </BentoCard>
 
           {/* Card 2 — col 2-3, row 1 */}
-          <BentoCard className="rounded-xl lg:col-span-2 lg:rounded-l-xl lg:rounded-tr-4xl lg:rounded-br-xl">
+          <BentoCard
+            className="rounded-xl lg:col-span-2 lg:rounded-l-xl lg:rounded-tr-4xl lg:rounded-br-xl"
+            data-aos="fade-left"
+            data-aos-delay="800"
+          >
             <div className="p-8 flex flex-col gap-4">
               <Typography variant="h4" color="white">Agenda inteligente y sin límites</Typography>
               <Typography variant="p" color="white">
@@ -101,7 +113,11 @@ export const Features = () => {
           </BentoCard>
 
           {/* Card 3 — col 2-3, row 2 */}
-          <BentoCard className="rounded-xl lg:col-span-2 lg:col-start-2 lg:row-start-2 lg:rounded-l-xl lg:rounded-tr-xl lg:rounded-br-4xl">
+          <BentoCard
+            className="rounded-xl lg:col-span-2 lg:col-start-2 lg:row-start-2 lg:rounded-l-xl lg:rounded-tr-xl lg:rounded-br-4xl"
+            data-aos="fade-left"
+            data-aos-delay="1000"
+          >
             <div className="p-8 flex flex-col gap-4">
               <Typography variant="h4" color="white">Se adapta a tu forma de trabajar</Typography>
               <Typography variant="p" color="white">
