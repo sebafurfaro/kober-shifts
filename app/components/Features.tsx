@@ -41,7 +41,7 @@ function BentoCard({ children, className = "", ...rest }: BentoCardProps) {
         ref={spotlightRef}
         className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full opacity-0 transition-opacity duration-150"
         style={{
-          background: "radial-gradient(circle, rgba(var(--accent-rgb, 120,100,255), 0.15) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(var(--accent-rgb, 20,151,181), 0.45) 0%, transparent 70%)",
         }}
       />
       {children}

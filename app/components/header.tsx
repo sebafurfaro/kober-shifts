@@ -49,14 +49,14 @@ export const Header = () => {
                                 </div>
                             </Link>
                             <div className="hidden sm:ml-6 sm:block md:mx-auto">
-                                <div className="flex space-x-4">
+                                <div className="flex gap-6 mt-2">
                                     {navItems.map((item) => {
                                         // Si el href comienza con #, usar scroll handler
                                         if (item.href.startsWith("#")) {
                                             return (
                                                 <button
                                                     key={item.href}
-                                                    className={`${scrolled ? "text-primary" : "text-white hover:text-[#1497B5]" } transition-colors duration-300 font-medium bg-transparent border-none cursor-pointer mt-2`}
+                                                    className={`${scrolled ? "text-primary" : "text-white" } relative inline cursor-pointer font-medium before:bg-accent  before:absolute before:-bottom-1 before:block before:h-[2px] before:w-full before:origin-bottom-right before:scale-x-0 before:transition before:duration-300 before:ease-in-out hover:before:origin-bottom-left hover:before:scale-x-100`}
                                                     onClick={() => {
                                                         const el = document.getElementById(item.href.slice(1));
                                                         if (el) el.scrollIntoView({ behavior: "smooth" });
@@ -71,7 +71,7 @@ export const Header = () => {
                                             <Link
                                                 key={item.href}
                                                 href={item.href}
-                                                className={`${scrolled ? "text-primary" : "text-white hover:text-[#1497B5]" } transition-colors duration-300 font-medium bg-transparent border-none cursor-pointer mt-2`}
+                                                className={`${scrolled ? "text-primary" : "text-white" } relative inline cursor-pointer font-medium before:bg-accent  before:absolute before:-bottom-1 before:block before:h-[2px] before:w-full before:origin-bottom-right before:scale-x-0 before:transition before:duration-300 before:ease-in-out hover:before:origin-bottom-left hover:before:scale-x-100`}
                                             >
                                                 {item.label}
                                             </Link>
@@ -84,9 +84,9 @@ export const Header = () => {
                         {/* Right side actions */}
                         <div className="absolute inset-y-0 right-0 flex items-center pr-2 md:static sm:inset-auto sm:ml-6 sm:pr-0">
 
-                            <Button as={Link} href="https://wa.me/5491173740338?text=Hola, quiero saber más sobre NODO App Turnos" variant="solid" radius="full" color="primary">
-                                Comenzar ahora!
-                            </Button>
+                            <Link href="https://wa.me/5491173740338?text=Hola, quiero saber más sobre NODO App Turnos" className="relative flex h-[48px] w-48 items-center justify-center font-semibold overflow-hidden bg-primary text-white rounded-full shadow-2xl transition-all before:absolute before:h-0 before:w-0 before:rounded-full before:bg-accent before:duration-500 before:ease-out hover:before:h-56 hover:before:w-56 hover:text-white" target="_blank">
+                                <span className="relative z-10">Comenzar ahora!</span>
+                            </Link>
                         </div>
                     </div>
                 </div>

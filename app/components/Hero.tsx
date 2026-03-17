@@ -37,7 +37,11 @@ export const Hero = () => {
               En NODO App, creemos que la agenda es el corazón del negocio, no una función premium. Por eso, nuestro plan incluye sin restricciones las herramientas fundamentales para organizarte y crecer.
             </Typography>
             <div className="mt-5 flex items-center justify-center gap-x-6" data-aos="zoom-in" data-aos-delay="200">
-              <Link href={"https://wa.me/5491173740338?text=Hola, quiero saber más sobre NODO App Turnos"} className="font-bold text-xl bg-white px-6 py-3 rounded-full relative w-fit">Comenzar ahora</Link>
+              <Link 
+                href={"https://wa.me/5491173740338?text=Hola, quiero saber más sobre NODO App Turnos"} 
+                className="relative flex h-[50px] w-48 items-center justify-center font-semibold overflow-hidden bg-white text-primary rounded-full shadow-2xl transition-all before:absolute before:h-0 before:w-0 before:rounded-full before:bg-accent before:duration-500 before:ease-out hover:shadow-accent hover:before:h-56 hover:before:w-56 hover:text-white">
+                  <span className="z-10 relative">Comenzar ahora</span>
+                </Link>
             </div>
           </div>
         </div>
