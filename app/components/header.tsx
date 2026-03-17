@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@heroui/react";
-import { Menu, X } from "lucide-react";
 import Logo from "@/app/branding/Logo";
 import Link from "next/link";
 import React from "react";
@@ -9,8 +8,19 @@ import { useState, useEffect } from "react";
 
 const SCROLL_THRESHOLD = 100;
 
-export const Header = ({ mobileMenuOpen, setMobileMenuOpen, navItems }: { mobileMenuOpen: boolean, setMobileMenuOpen: (open: boolean) => void, navItems: { label: string, href: string }[] }) => {
+export const Header = () => {
     const [scrolled, setScrolled] = useState(false);
+    
+      const navItems = [
+        {
+          label: "Precios",
+          href: "#precios"
+        },
+        {
+          label: "Beneficios",
+          href: "#beneficios"
+        }
+      ]
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY >= SCROLL_THRESHOLD);
@@ -23,8 +33,8 @@ export const Header = ({ mobileMenuOpen, setMobileMenuOpen, navItems }: { mobile
         <header
             className={`py-2 px-4 fixed left-0 right-0 mx-auto w-full z-9990 transition-all duration-300 ${
                 scrolled
-                    ? "top-0 bg-linear-to-b from-white/20 to-transparent backdrop-blur-md max-w-full shadow-none"
-                    : "top-4 shadow-none bg-white/10 border border-slate-100 rounded-full md:max-w-3xl md:mx-auto"
+                    ? "top-0 bg-white max-w-full shadow-md"
+                    : "top-0 shadow-none bg-white/0 rounded-full md:max-w-3xl md:mx-auto"
             }`}
         >
             <nav className="">
@@ -35,7 +45,7 @@ export const Header = ({ mobileMenuOpen, setMobileMenuOpen, navItems }: { mobile
                             <Link href="/">
                                 <div className="flex shrink-0 items-center gap-2">
                                     <Logo width={32} height={32} />
-                                    <h2 className="text-base font-bold text-center text-black">NODO <span className="bg-linear-to-r from-[#1A237E] via-[#1497B5] to-[#26A69A] bg-clip-text text-transparent">App</span> </h2>
+                                    <h2 className={`text-base font-bold text-center text-white transition-all duration-300 ease-in-out ${scrolled ? "opacity-0" : "opacity-100"}`}>NODO App</h2>
                                 </div>
                             </Link>
                             <div className="hidden sm:ml-6 sm:block md:mx-auto">
@@ -46,7 +56,7 @@ export const Header = ({ mobileMenuOpen, setMobileMenuOpen, navItems }: { mobile
                                             return (
                                                 <button
                                                     key={item.href}
-                                                    className="text-[#1A237E] hover:text-[#1497B5] transition-colors duration-300 font-medium bg-transparent border-none cursor-pointer"
+                                                    className={`${scrolled ? "text-primary" : "text-white hover:text-[#1497B5]" } transition-colors duration-300 font-medium bg-transparent border-none cursor-pointer mt-2`}
                                                     onClick={() => {
                                                         const el = document.getElementById(item.href.slice(1));
                                                         if (el) el.scrollIntoView({ behavior: "smooth" });
@@ -61,7 +71,7 @@ export const Header = ({ mobileMenuOpen, setMobileMenuOpen, navItems }: { mobile
                                             <Link
                                                 key={item.href}
                                                 href={item.href}
-                                                className="text-[#1A237E] hover:text-[#1497B5] transition-colors duration-300 font-medium"
+                                                className={`${scrolled ? "text-primary" : "text-white hover:text-[#1497B5]" } transition-colors duration-300 font-medium bg-transparent border-none cursor-pointer mt-2`}
                                             >
                                                 {item.label}
                                             </Link>

@@ -71,7 +71,6 @@ export const Plans = () => {
       const features = [
         "Turnos ilimitados",
         "Link personalizado de reservas",
-        "Confirmación de turnos por mail",
         "Métricas de la plataforma",
         "Franjas horarias de disponibilidad",
         "Tiempo de vacaciones",
@@ -82,35 +81,35 @@ export const Plans = () => {
 
     return(
       <>
-        <section className="bg-white py-28" id="precios">
-          <div className="max-w-7xl w-full mx-auto px-4 grid grid-cols-1 md:grid-cols-2 items-center md:items-start gap-8">
+        <section className="bg-gradient-to-b from-gray-900 to-gray-800 relative min-h-screen" id="precios">
+          <img src="/glow-hero.svg" alt="" className="absolute bottom-0 z-0" />
+          <div className="max-w-7xl w-full mx-auto px-4 flex flex-col items-center gap-8">
             <div className="space-y-4">
-              <Typography variant="h2" className="font-bold text-center md:text-left text-primary">Un plan simple que crece con tu negocio</Typography>
-              <Typography variant="p" className="font-medium! text-center md:text-left text-slate-900">Empezá con un usuario y sumá profesionales y recordatorios cuando necesités. Sin límites de turnos. Sin sorpresas.</Typography>
+              <Typography variant="h2" color="white" className="font-bold text-center">Un plan simple que crece con tu negocio</Typography>
+              <Typography variant="p" color="white" className="font-medium! text-center">Empezá con un usuario y sumá colaboradores. Sin límites de turnos. Sin sorpresas.</Typography>
             </div>
-            <Card className="max-w-lg mx-auto w-full p-5">
+            <Card className="max-w-lg mx-auto w-full p-5 bg-white/10 border border-white/10 backdrop-blur-md shadow-xl">
               <CardHeader>
-                  <Typography variant="h5" className="text-2xl font-bold text-center text-slate-900">Todo Incluido</Typography>
+                  <Typography variant="h4" color="white" className="text-center mx-auto">Todo Incluido</Typography>
               </CardHeader>
               <CardBody>
                 <ul className="list-none list-inside text-sm font-medium text-slate-800 space-y-1">
                   {features.map((feature) => (
                     <li key={feature} className="flex items-center">
-                      <Check className="h-3 w-3 text-green-600 mr-1" />
-                      {feature}
+                      <Check className="h-3 w-3 text-green-600 mr-2" />
+                      <Typography color="white" variant="p" className="text-sm">{feature}</Typography>
                     </li>
                   ))}
                 </ul>
               </CardBody>
               <CardFooter className="flex flex-col gap-4">
                 <div className="w-full">
-          
                   <Slider
                     size="sm"
-                    className="max-w-full"
+                    className="max-w-full text-white"
                     value={userCount}
                     onChange={(value) => setUserCount(Array.isArray(value) ? value[0] : value)}
-                    label=""
+                    label={<Typography variant="p" color="white" className="mb-3">Selecciona la cantidad de colaboradores</Typography>}
                     marks={[
                       { value: 1, label: "" },
                       { value: 5, label: "" },
@@ -123,15 +122,24 @@ export const Plans = () => {
                     showTooltip={true}
                     step={1}
                   />
+                  <div className="w-full flex items-center justify-between mb-2 -mt-3">
+                    <span className="text-white text-sm ml-2">1</span>
+                    <span className="text-white text-sm">20</span>
+                  </div>
                 </div>
                 <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-end gap-1">
-                      <span className="text-sm font-medium text-slate-700">$</span>
-                      <span className="text-5xl font-semibold text-primary">{formattedPrice}</span>
-                      <span className="text-sm font-medium text-slate-700">/ mes</span>
+                    <div className="flex items-end gap-2 text-white">
+                      <span className="text-sm font-semibold">Desde</span>
+                      <span className="text-sm font-medium">$</span>
+                      <span className="text-5xl font-semibold">{formattedPrice}</span>
+                      <span className="text-sm font-medium">/ mes</span>
                     </div>
                   </div>
-                <Button as={Link} href={`https://wa.me/5491173740338?text=${message}`} variant="solid" color="primary" className="w-full uppercase font-medium">Comprar</Button>
+                <Button 
+                  as={Link} 
+                  href={`https://wa.me/5491173740338?text=${message}`} 
+                  variant="solid" 
+                  className="w-full uppercase font-medium bg-accent text-white">Comprar</Button>
               </CardFooter>
             </Card>
           </div>
