@@ -9,20 +9,9 @@ import { Footer } from "../components/Footer";
 
 
 export default function PolicyPage() {
-    const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-    const navItems = [
-    {
-      label: "Precios",
-      href: "#precios"
-    },
-    {
-      label: "Beneficios",
-      href: "#beneficios"
-    }
-  ]
     return (
       <div className="min-h-screen bg-white font-primary w-full">
-        <Header mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} navItems={navItems} />
+        <Header />
         <section className="bg-linear-to-b from-blue-200 via-blue-50 to-white py-16">
           <div className="max-w-6xl mx-auto w-full px-4 md:px-2 mt-10 space-y-6 items-center">
             <Typography variant="h2" className="text-primary">Politicas de privacidad</Typography>            
