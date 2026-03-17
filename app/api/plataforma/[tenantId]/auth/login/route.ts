@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findUserByEmail, findUserByEmailAnyTenant } from "@/lib/db";
+import { findUserByEmail } from "@/lib/db";
 import { createSessionCookieValue, getSessionCookieOptions, SESSION_COOKIE } from "@/lib/session";
 import { verifyPassword } from "@/lib/auth";
 
@@ -15,18 +15,6 @@ export async function POST(
   try {
     const user = email ? await findUserByEmail(email, tenantId) : null;
     if (!user) {
-      if (email) {
-        const userOtherTenant = await findUserByEmailAnyTenant(email);
-        if (userOtherTenant && userOtherTenant.tenantId !== tenantId) {
-          return NextResponse.json(
-            {
-              error: "El correo está registrado en otro tenant. Usá la URL correcta para ingresar.",
-              correctTenantId: userOtherTenant.tenantId,
-            },
-            { status: 401 }
-          );
-        }
-      }
       return NextResponse.json({ error: "Credenciales incorrectas" }, { status: 401 });
     }
 
