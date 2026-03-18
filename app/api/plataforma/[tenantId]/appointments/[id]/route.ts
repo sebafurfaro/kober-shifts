@@ -5,8 +5,9 @@ import { AppointmentStatus, Role } from "@/lib/types";
 import { utcToMySQLDate } from "@/lib/timezone";
 import mysql from "@/lib/mysql";
 import { randomUUID } from "crypto";
-import { renderBasicTemplate, sendMail, getTurnoConfirmadoPacienteContent, getTurnoConfirmadoProfesionalContent } from "@/lib/email";
+import { renderBasicTemplate, sendMail, getTurnoConfirmadoPacienteContent } from "@/lib/email";
 import { mysqlDateToUTC, formatInBuenosAires } from "@/lib/timezone";
+import { getTenantSettingsRow } from "@/lib/settings-db";
 
 async function ensurePaymentsTable() {
   await mysql.execute(`
@@ -126,8 +127,16 @@ export async function PATCH(
 
   if (status === AppointmentStatus.CONFIRMED && appointment.status !== AppointmentStatus.CONFIRMED) {
     try {
-      const data = await findAppointmentWithRelations(id, tenantId);
-      if (data) {
+      const [settingsRow, data] = await Promise.all([
+        getTenantSettingsRow(tenantId),
+        findAppointmentWithRelations(id, tenantId),
+      ]);
+      const settings = (settingsRow?.settings && typeof settingsRow.settings === "object")
+        ? settingsRow.settings as Record<string, unknown>
+        : {};
+      const sendEmailConfirmation = settings.sendEmailConfirmation === true;
+
+      if (sendEmailConfirmation && data && data.patient.email) {
         const startAt = data.appointment.startAt instanceof Date
           ? data.appointment.startAt
           : new Date(data.appointment.startAt);
@@ -138,12 +147,6 @@ export async function PATCH(
           fechaHora: startFormatted,
           sede: data.location.name,
         });
-        const profContent = getTurnoConfirmadoProfesionalContent({
-          pacienteNombre: data.patient.name,
-          pacienteEmail: data.patient.email,
-          sede: data.location.name,
-          fechaHora: startFormatted,
-        });
         await sendMail({
           to: data.patient.email,
           subject: "Turno confirmado",
@@ -152,16 +155,6 @@ export async function PATCH(
             title: "Turno confirmado",
             preview: pacienteContent.preview,
             body: pacienteContent.bodyHtml,
-          }),
-        });
-        await sendMail({
-          to: data.professional.email,
-          subject: "Turno confirmado",
-          text: profContent.text,
-          html: renderBasicTemplate({
-            title: "Turno confirmado",
-            preview: profContent.preview,
-            body: profContent.bodyHtml,
           }),
         });
       }

@@ -5,9 +5,10 @@ import { getTenantSettingsRow } from "@/lib/settings-db";
 import { createAppointmentEvent } from "@/lib/googleCalendar";
 import { AppointmentStatus, Role } from "@/lib/types";
 import { randomUUID } from "crypto";
-import { utcToMySQLDate, BUENOS_AIRES_TIMEZONE } from "@/lib/timezone";
+import { utcToMySQLDate, BUENOS_AIRES_TIMEZONE, mysqlDateToUTC, formatInBuenosAires } from "@/lib/timezone";
 import { toZonedTime } from "date-fns-tz";
 import { getProfessionalAvailableDayNumbers } from "@/lib/professional-availability";
+import { renderBasicTemplate, sendMail, getTurnoConfirmadoPacienteContent } from "@/lib/email";
 
 export async function GET(
   req: Request,
@@ -218,10 +219,12 @@ export async function POST(
 
   // Misma lógica que appointments/request: seña → PENDING_DEPOSIT; sin seña y manualTurnConfirmation → REQUESTED; sin seña y !manualTurnConfirmation → CONFIRMED
   let manualTurnConfirmation = false;
+  let sendEmailConfirmation = false;
   try {
     const row = await getTenantSettingsRow(tenantId);
-    const settings = row?.settings && typeof row.settings === "object" ? row.settings : {};
-    manualTurnConfirmation = (settings as Record<string, unknown>).manualTurnConfirmation === true;
+    const settings = row?.settings && typeof row.settings === "object" ? row.settings as Record<string, unknown> : {};
+    manualTurnConfirmation = settings.manualTurnConfirmation === true;
+    sendEmailConfirmation = settings.sendEmailConfirmation === true;
   } catch {
     // default: auto-confirm when no seña
   }
@@ -271,6 +274,29 @@ export async function POST(
     patientFirstName: patient.firstName ?? null,
     patientLastName: patient.lastName ?? null,
   });
+
+  if (initialStatus === AppointmentStatus.CONFIRMED && sendEmailConfirmation && patient.email) {
+    try {
+      const startFormatted = formatInBuenosAires(mysqlDateToUTC(startAt!), "dd/MM/yyyy HH:mm");
+      const pacienteContent = getTurnoConfirmadoPacienteContent({
+        profesional: professional.name,
+        fechaHora: startFormatted,
+        sede: location?.name ?? "",
+      });
+      await sendMail({
+        to: patient.email,
+        subject: "Turno confirmado",
+        text: pacienteContent.text,
+        html: renderBasicTemplate({
+          title: "Turno confirmado",
+          preview: pacienteContent.preview,
+          body: pacienteContent.bodyHtml,
+        }),
+      });
+    } catch (error) {
+      console.error("Error sending confirmation email:", error);
+    }
+  }
 
   return NextResponse.json({ appointmentId: appointment.id, googleEventId: appointment.googleEventId });
 }

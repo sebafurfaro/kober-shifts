@@ -45,6 +45,7 @@ export async function GET(
       maxAnticipation: 30,
       defaultSlotDurationMinutes: 30,
       defaultSlotMarginMinutes: 0,
+      sendEmailConfirmation: false,
     };
 
     const merged = { ...defaultSettings, ...settingsObj };
@@ -154,6 +155,10 @@ export async function PUT(
         ? Math.max(0, parseInt(body.defaultSlotMarginMinutes, 10) || 0)
         : (typeof existingSettings.defaultSlotMarginMinutes === "number" ? existingSettings.defaultSlotMarginMinutes : 0);
 
+    const sendEmailConfirmation = typeof body.sendEmailConfirmation === "boolean"
+      ? body.sendEmailConfirmation
+      : (typeof existingSettings.sendEmailConfirmation === "boolean" ? existingSettings.sendEmailConfirmation : false);
+
     const settings = {
       isActive,
       notifications,
@@ -169,6 +174,7 @@ export async function PUT(
       maxAnticipation,
       defaultSlotDurationMinutes,
       defaultSlotMarginMinutes,
+      sendEmailConfirmation,
     };
 
     await updateTenantSettingsOnly(tenantId, settings);

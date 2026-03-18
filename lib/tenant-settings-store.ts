@@ -17,6 +17,8 @@ export interface TenantBookingSettings {
   defaultSlotDurationMinutes: number;
   /** Margen entre turnos en minutos (ej. 15); no se pueden elegir turnos consecutivos. */
   defaultSlotMarginMinutes: number;
+  /** Enviar email de confirmación al paciente cuando se confirma un turno. */
+  sendEmailConfirmation: boolean;
 }
 
 const defaultBookingSettings: TenantBookingSettings = {
@@ -27,6 +29,7 @@ const defaultBookingSettings: TenantBookingSettings = {
   maxAnticipation: 30,
   defaultSlotDurationMinutes: 30,
   defaultSlotMarginMinutes: 0,
+  sendEmailConfirmation: false,
 };
 
 interface TenantSettingsState {
@@ -77,6 +80,7 @@ export const useTenantSettingsStore = create<TenantSettingsState>()(
                 maxAnticipation: typeof data.maxAnticipation === "number" ? data.maxAnticipation : defaultBookingSettings.maxAnticipation,
                 defaultSlotDurationMinutes: typeof data.defaultSlotDurationMinutes === "number" ? data.defaultSlotDurationMinutes : defaultBookingSettings.defaultSlotDurationMinutes,
                 defaultSlotMarginMinutes: typeof data.defaultSlotMarginMinutes === "number" ? data.defaultSlotMarginMinutes : defaultBookingSettings.defaultSlotMarginMinutes,
+                sendEmailConfirmation: typeof data.sendEmailConfirmation === "boolean" ? data.sendEmailConfirmation : defaultBookingSettings.sendEmailConfirmation,
               },
             });
           } else {

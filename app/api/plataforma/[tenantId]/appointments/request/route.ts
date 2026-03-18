@@ -3,7 +3,7 @@ import { findUserById, findLocationById, findProfessionalProfileByUserId, findGo
 import { getTenantSettingsRow } from "@/lib/settings-db";
 import { getSession } from "@/lib/session";
 import { createAppointmentEvent } from "@/lib/googleCalendar";
-import { renderBasicTemplate, sendMail } from "@/lib/email";
+import { renderBasicTemplate, sendMail, getTurnoConfirmadoPacienteContent } from "@/lib/email";
 import { AppointmentStatus, Role } from "@/lib/types";
 import { randomUUID } from "crypto";
 import { realUTCToMySQLDate, mysqlDateToUTC, formatInBuenosAires, BUENOS_AIRES_TIMEZONE } from "@/lib/timezone";
@@ -84,10 +84,12 @@ export async function POST(
   const hasSenia = !!(service && service.price > 0);
 
   let manualTurnConfirmation = false;
+  let sendEmailConfirmation = false;
   try {
     const row = await getTenantSettingsRow(tenantId);
     const settings = (row?.settings && typeof row.settings === "object") ? row.settings as Record<string, unknown> : {};
     manualTurnConfirmation = settings.manualTurnConfirmation === true;
+    sendEmailConfirmation = settings.sendEmailConfirmation === true;
   } catch {
     // default: auto-confirm when no seña
   }
@@ -138,31 +140,56 @@ export async function POST(
   });
 
   const startFormatted = formatInBuenosAires(mysqlDateToUTC(startAt), "dd/MM/yyyy HH:mm");
-  await sendMail({
-    to: patient.email,
-    subject: "Turno solicitado",
-    text: `Tu turno fue solicitado.\n\nSede: ${location.name}\nInicio: ${startFormatted}`,
-    html: renderBasicTemplate({
-      title: "Turno solicitado",
-      preview: "Tu turno fue solicitado.",
-      body: `<p>Tu turno fue solicitado.</p>
-             <p><strong>Sede:</strong> ${location.name}<br/>
-             <strong>Inicio:</strong> ${startFormatted}</p>`,
-    }),
-  });
-  await sendMail({
-    to: professional.email,
-    subject: "Nuevo turno solicitado",
-    text: `Tenés un turno solicitado.\n\nPaciente: ${patient.name} (${patient.email})\nSede: ${location.name}\nInicio: ${startFormatted}`,
-    html: renderBasicTemplate({
-      title: "Nuevo turno solicitado",
-      preview: "Tenes un turno solicitado.",
-      body: `<p>Tenes un turno solicitado.</p>
-             <p><strong>Paciente:</strong> ${patient.name} (${patient.email})<br/>
-             <strong>Sede:</strong> ${location.name}<br/>
-             <strong>Inicio:</strong> ${startFormatted}</p>`,
-    }),
-  });
+
+  if (initialStatus === AppointmentStatus.CONFIRMED) {
+    if (sendEmailConfirmation && patient.email) {
+      try {
+        const pacienteContent = getTurnoConfirmadoPacienteContent({
+          profesional: professional.name,
+          fechaHora: startFormatted,
+          sede: location.name,
+        });
+        await sendMail({
+          to: patient.email,
+          subject: "Turno confirmado",
+          text: pacienteContent.text,
+          html: renderBasicTemplate({
+            title: "Turno confirmado",
+            preview: pacienteContent.preview,
+            body: pacienteContent.bodyHtml,
+          }),
+        });
+      } catch (error) {
+        console.error("Error sending confirmation email:", error);
+      }
+    }
+  } else {
+    await sendMail({
+      to: patient.email,
+      subject: "Turno solicitado",
+      text: `Tu turno fue solicitado.\n\nSede: ${location.name}\nInicio: ${startFormatted}`,
+      html: renderBasicTemplate({
+        title: "Turno solicitado",
+        preview: "Tu turno fue solicitado.",
+        body: `<p>Tu turno fue solicitado.</p>
+               <p><strong>Sede:</strong> ${location.name}<br/>
+               <strong>Inicio:</strong> ${startFormatted}</p>`,
+      }),
+    });
+    await sendMail({
+      to: professional.email,
+      subject: "Nuevo turno solicitado",
+      text: `Tenés un turno solicitado.\n\nPaciente: ${patient.name} (${patient.email})\nSede: ${location.name}\nInicio: ${startFormatted}`,
+      html: renderBasicTemplate({
+        title: "Nuevo turno solicitado",
+        preview: "Tenes un turno solicitado.",
+        body: `<p>Tenes un turno solicitado.</p>
+               <p><strong>Paciente:</strong> ${patient.name} (${patient.email})<br/>
+               <strong>Sede:</strong> ${location.name}<br/>
+               <strong>Inicio:</strong> ${startFormatted}</p>`,
+      }),
+    });
+  }
 
   return NextResponse.json({ appointmentId: appointment.id, googleEventId: appointment.googleEventId });
 }

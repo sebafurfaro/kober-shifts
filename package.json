@@ -17,6 +17,7 @@
     "migrate:mongo-to-mysql": "node scripts/migrate-mongo-settings-to-mysql.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1012.0",
     "@fullcalendar/core": "^6.1.20",
     "@fullcalendar/daygrid": "^6.1.20",
     "@fullcalendar/interaction": "^6.1.20",
@@ -43,6 +44,7 @@
     "react": "19.2.3",
     "react-apexcharts": "^1.9.0",
     "react-dom": "19.2.3",
+    "resend": "^6.9.4",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

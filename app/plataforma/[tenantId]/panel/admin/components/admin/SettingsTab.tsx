@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useParams } from "next/navigation";
 import Typography from "@/app/components/Typography";
-import { Divider, Input, Slider, Switch, Textarea, Button, Select } from "@heroui/react";
+import { Divider, Input, Slider, Switch, Textarea, Button, Select, Alert } from "@heroui/react";
 import { useTenantSettingsStore, type TenantBookingSettings } from "@/lib/tenant-settings-store";
 
 const defaultBooking: TenantBookingSettings = {
@@ -14,6 +14,7 @@ const defaultBooking: TenantBookingSettings = {
   maxAnticipation: 30,
   defaultSlotDurationMinutes: 30,
   defaultSlotMarginMinutes: 0,
+  sendEmailConfirmation: false,
 };
 
 export const SettingsTab = () => {
@@ -41,6 +42,7 @@ export const SettingsTab = () => {
           maxAnticipation: maxAnt,
           defaultSlotDurationMinutes: typeof data.defaultSlotDurationMinutes === "number" ? data.defaultSlotDurationMinutes : defaultBooking.defaultSlotDurationMinutes,
           defaultSlotMarginMinutes: typeof data.defaultSlotMarginMinutes === "number" ? data.defaultSlotMarginMinutes : defaultBooking.defaultSlotMarginMinutes,
+          sendEmailConfirmation: typeof data.sendEmailConfirmation === "boolean" ? data.sendEmailConfirmation : defaultBooking.sendEmailConfirmation,
         });
         setMaxAnticipationInput(maxAnt === -1 ? "-1" : String(maxAnt));
       })
@@ -81,6 +83,7 @@ export const SettingsTab = () => {
           maxAnticipation: maxAnt,
           defaultSlotDurationMinutes: form.defaultSlotDurationMinutes,
           defaultSlotMarginMinutes: form.defaultSlotMarginMinutes,
+          sendEmailConfirmation: form.sendEmailConfirmation,
         }),
       });
       if (res.ok) {
@@ -97,6 +100,7 @@ export const SettingsTab = () => {
             maxAnticipation: maxAnt,
             defaultSlotDurationMinutes: data.settings.defaultSlotDurationMinutes,
             defaultSlotMarginMinutes: data.settings.defaultSlotMarginMinutes,
+            sendEmailConfirmation: data.settings.sendEmailConfirmation ?? false,
           });
         }
       }
@@ -144,18 +148,38 @@ export const SettingsTab = () => {
         <Typography variant="p" size="sm" color="gray" opacity={70}>Este mensaje se mostrará cuando exista política de reembolso (cancelación o modificación de turnos).</Typography>
       </div>
       <Divider className="hidden" />
-      <div className="flex flex-col space-y-4">
-        <Typography variant="h6">Confirmación de turnos</Typography>
-        <Switch
-          isSelected={form.manualTurnConfirmation}
-          onValueChange={(checked) => setForm((f) => ({ ...f, manualTurnConfirmation: checked }))}
-          isDisabled={saving}
-        >
-          Confirmación manual de turnos
-        </Switch>
-        <Typography variant="p" size="sm" color="gray" opacity={70} >
-          Si lo mantenes desactivado, los turnos se confirmarán automáticamente al ser reservados por los clientes. Si lo activas, cada vez que un cliente reserve un turno, el turno quedará "pendiente" hasta que vos o tu equipo lo confirme manualmente desde el panel de administración. Esto te permite tener un control total sobre las reservas y evitar turnos no deseados o reservas duplicadas.
-        </Typography>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="flex flex-col space-y-4">
+          <Typography variant="h6">Confirmación de turnos</Typography>
+          <Switch
+            isSelected={form.manualTurnConfirmation}
+            onValueChange={(checked) => setForm((f) => ({ ...f, manualTurnConfirmation: checked }))}
+            isDisabled={saving}
+          >
+            Confirmación manual de turnos
+          </Switch>
+          <Typography variant="p" size="sm" color="gray" opacity={70} >
+            Si lo mantenes desactivado, los turnos se confirmarán automáticamente al ser reservados por los clientes. Si lo activas, cada vez que un cliente reserve un turno, el turno quedará "pendiente" hasta que vos o tu equipo lo confirme manualmente desde el panel de administración. Esto te permite tener un control total sobre las reservas y evitar turnos no deseados o reservas duplicadas.
+          </Typography>
+        </div>
+        <div className="flex flex-col space-y-4">
+          <Typography variant="h6">Enviar confirmación de turnos por mail</Typography>
+          <Switch
+            isSelected={form.sendEmailConfirmation}
+            onValueChange={(checked) => setForm((f) => ({ ...f, sendEmailConfirmation: checked }))}
+            isDisabled={saving}
+          >
+            Enviar por mail
+          </Switch>
+          <Alert color="warning" title="Recordá tener cargado un email válido en el receptor, es decir tu cliente o paciente." />
+          <Typography variant="p" size="sm" color="gray" opacity={70} >
+            Si mantenés esta opción desactivada, la confirmación del turno deberá ser manual a través de tu correo electrónico. 
+          </Typography>
+          <Typography variant="p" size="sm" color="gray" opacity={70} >
+            Si lo activás, en cada turno que se confirme se enviará al cliente un correo avisándole. No tiene costo adicional. 
+          </Typography>
+
+        </div>
       </div>
       <Divider />
       <div className="">
