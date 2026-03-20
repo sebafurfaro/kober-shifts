@@ -47,6 +47,9 @@ export interface User {
   gender?: Gender | null;
   nationality?: string | null;
   googleId?: string | null;
+  additionalInfo?: Array<{ id: string; title: string; description: string }> | null;
+  archives?: Array<{ id: string; label: string; url: string; createdAt: string }> | null;
+  notes?: Array<{ id: string; title: string; content: string; createdAt: string; updatedAt: string }> | null;
   passwordHash: string;
   role: Role;
   createdAt: Date;

@@ -96,7 +96,7 @@ export default function LoginPage() {
                 variant="flat"
                 onPress={() => window.location.href = `/api/plataforma/${tenantId}/auth/google`}
                 isDisabled={loading}
-                className="w-full bg-white text-black hover:bg-gray-100 border border-gray-300"
+                className="w-full bg-white text-black hover:bg-gray-100 border border-gray-300 hidden"
                 radius="none"
               >
                 <GoogleIcon />

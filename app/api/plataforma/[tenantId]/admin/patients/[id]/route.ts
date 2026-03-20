@@ -70,12 +70,16 @@ export async function PUT(
   const nationality = typeof body.nationality === "string" ? body.nationality.trim() : null;
   const tempPassword = typeof body.tempPassword === "string" ? body.tempPassword : "";
 
+  const additionalInfo = Array.isArray(body.additionalInfo) ? body.additionalInfo as User['additionalInfo'] : undefined;
+  const archives = Array.isArray(body.archives) ? body.archives as User['archives'] : undefined;
+  const notes = Array.isArray(body.notes) ? body.notes as User['notes'] : undefined;
+
   if (!firstName || !lastName) {
     return NextResponse.json({ error: "Nombre y apellido son requeridos" }, { status: 400 });
   }
 
   const name = `${firstName} ${lastName}`.trim();
-  const updateData: Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'phone' | 'address' | 'dni' | 'coverage' | 'plan' | 'dateOfBirth' | 'admissionDate' | 'gender' | 'nationality' | 'passwordHash'>> = {
+  const updateData: Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'phone' | 'address' | 'dni' | 'coverage' | 'plan' | 'dateOfBirth' | 'admissionDate' | 'gender' | 'nationality' | 'passwordHash' | 'additionalInfo' | 'archives' | 'notes'>> = {
     name,
     firstName,
     lastName,
@@ -89,6 +93,9 @@ export async function PUT(
     gender,
     nationality,
   };
+  if (additionalInfo !== undefined) updateData.additionalInfo = additionalInfo;
+  if (archives !== undefined) updateData.archives = archives;
+  if (notes !== undefined) updateData.notes = notes;
 
   // Only update password if provided
   if (tempPassword) {
@@ -98,7 +105,7 @@ export async function PUT(
     updateData.passwordHash = hashPassword(tempPassword);
   }
 
-  const updatedUser = await updateUser(id, tenantId, updateData as Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'phone' | 'address' | 'dni' | 'coverage' | 'plan' | 'dateOfBirth' | 'admissionDate' | 'gender' | 'nationality' | 'passwordHash'>>);
+  const updatedUser = await updateUser(id, tenantId, updateData);
   return NextResponse.json({
     id: updatedUser.id,
     email: updatedUser.email,
@@ -114,6 +121,9 @@ export async function PUT(
     admissionDate: updatedUser.admissionDate,
     gender: updatedUser.gender,
     nationality: updatedUser.nationality,
+    additionalInfo: updatedUser.additionalInfo ?? [],
+    archives: updatedUser.archives ?? [],
+    notes: updatedUser.notes ?? [],
   });
 }
 
