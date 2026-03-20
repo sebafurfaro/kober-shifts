@@ -74,7 +74,9 @@ export async function GET(
       orderBy = "startAt_asc";
   }
 
-  const userHasProfile = await hasProfessionalProfile(tenantId, session.userId);
+  // ADMIN ve todos los turnos del negocio; PROFESSIONAL ve solo los propios.
+  const isProfessionalOnly = session.role === "PROFESSIONAL";
+  const userHasProfile = isProfessionalOnly ? await hasProfessionalProfile(tenantId, session.userId) : false;
   const listOptions = {
     startDate,
     endDate,
@@ -82,7 +84,7 @@ export async function GET(
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
     orderBy,
-    professionalId: userHasProfile ? session.userId : undefined,
+    professionalId: isProfessionalOnly && userHasProfile ? session.userId : undefined,
   };
   const { list: appointmentList, total } = search
     ? await listAppointmentsForAdminRawWithSearch(tenantId, { ...listOptions, search })

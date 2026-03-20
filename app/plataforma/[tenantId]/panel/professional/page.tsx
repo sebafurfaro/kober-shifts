@@ -23,7 +23,7 @@ import {
   Alert,
   Divider,
 } from "@heroui/react";
-import { CircleX } from "lucide-react";
+import { CircleX, Hand } from "lucide-react";
 import { PanelHeader } from "../components/PanelHeader";
 import Typography from "@/app/components/Typography";
 import { useParams } from "next/navigation";
@@ -80,6 +80,7 @@ export default function ProfessionalPanelPage() {
   const [cancelReason, setCancelReason] = React.useState("");
   const [cancelError, setCancelError] = React.useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = React.useState(false);
+  const [attendedLoadingId, setAttendedLoadingId] = React.useState<string | null>(null);
 
   const allAppointments = React.useMemo(
     () => [...todayAppointments, ...upcomingAppointments].sort(
@@ -165,6 +166,28 @@ export default function ProfessionalPanelPage() {
     }
   };
 
+  const handleMarkAttended = async (appointment: Appointment) => {
+    setAttendedLoadingId(appointment.id);
+    try {
+      const res = await fetch(`/api/plataforma/${tenantId}/appointments/${appointment.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: "ATTENDED" }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Error al marcar como atendido");
+      }
+      await loadAppointments();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Error al marcar como atendido";
+      setLoadError(message);
+    } finally {
+      setAttendedLoadingId(null);
+    }
+  };
+
   const isCancellable = (status: string) =>
     status === "REQUESTED" || status === "PENDING_DEPOSIT" || status === "CONFIRMED";
 
@@ -244,6 +267,20 @@ export default function ProfessionalPanelPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1">
+                          <Tooltip content={appointment.status === "CONFIRMED" ? "Marcar como atendido" : "Solo para turnos confirmados"} placement="top">
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="light"
+                              color="primary"
+                              isDisabled={appointment.status !== "CONFIRMED" || attendedLoadingId === appointment.id}
+                              isLoading={attendedLoadingId === appointment.id}
+                              onPress={() => appointment.status === "CONFIRMED" && handleMarkAttended(appointment)}
+                              aria-label="Atendido"
+                            >
+                              <Hand className="w-4 h-4" />
+                            </Button>
+                          </Tooltip>
                           {isCancellable(appointment.status) && (
                             <Tooltip content="Cancelar" placement="top">
                               <Button
@@ -301,6 +338,18 @@ export default function ProfessionalPanelPage() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-1 mt-3">
+                    <Button
+                      size="sm"
+                      variant="solid"
+                      color="primary"
+                      isDisabled={apt.status !== "CONFIRMED" || attendedLoadingId === apt.id}
+                      isLoading={attendedLoadingId === apt.id}
+                      onPress={() => apt.status === "CONFIRMED" && handleMarkAttended(apt)}
+                      aria-label="Atendido"
+                      startContent={<Hand className="w-4 h-4" />}
+                    >
+                      Atendido
+                    </Button>
                     {isCancellable(apt.status) && (
                       <Button
                         size="sm"

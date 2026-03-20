@@ -82,7 +82,14 @@ export async function DELETE(
     await deleteLocation(id, tenantId);
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to delete location" }, { status: 500 });
+    const isForeignKey = error?.code === "ER_ROW_IS_REFERENCED_2" || /foreign key constraint/i.test(error?.message ?? "");
+    if (isForeignKey) {
+      return NextResponse.json(
+        { error: "No se puede eliminar esta sede porque tiene turnos asociados. Cancelá o reasigná los turnos antes de eliminarla." },
+        { status: 409 }
+      );
+    }
+    return NextResponse.json({ error: "No se pudo eliminar la sede." }, { status: 500 });
   }
 }
 

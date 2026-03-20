@@ -62,15 +62,19 @@ export async function POST(
   }
 
   const allowedDays = getProfessionalAvailableDayNumbers(professionalProfile);
-  if (allowedDays.length > 0) {
-    const startAtInBA = toZonedTime(startAt, BUENOS_AIRES_TIMEZONE);
-    const dayOfWeek = startAtInBA.getDay();
-    if (!allowedDays.includes(dayOfWeek)) {
-      return NextResponse.json(
-        { error: "La fecha/hora elegida no está dentro de la disponibilidad del profesional." },
-        { status: 400 }
-      );
-    }
+  if (allowedDays.length === 0) {
+    return NextResponse.json(
+      { error: "El profesional no tiene franjas horarias configuradas y no puede recibir turnos." },
+      { status: 400 }
+    );
+  }
+  const startAtInBA = toZonedTime(startAt, BUENOS_AIRES_TIMEZONE);
+  const dayOfWeek = startAtInBA.getDay();
+  if (!allowedDays.includes(dayOfWeek)) {
+    return NextResponse.json(
+      { error: "La fecha/hora elegida no está dentro de la disponibilidad del profesional." },
+      { status: 400 }
+    );
   }
 
   const [googleOAuth, location] = await Promise.all([

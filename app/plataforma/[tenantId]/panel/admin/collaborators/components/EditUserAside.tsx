@@ -2,8 +2,22 @@
 
 import * as React from "react";
 import { Button, Input, Select, SelectItem, Checkbox } from "@heroui/react";
-import { X } from "lucide-react";
-import { validatePassword } from "@/lib/auth";
+import { X, CheckCircle2, XCircle } from "lucide-react";
+
+function ValidationItem({ isValid, text }: { isValid: boolean; text: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      {isValid ? (
+        <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+      ) : (
+        <XCircle className="w-4 h-4 text-gray-400 opacity-50 shrink-0" />
+      )}
+      <span className={`text-xs transition-colors ${isValid ? "text-success" : "text-gray-500"}`}>
+        {text}
+      </span>
+    </div>
+  );
+}
 
 const ROLE_OPTIONS = [
   { value: "ADMIN", label: "Administrador" },
@@ -50,6 +64,16 @@ export function EditUserAside({
   const [errors, setErrors] = React.useState<Partial<Record<keyof EditUserFormData, string>>>({});
   const [submitting, setSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const [isPasswordTouched, setIsPasswordTouched] = React.useState(false);
+
+  const passwordValidations = React.useMemo(() => ({
+    minLength: (formData.tempPassword?.length ?? 0) >= 8,
+    hasUpperCase: /[A-Z]/.test(formData.tempPassword ?? ""),
+    hasNumber: /[0-9]/.test(formData.tempPassword ?? ""),
+    hasSpecialChar: /[^a-zA-Z0-9]/.test(formData.tempPassword ?? ""),
+  }), [formData.tempPassword]);
+
+  const isPasswordValid = Object.values(passwordValidations).every(Boolean);
 
   React.useEffect(() => {
     if (open) {
@@ -67,6 +91,7 @@ export function EditUserAside({
       }
       setErrors({});
       setSubmitError(null);
+      setIsPasswordTouched(false);
     }
   }, [open, initialData]);
 
@@ -79,20 +104,15 @@ export function EditUserAside({
     if (mode === "create") {
       if (!formData.tempPassword?.trim()) {
         newErrors.tempPassword = "La contraseña es requerida";
-      } else {
-        const passwordValidation = validatePassword(formData.tempPassword);
-        if (!passwordValidation.isValid) {
-          newErrors.tempPassword = passwordValidation.errors.join(", ");
-        }
+      } else if (!isPasswordValid) {
+        newErrors.tempPassword = "La contraseña no cumple con los requisitos de seguridad";
       }
-    } else if (mode === "edit" && formData.tempPassword?.trim()) {
-      const passwordValidation = validatePassword(formData.tempPassword);
-      if (!passwordValidation.isValid) {
-        newErrors.tempPassword = passwordValidation.errors.join(", ");
-      }
+    } else if (mode === "edit" && formData.tempPassword?.trim() && !isPasswordValid) {
+      newErrors.tempPassword = "La contraseña no cumple con los requisitos de seguridad";
     }
 
     setErrors(newErrors);
+    setIsPasswordTouched(true);
     return Object.keys(newErrors).length === 0;
   };
 
@@ -169,32 +189,38 @@ export function EditUserAside({
               autoComplete="off"
               classNames={{ label: "text-slate-800" }}
             />
-            {mode === "create" && (
-              <Input
-                label="Contraseña"
-                type="password"
-                value={formData.tempPassword ?? ""}
-                onValueChange={(v) => setFormData((prev) => ({ ...prev, tempPassword: v }))}
-                isInvalid={!!errors.tempPassword}
-                errorMessage={errors.tempPassword}
-                isRequired
-                description="Mínimo 8 caracteres, una mayúscula, un número y un caracter especial"
-                autoComplete="new-password"
-                classNames={{ label: "text-slate-800" }}
-              />
-            )}
-            {mode === "edit" && (
-              <Input
-                label="Nueva contraseña (opcional)"
-                type="password"
-                value={formData.tempPassword ?? ""}
-                onValueChange={(v) => setFormData((prev) => ({ ...prev, tempPassword: v }))}
-                isInvalid={!!errors.tempPassword}
-                errorMessage={errors.tempPassword}
-                description="Dejar en blanco para mantener la contraseña actual. Mínimo 8 caracteres, una mayúscula, un número y un caracter especial"
-                autoComplete="new-password"
-                classNames={{ label: "text-slate-800" }}
-              />
+            {(mode === "create" || mode === "edit") && (
+              <div className="space-y-2">
+                <Input
+                  label={mode === "create" ? "Contraseña" : "Nueva contraseña (opcional)"}
+                  type="password"
+                  value={formData.tempPassword ?? ""}
+                  onValueChange={(v) => {
+                    setFormData((prev) => ({ ...prev, tempPassword: v }));
+                    if (errors.tempPassword) setErrors((prev) => ({ ...prev, tempPassword: undefined }));
+                  }}
+                  onBlur={() => {
+                    if (formData.tempPassword?.trim()) setIsPasswordTouched(true);
+                  }}
+                  isInvalid={isPasswordTouched && (mode === "create" || !!formData.tempPassword?.trim()) && !isPasswordValid}
+                  isRequired={mode === "create"}
+                  autoComplete="new-password"
+                  classNames={{ label: "text-slate-800" }}
+                />
+                {(mode === "edit" && !formData.tempPassword?.trim()) ? (
+                  <p className="text-xs text-gray-500">Dejá en blanco para mantener la contraseña actual.</p>
+                ) : (
+                  <div className="p-3 bg-white rounded-lg border border-gray-200">
+                    <p className="text-xs font-semibold mb-2">Requisitos de la contraseña:</p>
+                    <div className="space-y-1">
+                      <ValidationItem isValid={passwordValidations.minLength} text="Mínimo 8 caracteres" />
+                      <ValidationItem isValid={passwordValidations.hasUpperCase} text="Al menos una mayúscula" />
+                      <ValidationItem isValid={passwordValidations.hasNumber} text="Al menos un número" />
+                      <ValidationItem isValid={passwordValidations.hasSpecialChar} text="Al menos un carácter especial" />
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
             <Select
               label="Rol"
