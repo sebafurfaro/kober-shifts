@@ -78,8 +78,13 @@ export function renderBasicTemplate(input: {
 
 export async function sendMail(input: { to: string; subject: string; text: string; html?: string }) {
   const resendKey = process.env.RESEND_API_KEY;
-  const smtpFrom = process.env.SMTP_FROM || "no-reply@example.com";
-  const resendFrom = process.env.RESEND_FROM || smtpFrom || "no-reply@resend.dev";
+  const smtpFrom = process.env.SMTP_FROM;
+  const resendFrom = process.env.RESEND_FROM || smtpFrom;
+
+  if (!resendFrom && !smtpFrom) {
+    console.error("sendMail: RESEND_FROM no está configurado. Configurá la variable de entorno con un dominio verificado en Resend.");
+    return;
+  }
 
   if (resendKey) {
     try {
