@@ -417,7 +417,7 @@ export function Aside({
             <>
               <SectionTitle label="Ayuda" isCollapsed={effectiveIsCollapsed} />
               <NavItem
-                href={"https://amethyst-pulsar-ff6.notion.site/Te-damos-la-bienvenida-a-Turnos-Nodo-App-3234a9e6636f80b8b740c5ff591a02cf"}
+                href={"https://nodoapp.gitbook.io/nodoapp-docs"}
                 label="Documentación"
                 icon={<BookOpen className="w-5 h-5" />}
                 isCollapsed={effectiveIsCollapsed}
