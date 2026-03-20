@@ -5,7 +5,7 @@ import { AppointmentStatus, Role } from "@/lib/types";
 import { utcToMySQLDate } from "@/lib/timezone";
 import mysql from "@/lib/mysql";
 import { randomUUID } from "crypto";
-import { renderBasicTemplate, sendMail, getTurnoConfirmadoPacienteContent } from "@/lib/email";
+import { renderBasicTemplate, sendMail, getTurnoConfirmadoPacienteContent, formatLocationAddress } from "@/lib/email";
 import { mysqlDateToUTC, formatInBuenosAires } from "@/lib/timezone";
 import { getTenantSettingsRow } from "@/lib/settings-db";
 
@@ -146,6 +146,7 @@ export async function PATCH(
           profesional: profesionalName,
           fechaHora: startFormatted,
           sede: data.location.name,
+          sedeAddress: formatLocationAddress(data.location),
         });
         await sendMail({
           to: data.patient.email,

@@ -162,7 +162,7 @@ export const SettingsTab = () => {
             Si lo mantenes desactivado, los turnos se confirmarán automáticamente al ser reservados por los clientes. Si lo activas, cada vez que un cliente reserve un turno, el turno quedará "pendiente" hasta que vos o tu equipo lo confirme manualmente desde el panel de administración. Esto te permite tener un control total sobre las reservas y evitar turnos no deseados o reservas duplicadas.
           </Typography>
         </div>
-        <div className="hidden flex-col space-y-4">
+        <div className="flex flex-col space-y-4">
           <Typography variant="h6">Enviar confirmación de turnos por mail</Typography>
           <Switch
             isSelected={form.sendEmailConfirmation}

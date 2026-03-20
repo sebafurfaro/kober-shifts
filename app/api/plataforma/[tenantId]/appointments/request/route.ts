@@ -3,7 +3,7 @@ import { findUserById, findLocationById, findProfessionalProfileByUserId, findGo
 import { getTenantSettingsRow } from "@/lib/settings-db";
 import { getSession } from "@/lib/session";
 import { createAppointmentEvent } from "@/lib/googleCalendar";
-import { renderBasicTemplate, sendMail, getTurnoConfirmadoPacienteContent } from "@/lib/email";
+import { renderBasicTemplate, sendMail, getTurnoConfirmadoPacienteContent, formatLocationAddress } from "@/lib/email";
 import { AppointmentStatus, Role } from "@/lib/types";
 import { randomUUID } from "crypto";
 import { realUTCToMySQLDate, mysqlDateToUTC, formatInBuenosAires, BUENOS_AIRES_TIMEZONE } from "@/lib/timezone";
@@ -152,6 +152,7 @@ export async function POST(
           profesional: professional.name,
           fechaHora: startFormatted,
           sede: location.name,
+          sedeAddress: formatLocationAddress(location),
         });
         await sendMail({
           to: patient.email,

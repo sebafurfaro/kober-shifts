@@ -8,7 +8,7 @@ import { randomUUID } from "crypto";
 import { utcToMySQLDate, BUENOS_AIRES_TIMEZONE, mysqlDateToUTC, formatInBuenosAires } from "@/lib/timezone";
 import { toZonedTime } from "date-fns-tz";
 import { getProfessionalAvailableDayNumbers } from "@/lib/professional-availability";
-import { renderBasicTemplate, sendMail, getTurnoConfirmadoPacienteContent } from "@/lib/email";
+import { renderBasicTemplate, sendMail, getTurnoConfirmadoPacienteContent, formatLocationAddress } from "@/lib/email";
 
 export async function GET(
   req: Request,
@@ -286,6 +286,7 @@ export async function POST(
         profesional: professional.name,
         fechaHora: startFormatted,
         sede: location?.name ?? "",
+        sedeAddress: location ? formatLocationAddress(location) : undefined,
       });
       await sendMail({
         to: patient.email,

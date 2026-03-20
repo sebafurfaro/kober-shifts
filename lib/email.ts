@@ -1,17 +1,49 @@
 import nodemailer from "nodemailer";
 
+/**
+ * Construye la dirección completa de una sede a partir de sus campos.
+ * Junta las partes no vacías separadas por coma.
+ */
+export function formatLocationAddress(location: {
+  name: string;
+  address?: string | null;
+  street?: string | null;
+  streetNumber?: string | null;
+  floor?: string | null;
+  apartment?: string | null;
+  neighborhood?: string | null;
+  province?: string | null;
+  postalCode?: string | null;
+}): string {
+  const parts: string[] = [];
+
+  const streetLine = [location.street, location.streetNumber].filter(Boolean).join(" ");
+  if (streetLine) parts.push(streetLine);
+  else if (location.address) parts.push(location.address);
+
+  if (location.floor) parts.push(`Piso ${location.floor}`);
+  if (location.apartment) parts.push(`Dpto. ${location.apartment}`);
+  if (location.neighborhood) parts.push(location.neighborhood);
+  if (location.province) parts.push(location.province);
+  if (location.postalCode) parts.push(location.postalCode);
+
+  return parts.length > 0 ? parts.join(", ") : location.name;
+}
+
 /** Variables para el mensaje de turno confirmado (paciente) */
 export type TurnoConfirmadoPacienteVars = {
   profesional: string;
   fechaHora: string;
   sede: string;
+  sedeAddress?: string;
 };
 
 /** Genera el texto y el HTML del cuerpo del email de "turno confirmado" para el paciente. */
 export function getTurnoConfirmadoPacienteContent(v: TurnoConfirmadoPacienteVars) {
   const sentence = `El turno con ${v.profesional} para el día ${v.fechaHora} en ${v.sede} ha sido confirmado.`;
-  const text = `Tu turno fue confirmado.\n\n${sentence}`;
-  const bodyHtml = `<p>Tu turno fue confirmado.</p><p>${sentence}</p><p><strong>Sede:</strong> ${v.sede}<br/><strong>Fecha y hora:</strong> ${v.fechaHora}</p>`;
+  const sedeDetail = v.sedeAddress ? `${v.sede}, ${v.sedeAddress}` : v.sede;
+  const text = `Tu turno fue confirmado.\n\n${sentence}\n\nSede: ${sedeDetail}\nFecha y hora: ${v.fechaHora}`;
+  const bodyHtml = `<p>Tu turno fue confirmado.</p><p>${sentence}</p><p><strong>Sede:</strong> ${sedeDetail}<br/><strong>Fecha y hora:</strong> ${v.fechaHora}</p>`;
   return { text, bodyHtml, preview: sentence };
 }
 
@@ -20,13 +52,15 @@ export type TurnoConfirmadoProfesionalVars = {
   pacienteNombre: string;
   pacienteEmail: string;
   sede: string;
+  sedeAddress?: string;
   fechaHora: string;
 };
 
 /** Genera el texto y el HTML del cuerpo del email de "turno confirmado" para el profesional. */
 export function getTurnoConfirmadoProfesionalContent(v: TurnoConfirmadoProfesionalVars) {
-  const text = `Turno confirmado.\n\nPaciente: ${v.pacienteNombre} (${v.pacienteEmail})\nSede: ${v.sede}\nInicio: ${v.fechaHora}`;
-  const bodyHtml = `<p>Turno confirmado.</p><p><strong>Paciente:</strong> ${v.pacienteNombre} (${v.pacienteEmail})<br/><strong>Sede:</strong> ${v.sede}<br/><strong>Inicio:</strong> ${v.fechaHora}</p>`;
+  const sedeDetail = v.sedeAddress ? `${v.sede}, ${v.sedeAddress}` : v.sede;
+  const text = `Turno confirmado.\n\nPaciente: ${v.pacienteNombre} (${v.pacienteEmail})\nSede: ${sedeDetail}\nInicio: ${v.fechaHora}`;
+  const bodyHtml = `<p>Turno confirmado.</p><p><strong>Paciente:</strong> ${v.pacienteNombre} (${v.pacienteEmail})<br/><strong>Sede:</strong> ${sedeDetail}<br/><strong>Inicio:</strong> ${v.fechaHora}</p>`;
   return { text, bodyHtml, preview: "Turno confirmado." };
 }
 

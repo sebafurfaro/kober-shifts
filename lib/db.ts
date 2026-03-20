@@ -1062,6 +1062,8 @@ export async function findAppointmentWithRelations(id: string, tenantId: string)
       go.scope as go_scope, go.tokenType as go_tokenType, go.expiryDate as go_expiryDate,
       go.createdAt as go_createdAt, go.updatedAt as go_updatedAt,
       l.id as l_id, l.tenantId as l_tenantId, l.name as l_name, l.address as l_address, l.phone as l_phone,
+      l.street as l_street, l.streetNumber as l_streetNumber, l.floor as l_floor, l.apartment as l_apartment,
+      l.neighborhood as l_neighborhood, l.province as l_province, l.postalCode as l_postalCode,
       l.createdAt as l_createdAt, l.updatedAt as l_updatedAt
     FROM appointments a
     INNER JOIN users p ON a.patientId = p.id AND a.tenantId = p.tenantId
@@ -1128,6 +1130,13 @@ export async function findAppointmentWithRelations(id: string, tenantId: string)
       name: row.l_name,
       address: row.l_address,
       phone: row.l_phone,
+      street: row.l_street,
+      streetNumber: row.l_streetNumber,
+      floor: row.l_floor,
+      apartment: row.l_apartment,
+      neighborhood: row.l_neighborhood,
+      province: row.l_province,
+      postalCode: row.l_postalCode,
       createdAt: row.l_createdAt,
       updatedAt: row.l_updatedAt,
     }),

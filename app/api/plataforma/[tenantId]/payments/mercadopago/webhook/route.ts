@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getTenantPaymentsRow } from "@/lib/settings-db";
+import { getTenantPaymentsRow, getTenantSettingsRow } from "@/lib/settings-db";
 import mysql from "@/lib/mysql";
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import crypto from "crypto";
 import { getMercadoPagoAccountByTenant, getMercadoPagoAccountWithRefresh } from "@/lib/mercadopago-accounts";
 import { findAppointmentById, updateAppointmentStatus, findAppointmentWithRelations } from "@/lib/db";
 import { AppointmentStatus } from "@/lib/types";
-import { renderBasicTemplate, sendMail, getTurnoConfirmadoPacienteContent, getTurnoConfirmadoProfesionalContent } from "@/lib/email";
+import { renderBasicTemplate, sendMail, getTurnoConfirmadoPacienteContent, getTurnoConfirmadoProfesionalContent, formatLocationAddress } from "@/lib/email";
 import { mysqlDateToUTC, formatInBuenosAires } from "@/lib/timezone";
 
 async function getTenantAccessToken(tenantId: string): Promise<string | null> {
@@ -261,8 +261,16 @@ export async function POST(
       ) {
         await updateAppointmentStatus(appointmentId, tenantId, AppointmentStatus.CONFIRMED);
         try {
-          const data = await findAppointmentWithRelations(appointmentId, tenantId);
-          if (data) {
+          const [settingsRow, data] = await Promise.all([
+            getTenantSettingsRow(tenantId),
+            findAppointmentWithRelations(appointmentId, tenantId),
+          ]);
+          const settings = settingsRow?.settings && typeof settingsRow.settings === "object"
+            ? settingsRow.settings as Record<string, unknown>
+            : {};
+          const sendEmailConfirmation = settings.sendEmailConfirmation === true;
+
+          if (data && sendEmailConfirmation) {
             const startAt = data.appointment.startAt instanceof Date
               ? data.appointment.startAt
               : new Date(data.appointment.startAt);
@@ -272,11 +280,13 @@ export async function POST(
               profesional: profesionalName,
               fechaHora: startFormatted,
               sede: data.location.name,
+              sedeAddress: formatLocationAddress(data.location),
             });
             const profContent = getTurnoConfirmadoProfesionalContent({
               pacienteNombre: data.patient.name,
               pacienteEmail: data.patient.email,
               sede: data.location.name,
+              sedeAddress: formatLocationAddress(data.location),
               fechaHora: startFormatted,
             });
             await sendMail({

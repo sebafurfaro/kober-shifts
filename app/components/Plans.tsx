@@ -71,6 +71,7 @@ export const Plans = () => {
       const features = [
         "Turnos ilimitados",
         "Link personalizado de reservas",
+        "Confirmación de turno por mail",
         "Métricas de la plataforma",
         "Franjas horarias de disponibilidad",
         "Tiempo de vacaciones",
