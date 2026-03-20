@@ -189,39 +189,34 @@ export function EditUserAside({
               autoComplete="off"
               classNames={{ label: "text-slate-800" }}
             />
-            {(mode === "create" || mode === "edit") && (
-              <div className="space-y-2">
-                <Input
-                  label={mode === "create" ? "Contraseña" : "Nueva contraseña (opcional)"}
-                  type="password"
-                  value={formData.tempPassword ?? ""}
-                  onValueChange={(v) => {
-                    setFormData((prev) => ({ ...prev, tempPassword: v }));
-                    if (errors.tempPassword) setErrors((prev) => ({ ...prev, tempPassword: undefined }));
-                  }}
-                  onBlur={() => {
-                    if (formData.tempPassword?.trim()) setIsPasswordTouched(true);
-                  }}
-                  isInvalid={isPasswordTouched && (mode === "create" || !!formData.tempPassword?.trim()) && !isPasswordValid}
-                  isRequired={mode === "create"}
-                  autoComplete="new-password"
-                  classNames={{ label: "text-slate-800" }}
-                />
-                {(mode === "edit" && !formData.tempPassword?.trim()) ? (
-                  <p className="text-xs text-gray-500">Dejá en blanco para mantener la contraseña actual.</p>
-                ) : (
-                  <div className="p-3 bg-white rounded-lg border border-gray-200">
-                    <p className="text-xs font-semibold mb-2">Requisitos de la contraseña:</p>
-                    <div className="space-y-1">
-                      <ValidationItem isValid={passwordValidations.minLength} text="Mínimo 8 caracteres" />
-                      <ValidationItem isValid={passwordValidations.hasUpperCase} text="Al menos una mayúscula" />
-                      <ValidationItem isValid={passwordValidations.hasNumber} text="Al menos un número" />
-                      <ValidationItem isValid={passwordValidations.hasSpecialChar} text="Al menos un carácter especial" />
-                    </div>
-                  </div>
-                )}
+            <div className="space-y-2">
+              <Input
+                label={mode === "create" ? "Contraseña" : "Nueva contraseña"}
+                type="password"
+                value={formData.tempPassword ?? ""}
+                onValueChange={(v) => {
+                  setFormData((prev) => ({ ...prev, tempPassword: v }));
+                  if (errors.tempPassword) setErrors((prev) => ({ ...prev, tempPassword: undefined }));
+                }}
+                onBlur={() => {
+                  if (mode === "create" || formData.tempPassword?.trim()) setIsPasswordTouched(true);
+                }}
+                isInvalid={isPasswordTouched && (mode === "create" || !!formData.tempPassword?.trim()) && !isPasswordValid}
+                isRequired={mode === "create"}
+                description={mode === "edit" ? "Dejá en blanco para mantener la contraseña actual." : undefined}
+                autoComplete="new-password"
+                classNames={{ label: "text-slate-800" }}
+              />
+              <div className="p-3 bg-white rounded-lg border border-gray-200">
+                <p className="text-xs font-semibold mb-2">Requisitos de la contraseña:</p>
+                <div className="space-y-1">
+                  <ValidationItem isValid={passwordValidations.minLength} text="Mínimo 8 caracteres" />
+                  <ValidationItem isValid={passwordValidations.hasUpperCase} text="Al menos una mayúscula" />
+                  <ValidationItem isValid={passwordValidations.hasNumber} text="Al menos un número" />
+                  <ValidationItem isValid={passwordValidations.hasSpecialChar} text="Al menos un carácter especial" />
+                </div>
               </div>
-            )}
+            </div>
             <Select
               label="Rol"
               selectedKeys={formData.role ? [formData.role] : []}
