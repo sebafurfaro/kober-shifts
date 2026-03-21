@@ -56,7 +56,10 @@ export default function PatientProfilePage() {
   React.useEffect(() => {
     const fetchPatient = async () => {
       try {
-        const res = await fetch(`/api/plataforma/${tenantId}/admin/patients/${patientId}`);
+        const res = await fetch(`/api/plataforma/${tenantId}/admin/patients/${patientId}`, {
+          cache: "no-store",
+          credentials: "include",
+        });
         if (!res.ok) throw new Error("Not found");
         const data = await res.json();
         setPatient(data);
@@ -72,7 +75,10 @@ export default function PatientProfilePage() {
   React.useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const res = await fetch(`/api/plataforma/${tenantId}/admin/appointments?patientId=${patientId}`);
+        const res = await fetch(`/api/plataforma/${tenantId}/admin/appointments?patientId=${patientId}`, {
+          cache: "no-store",
+          credentials: "include",
+        });
         if (!res.ok) throw new Error("Failed");
         const data = await res.json();
         const list: PatientAppointment[] = Array.isArray(data) ? data : (data.appointments ?? []);

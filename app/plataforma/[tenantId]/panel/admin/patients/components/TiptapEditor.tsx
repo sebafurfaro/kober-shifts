@@ -12,6 +12,7 @@ interface TiptapEditorProps {
 
 export const TiptapEditor = ({ content, onChange }: TiptapEditorProps) => {
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [StarterKit],
     content,
     onUpdate: ({ editor: e }) => {

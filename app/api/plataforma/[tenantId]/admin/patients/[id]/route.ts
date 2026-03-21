@@ -47,16 +47,53 @@ export async function PUT(
     return NextResponse.json({ error: "El usuario no es un paciente" }, { status: 400 });
   }
 
-  const firstName = typeof body.firstName === "string" ? body.firstName.trim() : "";
-  const lastName = typeof body.lastName === "string" ? body.lastName.trim() : "";
-  const phone = typeof body.phone === "string" ? body.phone.trim() : null;
-  const address = typeof body.address === "string" ? body.address.trim() : null;
-  const dni = typeof body.dni === "string" ? body.dni.trim() : null;
-  const coverage = typeof body.coverage === "string" ? body.coverage.trim() : null;
-  const plan = typeof body.plan === "string" ? body.plan.trim() : null;
-  const dateOfBirth = typeof body.dateOfBirth === "string" && body.dateOfBirth ? new Date(body.dateOfBirth) : null;
-  const admissionDate = typeof body.admissionDate === "string" && body.admissionDate ? new Date(body.admissionDate) : null;
-  const genderString = typeof body.gender === "string" ? body.gender : null;
+  // Actualización parcial: solo se sobrescribe un campo si viene en el body.
+  // Así los guardados desde la ficha (notas, archivos, etc.) no borran teléfono, dirección, etc.
+  const firstName = typeof body.firstName === "string" ? body.firstName.trim() : (user.firstName ?? "");
+  const lastName = typeof body.lastName === "string" ? body.lastName.trim() : (user.lastName ?? "");
+  const phone =
+    "phone" in body
+      ? typeof body.phone === "string"
+        ? body.phone.trim() || null
+        : null
+      : user.phone ?? null;
+  const address =
+    "address" in body
+      ? typeof body.address === "string"
+        ? body.address.trim() || null
+        : null
+      : user.address ?? null;
+  const dni =
+    "dni" in body
+      ? typeof body.dni === "string"
+        ? body.dni.trim() || null
+        : null
+      : user.dni ?? null;
+  const coverage =
+    "coverage" in body
+      ? typeof body.coverage === "string"
+        ? body.coverage.trim() || null
+        : null
+      : user.coverage ?? null;
+  const plan =
+    "plan" in body
+      ? typeof body.plan === "string"
+        ? body.plan.trim() || null
+        : null
+      : user.plan ?? null;
+  const dateOfBirth =
+    "dateOfBirth" in body
+      ? typeof body.dateOfBirth === "string" && body.dateOfBirth
+        ? new Date(body.dateOfBirth)
+        : null
+      : user.dateOfBirth ?? null;
+  const admissionDate =
+    "admissionDate" in body
+      ? typeof body.admissionDate === "string" && body.admissionDate
+        ? new Date(body.admissionDate)
+        : null
+      : user.admissionDate ?? null;
+  const genderString = "gender" in body ? (typeof body.gender === "string" ? body.gender : null) : user.gender;
   let gender: Gender | null = null;
   if (genderString) {
     if (genderString === Gender.MASCULINO) {
@@ -67,7 +104,12 @@ export async function PUT(
       gender = Gender.NO_BINARIO;
     }
   }
-  const nationality = typeof body.nationality === "string" ? body.nationality.trim() : null;
+  const nationality =
+    "nationality" in body
+      ? typeof body.nationality === "string"
+        ? body.nationality.trim() || null
+        : null
+      : user.nationality ?? null;
   const tempPassword = typeof body.tempPassword === "string" ? body.tempPassword : "";
 
   const additionalInfo = Array.isArray(body.additionalInfo) ? body.additionalInfo as User['additionalInfo'] : undefined;

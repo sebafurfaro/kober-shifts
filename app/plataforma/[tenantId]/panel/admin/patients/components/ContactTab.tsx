@@ -9,20 +9,25 @@ interface Patient {
   dni?: string | null;
   coverage?: string | null;
   plan?: string | null;
-  dateOfBirth?: string | null;
-  admissionDate?: string | null;
+  dateOfBirth?: string | Date | null;
+  admissionDate?: string | Date | null;
   gender?: string | null;
   nationality?: string | null;
 }
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
+function formatDate(value: string | Date | null | undefined): string {
+  if (value == null || value === "") return "—";
+  const d = value instanceof Date ? value : new Date(value);
   if (isNaN(d.getTime())) return "—";
   return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-const FIELDS: { key: keyof Patient; label: string; format?: (v: string | null | undefined) => string }[] = [
+function displayScalar(raw: string | null | undefined): string {
+  if (raw == null || raw === "") return "—";
+  return String(raw);
+}
+
+const FIELDS: { key: keyof Patient; label: string; format?: (v: string | Date | null | undefined) => string }[] = [
   { key: "email", label: "Email" },
   { key: "phone", label: "Teléfono" },
   { key: "dni", label: "DNI" },
@@ -44,8 +49,8 @@ export const ContactTab = ({ patient }: { patient: Patient }) => {
       </TableHeader>
       <TableBody>
         {FIELDS.map((f) => {
-          const raw = patient[f.key] as string | null | undefined;
-          const value = f.format ? f.format(raw) : (raw || "—");
+          const raw = patient[f.key] as string | Date | null | undefined;
+          const value = f.format ? f.format(raw) : displayScalar(raw as string | null | undefined);
           return (
             <TableRow key={f.key}>
               <TableCell>

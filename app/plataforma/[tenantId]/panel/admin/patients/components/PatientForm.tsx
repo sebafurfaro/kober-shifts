@@ -51,6 +51,7 @@ export const PatientForm = ({ patient, appointments, loadingAppointments, tenant
       const res = await fetch(`/api/plataforma/${tenantId}/admin/patients/${patient.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           firstName: patient.firstName ?? "",
           lastName: patient.lastName ?? "",
