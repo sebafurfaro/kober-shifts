@@ -31,9 +31,9 @@ export const Header = () => {
 
     return (
         <header
-            className={`py-2 px-4 fixed left-0 right-0 mx-auto w-full z-9990 transition-all duration-300 ${scrolled
-                ? "top-0 bg-white max-w-full shadow-md"
-                : "top-0 shadow-none bg-white/0 rounded-full md:max-w-3xl md:mx-auto"
+            className={`py-2 px-4 fixed top-0 left-0 right-0 mx-auto w-full max-w-full overflow-x-hidden sm:overflow-visible z-9990 transition-all duration-300 ${scrolled
+                ? "bg-white shadow-md"
+                : "shadow-none bg-transparent md:max-w-3xl md:mx-auto"
                 }`}
         >
 
@@ -90,8 +90,7 @@ export const Header = () => {
                             color="primary"
                             className="text-xs px-3 sm:text-sm sm:px-4"
                         >
-                            <span className="sm:hidden">Comenzar</span>
-                            <span className="hidden sm:inline">Comenzar ahora</span>
+                            <span className="inline">Comenzar ahora</span>
                         </Button>
                     </div>
                 </div>
