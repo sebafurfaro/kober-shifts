@@ -37,11 +37,11 @@ export const Header = () => {
                     : "top-0 shadow-none bg-white/0 rounded-full md:max-w-3xl md:mx-auto"
             }`}
         >
-            <nav className="">
-                <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
+            
+                <div className="mx-auto w-full max-w-7xl px-2 sm:px-6 lg:px-8">
                     <div className="relative flex h-16 items-center justify-between">
                         {/* Logo and desktop menu */}
-                        <div className="flex flex-1 items-center justify-start sm:items-stretch md:justify-start">
+                        <div className="flex md:flex-1 items-center justify-start sm:items-stretch md:justify-start">
                             <Link href="/">
                                 <div className="flex shrink-0 items-center gap-2">
                                     <Logo width={32} height={32} />
@@ -82,15 +82,25 @@ export const Header = () => {
                         </div>
 
                         {/* Right side actions */}
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-2 md:static sm:inset-auto sm:ml-6 sm:pr-0">
+												<div className="relative">
+													<Button 
+														as={Link} 
+														href="https://wa.me/5491173740338?text=Hola, quiero saber más sobre NODO App Turnos"
+														radius="full"
+														variant="solid"
+														color="primary"
+													>Comenzar ahora</Button>
 
-                            <Link href="https://wa.me/5491173740338?text=Hola, quiero saber más sobre NODO App Turnos" className="relative flex h-[48px] w-48 items-center justify-center font-semibold overflow-hidden bg-primary text-white rounded-full shadow-2xl transition-all before:absolute before:h-0 before:w-0 before:rounded-full before:bg-accent before:duration-500 before:ease-out hover:before:h-56 hover:before:w-56 hover:text-white" target="_blank">
-                                <span className="relative z-10">Comenzar ahora!</span>
-                            </Link>
-                        </div>
+													<div className="absolute inset-y-0 right-0 hidden md:flex items-center pr-2 md:static sm:inset-auto sm:ml-6 sm:pr-0">
+
+															<Link href="https://wa.me/5491173740338?text=Hola, quiero saber más sobre NODO App Turnos" className="relative flex h-[48px] w-48 items-center justify-center font-semibold overflow-hidden bg-primary text-white rounded-full shadow-2xl transition-all before:absolute before:h-0 before:w-0 before:rounded-full before:bg-accent before:duration-500 before:ease-out hover:before:h-56 hover:before:w-56 hover:text-white" target="_blank">
+																	<span className="relative z-10">Comenzar ahora!</span>
+															</Link>
+													</div>
+												</div>
                     </div>
                 </div>
-            </nav>
+            
         </header>
     )
 }
