@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Spinner, Tooltip, Divider, Input, Select, SelectItem } from "@heroui/react";
-import { Edit, Trash2, MessageCircle, Search } from "lucide-react";
+import { Edit, Trash2, MessageCircle, Search, Eye } from "lucide-react";
 import { PatientFormDialog } from "../components/PatientFormDialog";
 import { PanelHeader } from "../../components/PanelHeader";
 import Typography from "@/app/components/Typography";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ConfirmationDialog } from "../../components/alerts/ConfirmationDialog";
 import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { useTenantLabels } from "@/lib/use-tenant-labels";
@@ -50,6 +50,7 @@ const SORT_OPTIONS = [
 export default function AdminPatientsPage() {
   const params = useParams();
   const tenantId = params.tenantId as string;
+  const router = useRouter();
   const [patients, setPatients] = React.useState<Patient[]>([]);
   const { patientLabel } = useTenantLabels();
   const loadTranslations = useTenantSettingsStore((state) => state.loadTranslations);
@@ -145,6 +146,10 @@ export default function AdminPatientsPage() {
 
     return result;
   }, [patients, search, sortKey, coverageFilter]);
+
+  const handleView = (patient: Patient) => {
+    router.push(`/plataforma/${tenantId}/panel/admin/patients/${patient.id}`);
+  };
 
   const handleCreate = () => {
     setEditingPatient(null);
@@ -335,6 +340,17 @@ export default function AdminPatientsPage() {
                     <TableCell>{patient.plan || "—"}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
+                        <Tooltip content="Ver">
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            onPress={() => handleView(patient)}
+                            aria-label="ver"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </Tooltip>
                         <Tooltip content="Editar">
                           <Button
                             isIconOnly

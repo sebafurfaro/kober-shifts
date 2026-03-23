@@ -29,6 +29,7 @@ export async function GET(
   const filter = (url.searchParams.get("filter") || "todos") as Filter;
   const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
   const search = (url.searchParams.get("search") || "").trim();
+  const patientIdFilter = url.searchParams.get("patientId") || undefined;
 
   const now = new Date();
   const tz = "America/Argentina/Buenos_Aires";
@@ -81,10 +82,11 @@ export async function GET(
     startDate,
     endDate,
     statuses,
-    limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
+    limit: patientIdFilter ? 1000 : PAGE_SIZE,
+    offset: patientIdFilter ? 0 : (page - 1) * PAGE_SIZE,
     orderBy,
     professionalId: isProfessionalOnly && userHasProfile ? session.userId : undefined,
+    patientId: patientIdFilter,
   };
   const { list: appointmentList, total } = search
     ? await listAppointmentsForAdminRawWithSearch(tenantId, { ...listOptions, search })

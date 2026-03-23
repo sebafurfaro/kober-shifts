@@ -21,6 +21,9 @@ function rowToUser(row: any): User {
     gender: row.gender || null,
     nationality: row.nationality || null,
     googleId: row.googleId || null,
+    additionalInfo: row.additionalInfo != null ? (typeof row.additionalInfo === 'string' ? JSON.parse(row.additionalInfo) : row.additionalInfo) : null,
+    archives: row.archives != null ? (typeof row.archives === 'string' ? JSON.parse(row.archives) : row.archives) : null,
+    notes: row.notes != null ? (typeof row.notes === 'string' ? JSON.parse(row.notes) : row.notes) : null,
     passwordHash: row.passwordHash,
     role: row.role as Role,
     createdAt: row.createdAt,
@@ -295,7 +298,7 @@ export async function createUser(data: {
 export async function updateUser(
   id: string,
   tenantId: string,
-  data: Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'email' | 'phone' | 'address' | 'dni' | 'coverage' | 'plan' | 'dateOfBirth' | 'admissionDate' | 'gender' | 'nationality' | 'googleId' | 'passwordHash' | 'role'>>
+  data: Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'email' | 'phone' | 'address' | 'dni' | 'coverage' | 'plan' | 'dateOfBirth' | 'admissionDate' | 'gender' | 'nationality' | 'googleId' | 'passwordHash' | 'role' | 'additionalInfo' | 'archives' | 'notes'>>
 ): Promise<User> {
   const updates: string[] = [];
   const values: any[] = [];
@@ -378,6 +381,18 @@ export async function updateUser(
   if (data.plan !== undefined) {
     newFieldUpdates.push('plan = ?');
     newFieldValues.push(data.plan);
+  }
+  if (data.additionalInfo !== undefined) {
+    newFieldUpdates.push('additionalInfo = ?');
+    newFieldValues.push(data.additionalInfo != null ? JSON.stringify(data.additionalInfo) : null);
+  }
+  if (data.archives !== undefined) {
+    newFieldUpdates.push('archives = ?');
+    newFieldValues.push(data.archives != null ? JSON.stringify(data.archives) : null);
+  }
+  if (data.notes !== undefined) {
+    newFieldUpdates.push('notes = ?');
+    newFieldValues.push(data.notes != null ? JSON.stringify(data.notes) : null);
   }
 
   if (updates.length === 0 && newFieldUpdates.length === 0) {
@@ -1255,17 +1270,22 @@ export async function listAppointmentsForAdminRaw(
     endDate?: Date;
     statuses?: AppointmentStatus[];
     professionalId?: string;
+    patientId?: string;
     limit: number;
     offset: number;
     orderBy: 'startAt_asc' | 'startAt_desc';
   }
 ): Promise<{ list: Appointment[]; total: number }> {
-  const { startDate, endDate, statuses, professionalId, limit, offset, orderBy } = options;
+  const { startDate, endDate, statuses, professionalId, patientId, limit, offset, orderBy } = options;
   let whereClause = 'tenantId = ?';
   const params: any[] = [tenantId];
   if (professionalId) {
     whereClause += ' AND professionalId = ?';
     params.push(professionalId);
+  }
+  if (patientId) {
+    whereClause += ' AND patientId = ?';
+    params.push(patientId);
   }
   if (startDate != null) {
     whereClause += ' AND startAt >= ?';
@@ -1306,18 +1326,23 @@ export async function listAppointmentsForAdminRawWithSearch(
     endDate?: Date;
     statuses?: AppointmentStatus[];
     professionalId?: string;
+    patientId?: string;
     limit: number;
     offset: number;
     orderBy: 'startAt_asc' | 'startAt_desc';
   }
 ): Promise<{ list: Appointment[]; total: number }> {
-  const { search, startDate, endDate, statuses, professionalId, limit, offset, orderBy } = options;
+  const { search, startDate, endDate, statuses, professionalId, patientId, limit, offset, orderBy } = options;
   const searchPattern = `%${search.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
   let whereClause = `a.tenantId = ? AND (p.name LIKE ? OR prof.name LIKE ? OR l.name LIKE ? OR srv.name LIKE ?)`;
   const params: any[] = [tenantId, searchPattern, searchPattern, searchPattern, searchPattern];
   if (professionalId) {
     whereClause += ' AND a.professionalId = ?';
     params.push(professionalId);
+  }
+  if (patientId) {
+    whereClause += ' AND a.patientId = ?';
+    params.push(patientId);
   }
   if (startDate != null) {
     whereClause += ' AND a.startAt >= ?';
