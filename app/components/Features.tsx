@@ -51,7 +51,7 @@ function BentoCard({ children, className = "", ...rest }: BentoCardProps) {
 
 export const Features = () => {
   return (
-    <section className="pt-18 pb-32 relative bg-gradient-to-b from-gray-900 to-gray-800" id="beneficios">
+    <section className="pt-18 pb-32 relative overflow-hidden bg-gradient-to-b from-gray-900 to-gray-800" id="beneficios">
       <div className="max-w-7xl mx-auto w-full px-4 md:px-0">
 
         {/* Header */}

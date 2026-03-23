@@ -33,7 +33,7 @@ export const Header = () => {
         <header
             className={`py-2 px-4 fixed top-0 left-0 right-0 mx-auto w-full max-w-full overflow-x-hidden sm:overflow-visible z-9990 transition-all duration-300 ${scrolled
                 ? "bg-white shadow-md"
-                : "shadow-none bg-transparent md:max-w-3xl md:mx-auto"
+                : "shadow-none bg-transparent"
                 }`}
         >
 
@@ -44,38 +44,23 @@ export const Header = () => {
                         <Link href="/">
                             <div className="flex shrink-0 items-center gap-2">
                                 <Logo width={32} height={32} />
-                                <h2 className={`text-base font-bold text-center text-white transition-all duration-300 ease-in-out ${scrolled ? "opacity-0" : "opacity-100"}`}>NODO App</h2>
+                                <h2 className={`text-base font-bold text-center transition-all duration-300 ease-in-out ${scrolled ? "text-primary" : "text-white"}`}>NODO App</h2>
                             </div>
                         </Link>
                         <div className="hidden sm:ml-6 md:block md:mx-auto">
-                            <div className="flex gap-6 mt-2">
-                                {navItems.map((item) => {
-                                    // Si el href comienza con #, usar scroll handler
-                                    if (item.href.startsWith("#")) {
-                                        return (
-                                            <button
-                                                key={item.href}
-                                                className={`${scrolled ? "text-primary" : "text-white"} relative inline cursor-pointer font-medium before:bg-accent  before:absolute before:-bottom-1 before:block before:h-[2px] before:w-full before:origin-bottom-right before:scale-x-0 before:transition before:duration-300 before:ease-in-out hover:before:origin-bottom-left hover:before:scale-x-100`}
-                                                onClick={() => {
-                                                    const el = document.getElementById(item.href.slice(1));
-                                                    if (el) el.scrollIntoView({ behavior: "smooth" });
-                                                }}
-                                            >
-                                                {item.label}
-                                            </button>
-                                        );
-                                    }
-                                    // Si es navegación normal, usar Link
-                                    return (
-                                        <Link
-                                            key={item.href}
-                                            href={item.href}
-                                            className={`${scrolled ? "text-primary" : "text-white"} relative inline cursor-pointer font-medium before:bg-accent  before:absolute before:-bottom-1 before:block before:h-[2px] before:w-full before:origin-bottom-right before:scale-x-0 before:transition before:duration-300 before:ease-in-out hover:before:origin-bottom-left hover:before:scale-x-100`}
-                                        >
-                                            {item.label}
-                                        </Link>
-                                    );
-                                })}
+                            <div className="flex gap-6">
+                                {navItems.map((item) => (
+																	<button
+																		key={item.href}
+																		className={`${scrolled ? "text-primary" : "text-white"} z-10 relative hover:text-accent font-medium transition-all duration-300 ease cursor-pointer px-3 py-1.5`}
+																		onClick={() => {
+																			const el = document.getElementById(item.href.slice(1));
+																			if (el) el.scrollIntoView({ behavior: "smooth" });
+																		}}
+																		>
+																		{item.label}
+																	</button>
+																))}
                             </div>
                         </div>
                     </div>
@@ -90,7 +75,8 @@ export const Header = () => {
                             color="primary"
                             className="text-xs px-3 sm:text-sm sm:px-4"
                         >
-                            <span className="inline">Comenzar ahora</span>
+                            <span className="hidden md:inline">Comenzar ahora</span>
+														<span className="md:hidden inline">Comenzar</span>
                         </Button>
                     </div>
                 </div>
