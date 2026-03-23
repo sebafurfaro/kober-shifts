@@ -36,11 +36,17 @@ export const Hero = () => {
             <Typography variant="h5" color="white" data-aos="zoom-in" data-aos-delay="100">
               En NODO App, creemos que la agenda es el corazón del negocio, no una función premium. Por eso, nuestro plan incluye sin restricciones las herramientas fundamentales para organizarte y crecer.
             </Typography>
-            <div className="mt-5 flex items-center justify-center gap-x-6" data-aos="zoom-in" data-aos-delay="200">
+            <div className="mt-5 flex items-center mx-auto justify-center gap-x-6 w-fit" data-aos="zoom-in" data-aos-delay="200">
+              
               <Link 
                 href={"https://wa.me/5491173740338?text=Hola, quiero saber más sobre NODO App Turnos"} 
-                className="relative flex h-[50px] w-48 items-center justify-center font-semibold overflow-hidden bg-white text-primary rounded-full shadow-2xl transition-all before:absolute before:h-0 before:w-0 before:rounded-full before:bg-accent before:duration-500 before:ease-out hover:shadow-accent hover:before:h-56 hover:before:w-56 hover:text-white">
+                className="relative cursor-pointer hidden md:flex h-[50px] w-48 items-center justify-center font-semibold overflow-hidden bg-white text-primary rounded-full shadow-2xl transition-all before:absolute before:h-0 before:w-0 before:rounded-full before:bg-accent before:duration-500 before:ease-out hover:shadow-accent hover:before:h-56 hover:before:w-56 hover:text-white">
                   <span className="z-10 relative">Comenzar ahora</span>
+                </Link>
+                <Link 
+                href={"https://wa.me/5491173740338?text=Hola, quiero ver una demo de NODO App Turnos"} 
+                className="relative cursor-pointer flex h-[50px] w-48 items-center justify-center font-semibold overflow-hidden bg-transparent border-white border-2 text-white rounded-full shadow-2xl transition-all before:absolute before:h-0 before:w-0 before:rounded-full before:bg-orange-500 before:duration-500 before:ease-out hover:shadow-orange-500 hover:before:h-56 hover:before:w-56 hover:text-white hover:border-transparent">
+                  <span className="z-10 relative">Solicitar demo</span>
                 </Link>
             </div>
           </div>
