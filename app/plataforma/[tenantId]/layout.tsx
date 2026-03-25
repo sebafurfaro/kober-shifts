@@ -1,5 +1,6 @@
 import { findTenantById } from "@/lib/db";
 import { TenantNotFound } from "./components/TenantNotFound";
+import { PwaTenantRecorder } from "./components/PwaTenantRecorder";
 
 export default async function TenantLayout({
   children,
@@ -12,9 +13,15 @@ export default async function TenantLayout({
   if (!tenantId || typeof tenantId !== "string") {
     return <TenantNotFound />;
   }
-  const tenant = await findTenantById(tenantId.trim());
+  const trimmed = tenantId.trim();
+  const tenant = await findTenantById(trimmed);
   if (!tenant || !tenant.isActive) {
     return <TenantNotFound />;
   }
-  return <>{children}</>;
+  return (
+    <>
+      <PwaTenantRecorder tenantId={trimmed} />
+      {children}
+    </>
+  );
 }

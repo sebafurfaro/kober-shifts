@@ -23,6 +23,7 @@ import Logo from "@/app/branding/Logo";
 import { Dispatch, SetStateAction } from "react";
 import type { Role } from "@/lib/types";
 import { canAccess, type PermissionsMap, type PermKey } from "@/lib/panel-permissions";
+import { savePwaInstallTenantId } from "@/lib/pwa-entry";
 
 const DRAWER_WIDTH = 210;
 const DRAWER_COLLAPSED_WIDTH = 64;
@@ -78,9 +79,11 @@ function SectionTitle({ label, isCollapsed }: { label: string; isCollapsed: bool
 
 /** PWA: diálogo nativo si hay `beforeinstallprompt`; si no, modal con instrucciones (p. ej. Safari / iOS). */
 function DownloadAppButton({
+  tenantId,
   isCollapsed,
   onNavigate,
 }: {
+  tenantId: string;
   isCollapsed: boolean;
   onNavigate?: () => void;
 }) {
@@ -107,6 +110,7 @@ function DownloadAppButton({
   if (hiddenStandalone) return null;
 
   const handleClick = async () => {
+    savePwaInstallTenantId(tenantId);
     onNavigate?.();
     if (deferredPrompt) {
       try {
@@ -331,7 +335,11 @@ export function Aside({
         </div>
 
         <nav className="space-y-1 px-2">
-          <DownloadAppButton isCollapsed={effectiveIsCollapsed} onNavigate={handleNavClick} />
+          <DownloadAppButton
+            tenantId={currentTenantId}
+            isCollapsed={effectiveIsCollapsed}
+            onNavigate={handleNavClick}
+          />
 
           {/* Métricas */}
           {role !== "PATIENT" && can("analytics") && (

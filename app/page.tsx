@@ -10,6 +10,7 @@ import { Dashboard } from "./components/Dashboard";
 import { Plans } from "./components/Plans";
 import { Footer } from "./components/Footer";
 import { CallToAction } from "./components/CallToAction";
+import { PwaStandaloneHomeRedirect } from "./components/PwaStandaloneHomeRedirect";
 import "aos/dist/aos.css";
 
 export default function Home() {
@@ -28,6 +29,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white font-primary w-full">
+      <PwaStandaloneHomeRedirect />
       <Header />
       <Hero />
       <Features />
