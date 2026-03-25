@@ -22,6 +22,7 @@ export const SettingsTab = () => {
   const tenantId = params.tenantId as string;
   const { setBookingSettings } = useTenantSettingsStore();
   const [form, setForm] = React.useState<TenantBookingSettings>(defaultBooking);
+  const [blockAgendaOnNationalHolidays, setBlockAgendaOnNationalHolidays] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   /** String value for maxAnticipation input so the user can clear and type freely; committed to form on blur/save */
   const [maxAnticipationInput, setMaxAnticipationInput] = React.useState(String(defaultBooking.maxAnticipation));
@@ -45,6 +46,7 @@ export const SettingsTab = () => {
           sendEmailConfirmation: typeof data.sendEmailConfirmation === "boolean" ? data.sendEmailConfirmation : defaultBooking.sendEmailConfirmation,
         });
         setMaxAnticipationInput(maxAnt === -1 ? "-1" : String(maxAnt));
+        setBlockAgendaOnNationalHolidays(data.blockAgendaOnNationalHolidays === true);
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -84,6 +86,7 @@ export const SettingsTab = () => {
           defaultSlotDurationMinutes: form.defaultSlotDurationMinutes,
           defaultSlotMarginMinutes: form.defaultSlotMarginMinutes,
           sendEmailConfirmation: form.sendEmailConfirmation,
+          blockAgendaOnNationalHolidays,
         }),
       });
       if (res.ok) {
@@ -216,6 +219,20 @@ export const SettingsTab = () => {
             </Typography>
           </div>
         </div>
+      </div>
+      <Divider className="my-4" />
+      <div className="flex flex-col space-y-4">
+        <Typography variant="h6">Agenda y feriados</Typography>
+        <Switch
+          isSelected={blockAgendaOnNationalHolidays}
+          onValueChange={setBlockAgendaOnNationalHolidays}
+          isDisabled={saving}
+        >
+          Bloquear agenda en feriados nacionales (Argentina)
+        </Switch>
+        <Typography variant="p" size="sm" color="gray" opacity={70}>
+          Si está activo, los feriados nacionales no permiten turnos salvo que desbloquees ese día desde el calendario del panel (día seleccionado → desactivar &quot;Bloquear día&quot;).
+        </Typography>
       </div>
       <Divider className="my-4" />
       <div className="flex flex-col space-y-4">

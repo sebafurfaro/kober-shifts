@@ -8,6 +8,7 @@ import { randomUUID } from "crypto";
 import { renderBasicTemplate, sendMail, getTurnoConfirmadoPacienteContent, formatLocationAddress } from "@/lib/email";
 import { mysqlDateToUTC, formatInBuenosAires } from "@/lib/timezone";
 import { getTenantSettingsRow } from "@/lib/settings-db";
+import { isStartAtBlockedForTenant } from "@/lib/blocked-calendar-days-server";
 
 async function ensurePaymentsTable() {
   await mysql.execute(`
@@ -61,6 +62,16 @@ export async function PATCH(
     const utcDate = new Date(body.endAt);
     endAt = utcToMySQLDate(utcDate);
   }
+
+  if (startAt && !Number.isNaN(startAt.getTime())) {
+    if (await isStartAtBlockedForTenant(tenantId, startAt)) {
+      return NextResponse.json(
+        { error: "Este día no admite turnos (feriado o día bloqueado)." },
+        { status: 400 }
+      );
+    }
+  }
+
   const status: AppointmentStatus | undefined = typeof body.status === "string"
     ? (body.status === AppointmentStatus.REQUESTED ? AppointmentStatus.REQUESTED
       : body.status === AppointmentStatus.PENDING_DEPOSIT ? AppointmentStatus.PENDING_DEPOSIT

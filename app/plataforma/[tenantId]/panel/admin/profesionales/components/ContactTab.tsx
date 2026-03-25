@@ -56,14 +56,14 @@ export function ContactTab({ formData, handleChange, errors, mode }: ContactTabP
             />
             {mode === "create" && (
                 <Input
-                    label="Contraseña"
+                    label="Contraseña (opcional si completás DNI)"
                     type="password"
                     value={formData.tempPassword ?? ""}
                     onValueChange={(value) => handleChange("tempPassword", value)}
                     isInvalid={!!errors.tempPassword}
                     errorMessage={errors.tempPassword}
-                    isRequired
-                    description="Mínimo 8 caracteres, una mayúscula, un número y un caracter especial"
+                    description="Si no la completás, se usará el DNI como clave (debe cumplir los mismos requisitos). Mínimo 8 caracteres, una mayúscula, un número y un carácter especial."
+                    autoComplete="new-password"
                     classNames={{
                         input: "text-slate-800",
                         inputWrapper: "text-slate-800",
@@ -79,6 +79,7 @@ export function ContactTab({ formData, handleChange, errors, mode }: ContactTabP
                     isInvalid={!!errors.tempPassword}
                     errorMessage={errors.tempPassword}
                     description="Dejar en blanco para mantener la contraseña actual"
+                    autoComplete="new-password"
                     classNames={{
                         input: "text-slate-800",
                         inputWrapper: "text-slate-800",

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useEffect, useCallback, startTransition } from "react";
+import React, { useRef, useState, useEffect, useCallback, startTransition, useMemo } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -13,11 +13,21 @@ import {
   ModalFooter,
   Card,
   CardBody,
+  Switch,
 } from "@heroui/react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Toolbar } from "./calendar/Toolbar";
 
-import { fullCalendarDateToLocal, localDateToFullCalendar, serializeBATimeAsUTC, toZonedTime, BUENOS_AIRES_TIMEZONE } from "@/lib/timezone";
+import {
+  fullCalendarDateToLocal,
+  localDateToFullCalendar,
+  serializeBATimeAsUTC,
+  toZonedTime,
+  BUENOS_AIRES_TIMEZONE,
+  utcToMySQLDate,
+  fullCalendarDateToYmd,
+  forEachYmdInFcRange,
+} from "@/lib/timezone";
 import { EventDialogTitle } from "./calendar/EventDialogTitle";
 import { EventDialogContent } from "./calendar/EventDialogContent";
 import { EventDialogActions } from "./calendar/EventDialogActions";
@@ -26,7 +36,14 @@ import { AlertDialog } from "./alerts/AlertDialog";
 import { useCreateAppointment } from "@/lib/use-create-appointment";
 import { useAppointmentsInvalidationStore } from "@/lib/appointments-invalidation-store";
 import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
-import { Clock } from "lucide-react";
+import { Clock, Lock } from "lucide-react";
+import { formatInTimeZone } from "date-fns-tz";
+import {
+  normalizeBlockedCalendarDays,
+  normalizeHolidayAgendaAllowDays,
+  appointmentStartDateYMDInBuenosAires,
+  isEffectiveCalendarDayBlocked,
+} from "@/lib/blocked-calendar-days";
 
 type ViewType = "dayGridMonth" | "timeGridWeek" | "timeGridDay";
 
@@ -59,6 +76,37 @@ const REPEAT_LABEL: Record<string, string> = {
   biweekly: "Quincenal",
   monthly: "Mensual",
 };
+
+/** Respuesta de https://api.argentinadatos.com/v1/feriados/{year} (proxy: /api/argentina-feriados/{year}) */
+type ArgentinaFeriadoApi = { fecha: string; nombre: string; tipo?: string };
+
+function yearsOverlappingRange(start: Date, end: Date): number[] {
+  const y1 = start.getFullYear();
+  const y2 = end.getFullYear();
+  const out: number[] = [];
+  for (let y = y1; y <= y2; y++) out.push(y);
+  return out;
+}
+
+async function fetchArgentinaFeriadosForYears(years: number[]): Promise<ArgentinaFeriadoApi[]> {
+  const batches = await Promise.all(
+    years.map(async (year) => {
+      const res = await fetch(`/api/argentina-feriados/${year}`).catch(() => null);
+      if (!res?.ok) return [] as ArgentinaFeriadoApi[];
+      const data = await res.json().catch(() => []);
+      return Array.isArray(data) ? (data as ArgentinaFeriadoApi[]) : [];
+    })
+  );
+  return batches.flat();
+}
+
+/** Fin exclusivo al día siguiente (convención FullCalendar para eventos all-day de un día). */
+function ymdAddOneDay(ymd: string): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + 1);
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
+}
 
 function AvailabilitySidebar({ pro, onClose }: { pro: any | null; onClose: () => void }) {
   const days = pro?.availabilityConfig?.days ?? {};
@@ -174,11 +222,16 @@ interface CalendarEvent {
     holidayId?: string;
     holidayStartDate?: string;
     holidayEndDate?: string;
+    /** Feriado nacional AR (Argentina Datos), no es turno editable */
+    argentinaNationalHoliday?: boolean;
+    feriadoTipo?: string;
   };
   backgroundColor?: string;
   borderColor?: string;
+  textColor?: string;
   display?: string;
   classNames?: string[];
+  allDay?: boolean;
 }
 
 interface EventDialogData {
@@ -217,6 +270,30 @@ export function Calendar() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [mounted, setMounted] = useState(false);
   const [availabilitySidebarPro, setAvailabilitySidebarPro] = useState<any | null>(null);
+  const [blockedCalendarDays, setBlockedCalendarDays] = useState<string[]>([]);
+  const [blockAgendaOnNationalHolidays, setBlockAgendaOnNationalHolidays] = useState(false);
+  const [holidayAgendaAllowDays, setHolidayAgendaAllowDays] = useState<string[]>([]);
+  const [nationalHolidayYmds, setNationalHolidayYmds] = useState<Set<string>>(() => new Set());
+  const [selectedDayYmd, setSelectedDayYmd] = useState<string>(() =>
+    formatInTimeZone(new Date(), BUENOS_AIRES_TIMEZONE, "yyyy-MM-dd")
+  );
+  const [savingBlockedDay, setSavingBlockedDay] = useState(false);
+
+  const isDayEffectivelyBlocked = useCallback(
+    (ymd: string) =>
+      isEffectiveCalendarDayBlocked(ymd, {
+        blockedCalendarDays,
+        blockAgendaOnNationalHolidays,
+        holidayAgendaAllowDays,
+        nationalHolidayYmds,
+      }),
+    [blockedCalendarDays, blockAgendaOnNationalHolidays, holidayAgendaAllowDays, nationalHolidayYmds]
+  );
+
+  const selectedIsNationalHoliday = useMemo(
+    () => nationalHolidayYmds.has(selectedDayYmd),
+    [nationalHolidayYmds, selectedDayYmd]
+  );
 
   // Flag to prevent multiple dateClick handlers from firing
   const dateClickProcessingRef = useRef(false);
@@ -300,6 +377,7 @@ export function Calendar() {
     }
     setEventDialogMode("create");
     setEventDialogData({ start: startDate, end: endDate });
+    setSelectedDayYmd(formatInTimeZone(startDate, BUENOS_AIRES_TIMEZONE, "yyyy-MM-dd"));
     setEventDialogOpen(true);
     router.replace(`/plataforma/${tenantId}/panel`, { scroll: false });
   }, [mounted, tenantId, router, searchParams]);
@@ -342,10 +420,11 @@ export function Calendar() {
   async function loadInitialData() {
     if (!tenantId) return;
     try {
-      const [patientsRes, professionalsRes, locationsRes] = await Promise.all([
+      const [patientsRes, professionalsRes, locationsRes, blockedRes] = await Promise.all([
         fetch(`/api/plataforma/${tenantId}/admin/patients`).catch(() => null),
         fetch(`/api/plataforma/${tenantId}/admin/professionals`).catch(() => null),
         fetch(`/api/plataforma/${tenantId}/admin/locations`).catch(() => null),
+        fetch(`/api/plataforma/${tenantId}/calendar/blocked-days`).catch(() => null),
       ]);
 
       if (patientsRes?.ok) {
@@ -379,8 +458,49 @@ export function Calendar() {
         const data = await locationsRes.json();
         setLocations(Array.isArray(data) ? data : []);
       }
+      if (blockedRes?.ok) {
+        const data = await blockedRes.json();
+        setBlockedCalendarDays(normalizeBlockedCalendarDays(data.blockedCalendarDays));
+        setBlockAgendaOnNationalHolidays(data.blockAgendaOnNationalHolidays === true);
+        setHolidayAgendaAllowDays(normalizeHolidayAgendaAllowDays(data.holidayAgendaAllowDays));
+      }
     } catch (error) {
       console.error("Error loading initial data:", error);
+    }
+  }
+
+  async function persistCalendarBlockLists(next: {
+    blockedCalendarDays?: string[];
+    holidayAgendaAllowDays?: string[];
+  }) {
+    const normalizedBlocked = normalizeBlockedCalendarDays(
+      next.blockedCalendarDays ?? blockedCalendarDays
+    );
+    const normalizedAllow = normalizeHolidayAgendaAllowDays(
+      next.holidayAgendaAllowDays ?? holidayAgendaAllowDays
+    );
+    setSavingBlockedDay(true);
+    try {
+      const res = await fetch(`/api/plataforma/${tenantId}/calendar/blocked-days`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          blockedCalendarDays: normalizedBlocked,
+          holidayAgendaAllowDays: normalizedAllow,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      const data = await res.json();
+      setBlockedCalendarDays(normalizeBlockedCalendarDays(data.blockedCalendarDays));
+      setHolidayAgendaAllowDays(normalizeHolidayAgendaAllowDays(data.holidayAgendaAllowDays));
+    } catch {
+      setAlertDialog({
+        open: true,
+        message: "No se pudo guardar el bloqueo del día. Intente de nuevo.",
+        type: "error",
+      });
+    } finally {
+      setSavingBlockedDay(false);
     }
   }
 
@@ -447,8 +567,58 @@ export function Calendar() {
         });
       });
 
-      // Combine appointments and holiday events
-      const allEvents = [...data, ...holidayEvents];
+      // Feriados nacionales Argentina (año según rango visible; puede abarcar dos años)
+      let argentinaNationalEvents: CalendarEvent[] = [];
+      try {
+        const years = yearsOverlappingRange(start, end);
+        const feriados = await fetchArgentinaFeriadosForYears(years);
+        const holidayYmdSet = new Set<string>();
+        for (const f of feriados) {
+          if (
+            f.fecha &&
+            /^\d{4}-\d{2}-\d{2}$/.test(f.fecha) &&
+            f.fecha >= startStr &&
+            f.fecha <= endStr
+          ) {
+            holidayYmdSet.add(f.fecha);
+          }
+        }
+        setNationalHolidayYmds(holidayYmdSet);
+        const slug = (s: string) =>
+          s.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9\-áéíóúÁÉÍÓÚñÑ]/g, "").slice(0, 48);
+        argentinaNationalEvents = feriados
+          .filter(
+            (f) =>
+              f.fecha &&
+              f.nombre &&
+              /^\d{4}-\d{2}-\d{2}$/.test(f.fecha) &&
+              f.fecha >= startStr &&
+              f.fecha <= endStr
+          )
+          .map((f) => ({
+            id: `ar-national-${f.fecha}-${slug(f.nombre)}`,
+            title: f.nombre,
+            start: f.fecha,
+            end: ymdAddOneDay(f.fecha),
+            allDay: true,
+            backgroundColor: "rgba(236, 253, 245, 0.95)",
+            borderColor: "#22c55e",
+            textColor: "#15803d",
+            display: "block",
+            classNames: ["ar-national-holiday"],
+            extendedProps: {
+              isHoliday: true,
+              argentinaNationalHoliday: true,
+              feriadoTipo: f.tipo ?? "",
+              holidayDescription: f.nombre,
+            },
+          }));
+      } catch (e) {
+        console.error("Feriados Argentina:", e);
+      }
+
+      // Combine appointments, vacaciones de profesionales y feriados nacionales AR
+      const allEvents = [...data, ...holidayEvents, ...argentinaNationalEvents];
 
       // Check if events actually changed before updating
       const eventsChanged =
@@ -516,10 +686,24 @@ export function Calendar() {
         return arg.view.type !== prevView ? (arg.view.type as ViewType) : prevView;
       });
     });
+
+    if (arg.view.type === "timeGridDay") {
+      setSelectedDayYmd(fullCalendarDateToYmd(arg.view.activeStart));
+    }
   }, [loadEvents]);
 
   function handleEventClick(info: any) {
     const event = info.event;
+
+    if (event.extendedProps?.argentinaNationalHoliday) {
+      const tipo = event.extendedProps?.feriadoTipo ? ` (${event.extendedProps.feriadoTipo})` : "";
+      setAlertDialog({
+        open: true,
+        message: `Feriado nacional: ${event.title}${tipo}`,
+        type: "info",
+      });
+      return;
+    }
 
     // Convert FullCalendar event to our CalendarEvent format
     const calendarEvent: CalendarEvent = {
@@ -594,6 +778,17 @@ export function Calendar() {
     const endDate = new Date(startDate);
     endDate.setUTCMinutes(endDate.getUTCMinutes() + defaultSlotDurationMinutes);
 
+    const ymdCreate = formatInTimeZone(baseDate, BUENOS_AIRES_TIMEZONE, "yyyy-MM-dd");
+    setSelectedDayYmd(ymdCreate);
+    if (isDayEffectivelyBlocked(ymdCreate)) {
+      setAlertDialog({
+        open: true,
+        message: "Este día está bloqueado (feriado). No se pueden agendar turnos.",
+        type: "warning",
+      });
+      return;
+    }
+
     setEventDialogData({
       start: startDate,
       end: endDate,
@@ -619,6 +814,20 @@ export function Calendar() {
       const clickedDate = clickInfo.date instanceof Date
         ? clickInfo.date
         : new Date(clickInfo.date);
+
+      const ymdForDay = fullCalendarDateToYmd(clickedDate);
+      setSelectedDayYmd(ymdForDay);
+      if (isDayEffectivelyBlocked(ymdForDay)) {
+        setAlertDialog({
+          open: true,
+          message: "Este día está bloqueado (feriado). No se pueden agendar turnos.",
+          type: "warning",
+        });
+        setTimeout(() => {
+          dateClickProcessingRef.current = false;
+        }, 100);
+        return;
+      }
 
       // Convert FullCalendar date to Date with BA components stored as UTC
       // fullCalendarDateToLocal extracts the displayed BA time directly from UTC methods
@@ -651,6 +860,25 @@ export function Calendar() {
   }
 
   function handleDateSelect(selectInfo: any) {
+    const rangeStart = selectInfo.start instanceof Date ? selectInfo.start : new Date(selectInfo.start);
+    const rangeEnd = selectInfo.end instanceof Date ? selectInfo.end : new Date(selectInfo.end || selectInfo.start);
+
+    const ymdStart = fullCalendarDateToYmd(rangeStart);
+    setSelectedDayYmd(ymdStart);
+
+    let hasBlockedInRange = false;
+    forEachYmdInFcRange(rangeStart, rangeEnd, (ymd) => {
+      if (isDayEffectivelyBlocked(ymd)) hasBlockedInRange = true;
+    });
+    if (hasBlockedInRange) {
+      setAlertDialog({
+        open: true,
+        message: "El rango incluye un día bloqueado (feriado). No se pueden agendar turnos.",
+        type: "warning",
+      });
+      return;
+    }
+
     setEventDialogMode("create");
 
     // Convert FullCalendar dates to local dates using centralized timezone utilities
@@ -861,10 +1089,27 @@ export function Calendar() {
       })()}
 
       {/* Calendar */}
-      <Card className="p-4 mb-4">
+      <Card className="p-4 mb-2">
         <CardBody className="p-0">
           {mounted && (
-            <div className="grow min-h-0 [&_.fc]:h-full">
+            <div className="calendar-blocked-wrap grow min-h-0 [&_.fc]:h-full">
+              <style jsx global>{`
+                .calendar-blocked-wrap .fc .fc-daygrid-day.fc-day-blocked .fc-daygrid-day-frame {
+                  background-color: rgba(239, 68, 68, 0.1);
+                }
+                .calendar-blocked-wrap .fc .fc-col-header-cell.fc-day-blocked-header {
+                  background-color: rgba(239, 68, 68, 0.08);
+                }
+                .calendar-blocked-wrap .fc .fc-event.ar-national-holiday .fc-event-title {
+                  font-size: 10px;
+                  line-height: 1.25;
+                  color: #15803d;
+                  font-weight: 600;
+                }
+                .calendar-blocked-wrap .fc .fc-event.ar-national-holiday {
+                  border-left-width: 3px;
+                }
+              `}</style>
               <FullCalendar
                 ref={calendarRef}
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -889,11 +1134,63 @@ export function Calendar() {
                 slotMaxTime="20:00:00"
                 allDaySlot={false}
                 contentHeight="auto"
+                dayCellClassNames={(arg) => {
+                  const ymd = fullCalendarDateToYmd(arg.date);
+                  return isDayEffectivelyBlocked(ymd) ? ["fc-day-blocked"] : [];
+                }}
+                dayCellContent={(arg) => {
+                  const ymd = fullCalendarDateToYmd(arg.date);
+                  const blocked = isDayEffectivelyBlocked(ymd);
+                  return (
+                    <div className="flex w-full items-start justify-between gap-1 pr-0.5 pt-0.5">
+                      <div className="fc-daygrid-day-number">{arg.dayNumberText}</div>
+                      {blocked ? (
+                        <Lock
+                          className="w-3.5 h-3.5 shrink-0 text-red-600 opacity-90"
+                          strokeWidth={2}
+                          aria-hidden
+                        />
+                      ) : null}
+                    </div>
+                  );
+                }}
+                dayHeaderClassNames={(arg) => {
+                  const ymd = fullCalendarDateToYmd(arg.date);
+                  return isDayEffectivelyBlocked(ymd) ? ["fc-day-blocked-header"] : [];
+                }}
+                dayHeaderContent={(arg) => {
+                  const ymd = fullCalendarDateToYmd(arg.date);
+                  const blocked = isDayEffectivelyBlocked(ymd);
+                  return (
+                    <div className="flex items-center justify-center gap-1.5 w-full py-0.5">
+                      {blocked ? (
+                        <Lock
+                          className="w-3.5 h-3.5 shrink-0 text-red-600 opacity-90"
+                          strokeWidth={2}
+                          aria-hidden
+                        />
+                      ) : null}
+                      <span className="fc-col-header-cell-cushion">{arg.text}</span>
+                    </div>
+                  );
+                }}
+                selectAllow={(span) => {
+                  const endExclusive =
+                    span.end != null
+                      ? new Date(span.end)
+                      : new Date(span.start.getTime() + 24 * 60 * 60 * 1000);
+                  let allowed = true;
+                  forEachYmdInFcRange(span.start, endExclusive, (ymd) => {
+                    if (isDayEffectivelyBlocked(ymd)) allowed = false;
+                  });
+                  return allowed;
+                }}
                 eventAllow={(dropInfo, draggedEvent) => {
-                  // Prevent dragging holiday events
                   if (draggedEvent && draggedEvent.extendedProps?.isHoliday) {
                     return false;
                   }
+                  const ymd = fullCalendarDateToYmd(dropInfo.start);
+                  if (isDayEffectivelyBlocked(ymd)) return false;
                   return true;
                 }}
               />
@@ -901,6 +1198,57 @@ export function Calendar() {
           )}
         </CardBody>
       </Card>
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 px-1">
+        <p className="text-sm text-slate-600">
+          Día seleccionado: {selectedDayYmd.split("-").reverse().join("/")}
+        </p>
+        <Switch
+          isSelected={isDayEffectivelyBlocked(selectedDayYmd)}
+          onValueChange={async (checked) => {
+            const manual = blockedCalendarDays.includes(selectedDayYmd);
+            const national =
+              blockAgendaOnNationalHolidays && selectedIsNationalHoliday;
+            const inAllow = holidayAgendaAllowDays.includes(selectedDayYmd);
+
+            if (checked) {
+              if (manual) return;
+              if (national && inAllow) {
+                await persistCalendarBlockLists({
+                  holidayAgendaAllowDays: holidayAgendaAllowDays.filter((d) => d !== selectedDayYmd),
+                });
+                return;
+              }
+              if (national && !inAllow) return;
+              await persistCalendarBlockLists({
+                blockedCalendarDays: normalizeBlockedCalendarDays([
+                  ...blockedCalendarDays,
+                  selectedDayYmd,
+                ]),
+              });
+              return;
+            }
+
+            if (manual) {
+              await persistCalendarBlockLists({
+                blockedCalendarDays: blockedCalendarDays.filter((d) => d !== selectedDayYmd),
+              });
+              return;
+            }
+            if (national && !inAllow) {
+              await persistCalendarBlockLists({
+                holidayAgendaAllowDays: normalizeHolidayAgendaAllowDays([
+                  ...holidayAgendaAllowDays,
+                  selectedDayYmd,
+                ]),
+              });
+            }
+          }}
+          isDisabled={savingBlockedDay}
+        >
+          Bloquear día
+        </Switch>
+      </div>
 
       {/* Event Dialog */}
       {mounted && (
@@ -1005,6 +1353,18 @@ export function Calendar() {
                   if (eventDialogData.professionalId) {
                     const selectedProfessional = professionals.find(p => p.id === eventDialogData.professionalId);
                     if (selectedProfessional) {
+                      const startYmd = appointmentStartDateYMDInBuenosAires(
+                        utcToMySQLDate(new Date(serializeBATimeAsUTC(eventDialogData.start)))
+                      );
+                      if (isDayEffectivelyBlocked(startYmd)) {
+                        setAlertDialog({
+                          open: true,
+                          message: "Este día está bloqueado (feriado). No se pueden agendar turnos.",
+                          type: "warning",
+                        });
+                        return;
+                      }
+
                       // Check if the appointment dates overlap with a holiday period
                       const holidayCheck = checkHolidayOverlap(eventDialogData.start, eventDialogData.end, eventDialogData.professionalId);
                       

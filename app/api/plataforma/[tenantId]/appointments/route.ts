@@ -9,6 +9,7 @@ import { utcToMySQLDate, BUENOS_AIRES_TIMEZONE, mysqlDateToUTC, formatInBuenosAi
 import { toZonedTime } from "date-fns-tz";
 import { getProfessionalAvailableDayNumbers } from "@/lib/professional-availability";
 import { renderBasicTemplate, sendMail, getTurnoConfirmadoPacienteContent, formatLocationAddress } from "@/lib/email";
+import { isStartAtBlockedForTenant } from "@/lib/blocked-calendar-days-server";
 
 export async function GET(
   req: Request,
@@ -190,6 +191,20 @@ export async function POST(
     );
   }
 
+  const settingsRow = await getTenantSettingsRow(tenantId).catch(() => null);
+  const settings =
+    settingsRow?.settings && typeof settingsRow.settings === "object"
+      ? (settingsRow.settings as Record<string, unknown>)
+      : {};
+  if (await isStartAtBlockedForTenant(tenantId, startAt!)) {
+    return NextResponse.json(
+      { error: "Este día no admite turnos (feriado o día bloqueado)." },
+      { status: 400 }
+    );
+  }
+  const manualTurnConfirmation = settings.manualTurnConfirmation === true;
+  const sendEmailConfirmation = settings.sendEmailConfirmation === true;
+
   // Check for duplicate appointments (same patient, professional, date and time)
   // Allow a small tolerance (1 minute) to account for potential timezone rounding issues
   const duplicateCheckStart = new Date(startAt.getTime() - 60000); // 1 minute before
@@ -222,16 +237,6 @@ export async function POST(
   }
 
   // Misma lógica que appointments/request: seña → PENDING_DEPOSIT; sin seña y manualTurnConfirmation → REQUESTED; sin seña y !manualTurnConfirmation → CONFIRMED
-  let manualTurnConfirmation = false;
-  let sendEmailConfirmation = false;
-  try {
-    const row = await getTenantSettingsRow(tenantId);
-    const settings = row?.settings && typeof row.settings === "object" ? row.settings as Record<string, unknown> : {};
-    manualTurnConfirmation = settings.manualTurnConfirmation === true;
-    sendEmailConfirmation = settings.sendEmailConfirmation === true;
-  } catch {
-    // default: auto-confirm when no seña
-  }
   const service = serviceId ? await findServiceById(serviceId, tenantId) : null;
   const hasSenia = !!(service && service.price > 0);
   const initialStatus =

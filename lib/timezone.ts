@@ -188,6 +188,49 @@ export function fullCalendarDateToLocal(fcDate: Date): Date {
 }
 
 /**
+ * Fecha calendario YYYY-MM-DD alineada con FullCalendar: usa getUTCFullYear/Month/Date,
+ * que en fechas devueltas por FullCalendar (con timeZone) son el día/hora mostrados, no el instante UTC real.
+ * No usar formatInTimeZone(fcDate, …) sobre el Date crudo: desplaza el día (ej. clic día 24 → 23).
+ */
+export function fullCalendarDateToYmd(fcDate: Date): string {
+  const y = fcDate.getUTCFullYear();
+  const m = String(fcDate.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(fcDate.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Siguiente día calendario YYYY-MM-DD (UTC date math). */
+export function incrementYmd(ymd: string): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const n = new Date(Date.UTC(y, m - 1, d));
+  n.setUTCDate(n.getUTCDate() + 1);
+  return `${n.getUTCFullYear()}-${String(n.getUTCMonth() + 1).padStart(2, "0")}-${String(n.getUTCDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Días YYYY-MM-DD incluidos en [rangeStart, rangeEnd) como en FullCalendar (fin exclusivo).
+ */
+export function forEachYmdInFcRange(
+  rangeStart: Date,
+  rangeEndExclusive: Date,
+  fn: (ymd: string) => void
+): void {
+  if (rangeEndExclusive.getTime() <= rangeStart.getTime()) {
+    return;
+  }
+  const startYmd = fullCalendarDateToYmd(rangeStart);
+  const lastInstant = new Date(rangeEndExclusive.getTime() - 1);
+  const lastYmd = fullCalendarDateToYmd(lastInstant);
+  let cur = startYmd;
+  while (true) {
+    fn(cur);
+    if (cur === lastYmd) break;
+    cur = incrementYmd(cur);
+    if (cur > lastYmd) break;
+  }
+}
+
+/**
  * Converts a Date with BA time components (stored as UTC components) to a UTC Date for FullCalendar.
  * 
  * Strategy: We create a Date UTC with BA components, then use toZonedTime to see

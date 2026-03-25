@@ -9,6 +9,7 @@ import { randomUUID } from "crypto";
 import { realUTCToMySQLDate, mysqlDateToUTC, formatInBuenosAires, BUENOS_AIRES_TIMEZONE } from "@/lib/timezone";
 import { toZonedTime } from "date-fns-tz";
 import { getProfessionalAvailableDayNumbers } from "@/lib/professional-availability";
+import { isStartAtBlockedForTenant } from "@/lib/blocked-calendar-days-server";
 
 export async function POST(
   req: Request,
@@ -87,16 +88,19 @@ export async function POST(
   const service = serviceId ? await findServiceById(serviceId, tenantId) : null;
   const hasSenia = !!(service && service.price > 0);
 
-  let manualTurnConfirmation = false;
-  let sendEmailConfirmation = false;
-  try {
-    const row = await getTenantSettingsRow(tenantId);
-    const settings = (row?.settings && typeof row.settings === "object") ? row.settings as Record<string, unknown> : {};
-    manualTurnConfirmation = settings.manualTurnConfirmation === true;
-    sendEmailConfirmation = settings.sendEmailConfirmation === true;
-  } catch {
-    // default: auto-confirm when no seña
+  const settingsRow = await getTenantSettingsRow(tenantId).catch(() => null);
+  const settings =
+    settingsRow?.settings && typeof settingsRow.settings === "object"
+      ? (settingsRow.settings as Record<string, unknown>)
+      : {};
+  if (await isStartAtBlockedForTenant(tenantId, startAt)) {
+    return NextResponse.json(
+      { error: "Este día no admite turnos (feriado o día bloqueado)." },
+      { status: 400 }
+    );
   }
+  const manualTurnConfirmation = settings.manualTurnConfirmation === true;
+  const sendEmailConfirmation = settings.sendEmailConfirmation === true;
 
   // Confirmación según plan: con señas → pendiente hasta pago; sin señas y manualTurnConfirmation false → auto CONFIRMED; sin señas y true → REQUESTED
   let initialStatus: AppointmentStatus;

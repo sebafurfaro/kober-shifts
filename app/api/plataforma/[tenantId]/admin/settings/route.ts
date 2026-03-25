@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { getTenantSettingsRow, updateTenantSettingsOnly } from "@/lib/settings-db";
 import { Role } from "@/lib/types";
+import { normalizeBlockedCalendarDays, normalizeHolidayAgendaAllowDays } from "@/lib/blocked-calendar-days";
 
 /**
  * GET /api/plataforma/[tenantId]/admin/settings
@@ -46,9 +47,28 @@ export async function GET(
       defaultSlotDurationMinutes: 30,
       defaultSlotMarginMinutes: 0,
       sendEmailConfirmation: false,
+      /** Días (YYYY-MM-DD, calendario Buenos Aires) sin turnos por feriados u otros cierres. */
+      blockedCalendarDays: [] as string[],
+      /** Si es true, los feriados nacionales AR bloquean agenda salvo excepciones en `holidayAgendaAllowDays`. */
+      blockAgendaOnNationalHolidays: false,
+      /** Feriados donde se permite agenda aunque la regla de feriados esté activa. */
+      holidayAgendaAllowDays: [] as string[],
     };
 
-    const merged = { ...defaultSettings, ...settingsObj };
+    const merged = {
+      ...defaultSettings,
+      ...settingsObj,
+      blockedCalendarDays: normalizeBlockedCalendarDays(
+        settingsObj.blockedCalendarDays ?? defaultSettings.blockedCalendarDays
+      ),
+      blockAgendaOnNationalHolidays:
+        typeof settingsObj.blockAgendaOnNationalHolidays === "boolean"
+          ? settingsObj.blockAgendaOnNationalHolidays
+          : defaultSettings.blockAgendaOnNationalHolidays,
+      holidayAgendaAllowDays: normalizeHolidayAgendaAllowDays(
+        settingsObj.holidayAgendaAllowDays ?? defaultSettings.holidayAgendaAllowDays
+      ),
+    };
     return NextResponse.json(merged);
   } catch (error: unknown) {
     console.error("Error fetching settings:", error);
@@ -159,6 +179,19 @@ export async function PUT(
       ? body.sendEmailConfirmation
       : (typeof existingSettings.sendEmailConfirmation === "boolean" ? existingSettings.sendEmailConfirmation : false);
 
+    const blockedCalendarDays = Array.isArray(body.blockedCalendarDays)
+      ? normalizeBlockedCalendarDays(body.blockedCalendarDays)
+      : normalizeBlockedCalendarDays(existingSettings.blockedCalendarDays);
+
+    const blockAgendaOnNationalHolidays =
+      typeof body.blockAgendaOnNationalHolidays === "boolean"
+        ? body.blockAgendaOnNationalHolidays
+        : existingSettings.blockAgendaOnNationalHolidays === true;
+
+    const holidayAgendaAllowDays = Array.isArray(body.holidayAgendaAllowDays)
+      ? normalizeHolidayAgendaAllowDays(body.holidayAgendaAllowDays)
+      : normalizeHolidayAgendaAllowDays(existingSettings.holidayAgendaAllowDays);
+
     const settings = {
       isActive,
       notifications,
@@ -175,6 +208,9 @@ export async function PUT(
       defaultSlotDurationMinutes,
       defaultSlotMarginMinutes,
       sendEmailConfirmation,
+      blockedCalendarDays,
+      blockAgendaOnNationalHolidays,
+      holidayAgendaAllowDays,
     };
 
     await updateTenantSettingsOnly(tenantId, settings);

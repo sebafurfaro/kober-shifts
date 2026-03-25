@@ -112,7 +112,7 @@ function rowToProfessionalProfile(row: any): ProfessionalProfile {
       try {
         const parsed = typeof row.availabilityConfig === 'string' ? JSON.parse(row.availabilityConfig) : row.availabilityConfig;
         if (!parsed || typeof parsed !== 'object' || !parsed.days) return null;
-        
+
         // Normalize day keys to numbers (JSON parsing may convert them to strings)
         const normalizedDays: { [key: number]: any } = {};
         for (const key in parsed.days) {
@@ -121,7 +121,7 @@ function rowToProfessionalProfile(row: any): ProfessionalProfile {
             normalizedDays[numKey] = parsed.days[key];
           }
         }
-        
+
         return {
           days: normalizedDays,
           ...(Array.isArray(parsed.holidays) ? { holidays: parsed.holidays } : {}),
@@ -404,7 +404,7 @@ export async function updateUser(
   // Try to update with all fields first
   const allUpdates = [...updates, ...newFieldUpdates];
   const allValues = [...values, ...newFieldValues, id, tenantId];
-  
+
   try {
     await mysql.execute(`UPDATE users SET ${allUpdates.join(', ')} WHERE id = ? AND tenantId = ?`, allValues);
   } catch (error: any) {
@@ -416,7 +416,7 @@ export async function updateUser(
       throw error;
     }
   }
-  
+
   const user = await findUserById(id, tenantId);
   if (!user) throw new Error('Failed to update user');
   return user;
@@ -715,7 +715,7 @@ export async function updateLocation(
   // Try to update with all fields first
   const allUpdates = [...updates, ...newFieldUpdates];
   const allValues = [...values, ...newFieldValues, id, tenantId];
-  
+
   try {
     await mysql.execute(`UPDATE locations SET ${allUpdates.join(', ')} WHERE id = ? AND tenantId = ?`, allValues);
   } catch (error: any) {
@@ -727,7 +727,7 @@ export async function updateLocation(
       throw error;
     }
   }
-  
+
   const location = await findLocationById(id, tenantId);
   if (!location) throw new Error('Failed to update location');
   return location;
@@ -1770,4 +1770,28 @@ export async function findTenantById(id: string): Promise<Tenant | null> {
 export async function deleteTenant(id: string): Promise<void> {
   // Note: Foreign key constraints with ON DELETE CASCADE will handle related data
   await mysql.execute('DELETE FROM tenants WHERE id = ?', [id]);
+}
+
+// Password Reset Tokens operations
+export async function createPasswordResetToken(userId: string, tokenHash: string, expiresAt: Date): Promise<void> {
+  await mysql.execute(
+    'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
+    [userId, tokenHash, expiresAt]
+  );
+}
+
+export async function findResetTokenByHash(tokenHash: string): Promise<any | null> {
+  const [rows] = await mysql.execute(
+    'SELECT * FROM password_reset_tokens WHERE token_hash = ? LIMIT 1',
+    [tokenHash]
+  );
+  const result = rows as any[];
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function markTokenAsUsed(tokenId: number): Promise<void> {
+  await mysql.execute(
+    'UPDATE password_reset_tokens SET used = 1 WHERE id = ?',
+    [tokenId]
+  );
 }

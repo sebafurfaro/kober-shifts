@@ -66,18 +66,25 @@ export function ProfessionalForm({
         }
 
         if (mode === "create") {
-            if (!formData.tempPassword?.trim()) {
-                newErrors.tempPassword = "La contraseña es requerida";
-            } else {
-                const passwordValidation = validatePassword(formData.tempPassword);
+            const pwd = formData.tempPassword?.trim() ?? "";
+            const dni = formData.dni?.trim() ?? "";
+            if (pwd) {
+                const passwordValidation = validatePassword(pwd);
                 if (!passwordValidation.isValid) {
                     newErrors.tempPassword = passwordValidation.errors.join(", ");
                 }
+            } else if (dni) {
+                // La contraseña será el DNI en el envío; el servidor aplica validatePassword al crear.
+            } else {
+                newErrors.tempPassword = "Ingresá una contraseña o un DNI para definir la clave del primer acceso";
             }
-        } else if (mode === "edit" && formData.tempPassword?.trim()) {
-            const passwordValidation = validatePassword(formData.tempPassword);
-            if (!passwordValidation.isValid) {
-                newErrors.tempPassword = passwordValidation.errors.join(", ");
+        } else if (mode === "edit") {
+            const pwd = formData.tempPassword?.trim() ?? "";
+            if (pwd) {
+                const passwordValidation = validatePassword(pwd);
+                if (!passwordValidation.isValid) {
+                    newErrors.tempPassword = passwordValidation.errors.join(", ");
+                }
             }
         }
 
@@ -88,10 +95,14 @@ export function ProfessionalForm({
     const handleSubmit = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (validate()) {
-            let dataToSubmit = formData;
+            let dataToSubmit: ProfessionalFormData = { ...formData };
             // Solo usar DNI como contraseña si no se proporcionó una contraseña explícita en modo creación
             if (mode === "create" && !dataToSubmit.tempPassword?.trim() && dataToSubmit.dni?.trim()) {
                 dataToSubmit = { ...dataToSubmit, tempPassword: dataToSubmit.dni.trim() };
+            }
+            if (mode === "edit" && !dataToSubmit.tempPassword?.trim()) {
+                const { tempPassword: _omit, ...rest } = dataToSubmit;
+                dataToSubmit = rest as ProfessionalFormData;
             }
             onSubmit(dataToSubmit);
         } else {

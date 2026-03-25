@@ -9,6 +9,10 @@ import {
 import { getTenantSettingsRow } from "@/lib/settings-db";
 import { getCalendarClient } from "@/lib/googleOAuth";
 import { AppointmentStatus } from "@/lib/types";
+import { normalizeBlockedCalendarDays, normalizeHolidayAgendaAllowDays } from "@/lib/blocked-calendar-days";
+import { fetchArgentinaNationalHolidayYmdsForYear } from "@/lib/argentina-national-holidays";
+import { BUENOS_AIRES_TIMEZONE } from "@/lib/timezone";
+import { formatInTimeZone } from "date-fns-tz";
 
 /**
  * GET /api/plataforma/[tenantId]/appointments/available-slots?professionalId=xxx&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
@@ -67,20 +71,35 @@ export async function GET(
   }
 
   // Resolve slot duration and margin: service overrides tenant defaults
-  let appointmentDurationMinutes = 30;
-  let slotMarginMinutes = 0;
-  try {
-    const row = await getTenantSettingsRow(tenantId);
-    const settings = (row?.settings && typeof row.settings === "object") ? row.settings as Record<string, unknown> : {};
-    appointmentDurationMinutes = typeof settings.defaultSlotDurationMinutes === "number" && settings.defaultSlotDurationMinutes > 0
+  const settingsRow = await getTenantSettingsRow(tenantId).catch(() => null);
+  const settings =
+    settingsRow?.settings && typeof settingsRow.settings === "object"
+      ? (settingsRow.settings as Record<string, unknown>)
+      : {};
+  let appointmentDurationMinutes =
+    typeof settings.defaultSlotDurationMinutes === "number" && settings.defaultSlotDurationMinutes > 0
       ? settings.defaultSlotDurationMinutes
       : 30;
-    slotMarginMinutes = typeof settings.defaultSlotMarginMinutes === "number" && settings.defaultSlotMarginMinutes >= 0
+  let slotMarginMinutes =
+    typeof settings.defaultSlotMarginMinutes === "number" && settings.defaultSlotMarginMinutes >= 0
       ? settings.defaultSlotMarginMinutes
       : 0;
-  } catch {
-    // keep defaults
+  const blockAgendaOnNationalHolidays = settings.blockAgendaOnNationalHolidays === true;
+  const manualBlockedSet = new Set(normalizeBlockedCalendarDays(settings.blockedCalendarDays));
+  const holidayAllowSet = new Set(normalizeHolidayAgendaAllowDays(settings.holidayAgendaAllowDays));
+  const y1 = startDate.getFullYear();
+  const y2 = endDate.getFullYear();
+  const nationalHolidayYmds = new Set<string>();
+  for (let y = y1; y <= y2; y++) {
+    const s = await fetchArgentinaNationalHolidayYmdsForYear(y);
+    for (const d of s) nationalHolidayYmds.add(d);
   }
+  const isTenantDayBlocked = (ymd: string): boolean => {
+    if (manualBlockedSet.has(ymd)) return true;
+    if (!blockAgendaOnNationalHolidays) return false;
+    if (holidayAllowSet.has(ymd)) return false;
+    return nationalHolidayYmds.has(ymd);
+  };
   if (serviceId) {
     const service = await findServiceById(serviceId, tenantId);
     if (service) {
@@ -190,7 +209,8 @@ export async function GET(
     googleEvents,
     now,
     appointmentDurationMinutes,
-    slotMarginMinutes
+    slotMarginMinutes,
+    isTenantDayBlocked
   );
 
   console.log("Generated slots count:", slots.length);
@@ -251,7 +271,8 @@ function generateAvailableSlots(
   googleEvents: Array<{ start: Date; end: Date }>,
   now: Date,
   appointmentDurationMinutes: number,
-  slotMarginMinutes: number
+  slotMarginMinutes: number,
+  isTenantDayBlocked: (ymd: string) => boolean
 ): Array<{ date: string; time: string; datetime: string }> {
   const slots: Array<{ date: string; time: string; datetime: string }> = [];
   const appointmentDuration = Math.max(1, appointmentDurationMinutes);
@@ -340,6 +361,12 @@ function generateAvailableSlots(
     while (currentDate <= endDate) {
       // Skip if date is in a holiday period
       if (isDateInHoliday(currentDate, holidays)) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        continue;
+      }
+
+      const blockedYmd = formatInTimeZone(currentDate, BUENOS_AIRES_TIMEZONE, "yyyy-MM-dd");
+      if (isTenantDayBlocked(blockedYmd)) {
         currentDate.setDate(currentDate.getDate() + 1);
         continue;
       }
@@ -531,6 +558,12 @@ function generateAvailableSlots(
     while (currentDate <= endDate) {
       // Skip if date is in a holiday period
       if (isDateInHoliday(currentDate, holidays)) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        continue;
+      }
+
+      const blockedYmdLegacy = formatInTimeZone(currentDate, BUENOS_AIRES_TIMEZONE, "yyyy-MM-dd");
+      if (isTenantDayBlocked(blockedYmdLegacy)) {
         currentDate.setDate(currentDate.getDate() + 1);
         continue;
       }
