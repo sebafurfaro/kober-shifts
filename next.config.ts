@@ -12,6 +12,23 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "application/javascript; charset=utf-8",
+          },
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+          {
+            key: "Service-Worker-Allowed",
+            value: "/",
+          },
+        ],
+      },
+      {
         source: "/(.*)",
         headers: [
           {
@@ -32,6 +49,8 @@ const nextConfig: NextConfig = {
               "font-src 'self' data: https://fonts.gstatic.com",
               "connect-src 'self' https: https://accounts.google.com https://www.googleapis.com https://*.mercadopago.com https://api.mercadopago.com",
               "frame-src 'self' https://accounts.google.com https://www.gstatic.com https://*.mercadopago.com",
+              "worker-src 'self'",
+              "manifest-src 'self'",
             ].join("; "),
           },
         ],

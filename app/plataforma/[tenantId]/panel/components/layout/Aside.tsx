@@ -16,8 +16,9 @@ import {
   BookOpen,
   UserIcon,
   CalendarCheck2,
+  Download,
 } from "lucide-react";
-import { Alert } from "@heroui/react";
+import { Alert, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Button } from "@heroui/react";
 import Logo from "@/app/branding/Logo";
 import { Dispatch, SetStateAction } from "react";
 import type { Role } from "@/lib/types";
@@ -25,6 +26,12 @@ import { canAccess, type PermissionsMap, type PermKey } from "@/lib/panel-permis
 
 const DRAWER_WIDTH = 210;
 const DRAWER_COLLAPSED_WIDTH = 64;
+
+/** Evento no estándar para instalación PWA (Chrome, Edge, etc.). */
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
 
 interface NavItemProps {
   href: string;
@@ -66,6 +73,97 @@ function SectionTitle({ label, isCollapsed }: { label: string; isCollapsed: bool
     <p className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
       {label}
     </p>
+  );
+}
+
+/** PWA: diálogo nativo si hay `beforeinstallprompt`; si no, modal con instrucciones (p. ej. Safari / iOS). */
+function DownloadAppButton({
+  isCollapsed,
+  onNavigate,
+}: {
+  isCollapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  const [deferredPrompt, setDeferredPrompt] = React.useState<BeforeInstallPromptEvent | null>(null);
+  const [iosHelpOpen, setIosHelpOpen] = React.useState(false);
+  const [hiddenStandalone, setHiddenStandalone] = React.useState(false);
+
+  React.useEffect(() => {
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+    setHiddenStandalone(standalone);
+  }, []);
+
+  React.useEffect(() => {
+    const onBip = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener("beforeinstallprompt", onBip);
+    return () => window.removeEventListener("beforeinstallprompt", onBip);
+  }, []);
+
+  if (hiddenStandalone) return null;
+
+  const handleClick = async () => {
+    onNavigate?.();
+    if (deferredPrompt) {
+      try {
+        await deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+      } finally {
+        setDeferredPrompt(null);
+      }
+      return;
+    }
+    setIosHelpOpen(true);
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={handleClick}
+        className={`flex w-full items-center gap-3 py-3 transition-all duration-200 ease-in-out rounded-md font-primary text-left
+          ${isCollapsed ? "justify-center px-2" : "px-4"}
+          text-slate-800 hover:bg-[#0288D1]/10`}
+        title={isCollapsed ? "Instalar App" : undefined}
+        aria-label="Instalar App"
+      >
+        <span className="w-5 h-5 shrink-0 text-[#0288D1]">
+          <Download className="w-5 h-5" />
+        </span>
+        {!isCollapsed && <span className="text-sm font-medium">Installar App</span>}
+      </button>
+
+      <Modal isOpen={iosHelpOpen} onOpenChange={setIosHelpOpen} placement="center">
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">Instalar la app</ModalHeader>
+          <ModalBody className="text-sm text-slate-600 pb-2 space-y-3">
+            <p>
+              En <strong>iPhone o iPad</strong>: tocá Compartir{" "}
+              <span className="whitespace-nowrap">(cuadrado con flecha)</span> y elegí{" "}
+              <strong>Añadir a inicio</strong>.
+            </p>
+            <p>
+              En <strong>Windows / Mac con Chrome o Edge</strong>: menú{" "}
+              <span className="whitespace-nowrap">(⋮ tres puntos)</span> junto a la barra de direcciones →{" "}
+              <strong>Instalar aplicación…</strong> o <strong>Instalar Turnos Nodo</strong>. Si no aparece,
+              recargá la página una vez tras entrar al sitio (hace falta HTTPS en producción).
+            </p>
+            <p className="text-xs text-slate-500">
+              Firefox y Safari en escritorio tienen soporte limitado para instalar PWAs; probá Chrome o Edge.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button color="primary" variant="flat" onPress={() => setIosHelpOpen(false)}>
+              Entendido
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </>
   );
 }
 
@@ -233,6 +331,8 @@ export function Aside({
         </div>
 
         <nav className="space-y-1 px-2">
+          <DownloadAppButton isCollapsed={effectiveIsCollapsed} onNavigate={handleNavClick} />
+
           {/* Métricas */}
           {role !== "PATIENT" && can("analytics") && (
             <>

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:https": "next dev --experimental-https",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -14,7 +15,8 @@
     "docker:logs": "docker compose logs -f",
     "seed:admin": "node scripts/seed-admin.mjs",
     "seed:store": "node scripts/seed-store-user.mjs",
-    "migrate:mongo-to-mysql": "node scripts/migrate-mongo-settings-to-mysql.mjs"
+    "migrate:mongo-to-mysql": "node scripts/migrate-mongo-settings-to-mysql.mjs",
+    "icons:pwa": "node scripts/generate-pwa-icons.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1012.0",
@@ -48,6 +50,7 @@
     "react-apexcharts": "^1.9.0",
     "react-dom": "19.2.3",
     "resend": "^6.9.4",
+    "web-push": "^3.6.7",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
@@ -58,11 +61,13 @@
     "@types/nodemailer": "^7.0.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "dotenv": "^16.6.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "mongodb": "^6.16.0",
     "prisma": "^7.4.2",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.18"

@@ -76,7 +76,9 @@ export const Plans = () => {
         "Franjas horarias de disponibilidad",
         "Tiempo de vacaciones",
         "Asistencia técnica",
-        "¿Usas planes de cobertura médica? También disponible"
+        "¿Usas planes de cobertura médica? También disponible",
+        "Ficha de cliente",
+        "Bloqueo diario por Feriados"
       ];
 
 

@@ -4,6 +4,7 @@ import * as React from "react";
 import { HeroUIProvider } from "@heroui/react";
 import { setLocalTimeZone } from "@internationalized/date";
 import { BUENOS_AIRES_TIMEZONE } from "@/lib/timezone";
+import { PwaServiceWorkerRegister } from "@/app/components/PwaServiceWorkerRegister";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   // Calendario y date pickers: zona horaria Buenos Aires y español
@@ -14,6 +15,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   // HeroUIProvider: locale es-AR para que calendarios y DatePickers estén en español (Argentina)
   return (
     <HeroUIProvider locale="es-AR">
+      <PwaServiceWorkerRegister />
       {children}
     </HeroUIProvider>
   );
