@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button, Input, Card, CardBody, CardHeader, Divider } from "@heroui/react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Logo from "@/app/branding/Logo";
 import { GoogleIcon } from "@/app/branding/GoogleIcon";
 import { Typography } from "@/app/components/Typography";
@@ -12,7 +12,9 @@ import { Role } from "@/lib/types";
 export default function LoginPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const tenantId = params.tenantId as string;
+  const fromInstalledPwa = searchParams.get("pwa") === "1";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,6 +57,11 @@ export default function LoginPage() {
           <CardHeader className="flex justify-center flex-col">
             <Logo width={50} height={50} />
             <h2 className="text-2xl font-semibold text-slate-800 font-primary">Ingresar</h2>
+            {fromInstalledPwa ? (
+              <p className="text-sm text-slate-500 font-normal text-center px-2">
+                Accedé con tu cuenta de la app instalada.
+              </p>
+            ) : null}
           </CardHeader>
           <Divider />
           <CardBody className="py-4 px-10">

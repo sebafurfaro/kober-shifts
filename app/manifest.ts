@@ -5,8 +5,8 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Turnos Nodo App",
     short_name: "Turnos Nodo",
     description: "Nunca fue tan fácil gestionar tus turnos",
-    /** Entrada común; en standalone `PwaStandaloneHomeRedirect` manda al último tenant en localStorage. */
-    start_url: "/",
+    /** Entrada PWA sin pasar por la home de marketing (`/pwa` redirige a panel o login del tenant). */
+    start_url: "/pwa",
     scope: "/",
     display: "standalone",
     background_color: "#f8fafc",
