@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/react";
 import { findTenantById } from "@/lib/db";
 import { TenantNotFound } from "./components/TenantNotFound";
 import { PwaTenantRecorder } from "./components/PwaTenantRecorder";
@@ -22,6 +23,7 @@ export default async function TenantLayout({
     <>
       <PwaTenantRecorder tenantId={trimmed} />
       {children}
+      <Analytics />
     </>
   );
 }

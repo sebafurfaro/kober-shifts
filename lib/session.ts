@@ -1,8 +1,14 @@
 import type { Role } from "./types";
 import { createSessionToken, verifySessionToken } from "./auth";
 import { cookies } from "next/headers";
+import { SESSION_COOKIE } from "./session-cookies";
 
-export const SESSION_COOKIE = "ks_session";
+export {
+  PWA_SESSION_COOKIE,
+  PWA_SESSION_MAX_AGE_SECONDS,
+  SESSION_COOKIE,
+  getSessionCookieOptions,
+} from "./session-cookies";
 
 export async function getSession(): Promise<{ userId: string; tenantId: string; role: Role } | null> {
   // Next.js 16: cookies() can be async depending on runtime.
@@ -10,15 +16,6 @@ export async function getSession(): Promise<{ userId: string; tenantId: string; 
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
   return verifySessionToken(token);
-}
-
-export function getSessionCookieOptions() {
-  return {
-    httpOnly: true as const,
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-  };
 }
 
 export function createSessionCookieValue(input: { userId: string; tenantId: string; role: Role }) {

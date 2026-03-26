@@ -29,7 +29,7 @@ export default function LoginPage() {
       const res = await fetch(`/api/plataforma/${tenantId}/auth/login`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, pwa: fromInstalledPwa }),
       });
       if (!res.ok) {
         const json = (await res.json().catch(() => ({}))) as { error?: string };

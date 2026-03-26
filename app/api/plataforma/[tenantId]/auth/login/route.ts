@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { findUserByEmail } from "@/lib/db";
-import { createSessionCookieValue, getSessionCookieOptions, SESSION_COOKIE } from "@/lib/session";
+import {
+  createSessionCookieValue,
+  getSessionCookieOptions,
+  PWA_SESSION_COOKIE,
+  PWA_SESSION_MAX_AGE_SECONDS,
+  SESSION_COOKIE,
+} from "@/lib/session";
 import { verifyPassword } from "@/lib/auth";
 
 export async function POST(
@@ -11,6 +17,7 @@ export async function POST(
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const password = typeof body.password === "string" ? body.password.trim() : "";
+  const pwa = body.pwa === true;
 
   try {
     const user = email ? await findUserByEmail(email, tenantId) : null;
@@ -28,8 +35,17 @@ export async function POST(
       role: user.role,
       tenantId: tenantId
     }), {
-      ...getSessionCookieOptions(),
+      ...getSessionCookieOptions({ persistent: pwa }),
     });
+    if (pwa) {
+      res.cookies.set(PWA_SESSION_COOKIE, "1", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: PWA_SESSION_MAX_AGE_SECONDS,
+      });
+    }
     return res;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

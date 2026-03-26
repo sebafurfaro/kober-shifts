@@ -1,39 +1,65 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import {
+  PWA_SESSION_COOKIE,
+  PWA_SESSION_MAX_AGE_SECONDS,
+  SESSION_COOKIE,
+  getSessionCookieOptions,
+} from "@/lib/session-cookies";
 
-/**
- * Proxy: extracts `tenantId` from the URL path `/plataforma/:tenantId/*`.
- * Adds the tenantId as a custom header `x-tenant-id` so that API routes
- * and server components can read it without parsing the URL again.
- * If the tenantId is missing, the request is redirected to the root page.
- */
-export function proxy(request: NextRequest) {
-    const url = request.nextUrl.clone();
-    const pathname = url.pathname;
-
-    // Store routes are not matched by config.matcher; they handle their own
-    // authentication in app/store/layout.tsx
-
-    // Expected pattern: /plataforma/<tenantId>/...
-    const match = pathname.match(/^\/plataforma\/([^\/]+)(\/.*)?$/);
-    if (!match) {
-        // No tenantId present – redirect to home (or a landing page)
-        return NextResponse.redirect(new URL('/', request.url));
-    }
-
-    const tenantId = match[1];
-    // Attach tenantId as a header for downstream handlers
-    const response = NextResponse.next();
-    response.headers.set('x-tenant-id', tenantId);
-    response.headers.set('x-pathname', pathname);
-    return response;
+function withPwaSessionRenewal(req: NextRequest, res: NextResponse): NextResponse {
+  const sessionToken = req.cookies.get(SESSION_COOKIE)?.value;
+  const isPwaSession = req.cookies.get(PWA_SESSION_COOKIE)?.value === "1";
+  if (!sessionToken || !isPwaSession) return res;
+  res.cookies.set(SESSION_COOKIE, sessionToken, {
+    ...getSessionCookieOptions({ persistent: true }),
+  });
+  res.cookies.set(PWA_SESSION_COOKIE, "1", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: PWA_SESSION_MAX_AGE_SECONDS,
+  });
+  return res;
 }
 
 /**
- * Apply proxy only to plataforma routes.
+ * Proxy (antes middleware): Edge-safe. No importar módulos con `node:crypto`.
+ *
+ * - `/api/plataforma/:tenantId/*` y `/plataforma/:tenantId/*`: headers `x-tenant-id` + renovación PWA.
+ * - `/plataforma` sin tenant: redirect a `/` (comportamiento previo).
+ * - Renovación de sesión PWA en rutas coincidentes.
  */
+export function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  const apiMatch = pathname.match(/^\/api\/plataforma\/([^/]+)(\/.*)?$/);
+  if (apiMatch) {
+    const res = NextResponse.next();
+    withPwaSessionRenewal(request, res);
+    res.headers.set("x-tenant-id", apiMatch[1]);
+    res.headers.set("x-pathname", pathname);
+    return res;
+  }
+
+  const pageMatch = pathname.match(/^\/plataforma\/([^/]+)(\/.*)?$/);
+  if (pageMatch) {
+    const res = NextResponse.next();
+    withPwaSessionRenewal(request, res);
+    res.headers.set("x-tenant-id", pageMatch[1]);
+    res.headers.set("x-pathname", pathname);
+    return res;
+  }
+
+  if (pathname.startsWith("/plataforma")) {
+    const res = NextResponse.redirect(new URL("/", request.url));
+    return withPwaSessionRenewal(request, res);
+  }
+
+  return withPwaSessionRenewal(request, NextResponse.next());
+}
+
 export const config = {
-    matcher: [
-        '/plataforma/:tenantId/:path*',
-    ],
+  matcher: ["/plataforma/:path*", "/api/plataforma/:path*"],
 };
