@@ -1,10 +1,7 @@
 "use client";
 
-import * as React from "react";
 import {
     Button,
-    Select,
-    SelectItem,
 } from "@heroui/react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -38,14 +35,14 @@ export function Toolbar({
     return (
         <div className="p-2 md:p-4 mb-4 bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="grid grid-cols-2 md:flex md:flex-row items-center justify-between gap-4 w-full">
-                <h2 className="col-span-2 order-1 text-sm md:text-lg font-semibold capitalize text-center px-1 md:order-none md:flex-1">
+                <h2 className="col-span-2 order-1 text-sm md:text-lg font-semibold capitalize text-center px-1 md:flex-1">
                     {currentView === "dayGridMonth"
                         ? format(currentDate, "MMMM yyyy", { locale: es })
                         : currentView === "timeGridWeek" || currentView === "listWeek"
                         ? `Semana · ${format(currentDate, "d MMM yyyy", { locale: es })}`
                         : format(currentDate, "EEEE d MMMM yyyy", { locale: es })}
                 </h2>
-                <div className="order-3 flex items-center gap-2 md:order-none">
+                <div className="order-3 flex items-center gap-2">
                     <Button onPress={onToday} className="font-bold tracking-wide text-xs md:text-base px-2 md:px-4 min-w-10 md:min-w-20 hidden md:inline-flex">
                         Hoy
                     </Button>
@@ -63,7 +60,7 @@ export function Toolbar({
                 </div>
 
                 
-                <div className="order-2 col-span-2 flex justify-end md:order-none">
+                <div className="order-2 col-span-2 flex justify-end">
                     <Button
                         color="primary"
                         onPress={onCreateEvent}
@@ -76,7 +73,7 @@ export function Toolbar({
                 </div>
 
 
-                <div className="order-3 inline-flex flex-wrap justify-center bg-gray-200 rounded-md md:rounded-lg p-1 md:gap-1 max-w-full md:order-none">
+                <div className="order-3 inline-flex flex-wrap justify-center bg-gray-200 rounded-md md:rounded-lg p-1 md:gap-1 max-w-full">
                     <Button
                         onPress={() => onViewChange("dayGridMonth")}
                         className={`px-1 md:px-4 py-1.5 font-medium min-w-auto rounded-lg md:rounded-xl text-xs md:text-base ${
