@@ -102,7 +102,7 @@ body {
 }
 
 .card {
-  @apply p-6 bg-white shadow-sm rounded-lg;
+  @apply p-2 md:p-6 bg-white shadow-sm rounded-lg;
 }
 
 @media (max-width: 640px) {

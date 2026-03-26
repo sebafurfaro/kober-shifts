@@ -54,7 +54,7 @@ export const ContactTab = ({ patient }: { patient: Patient }) => {
           return (
             <TableRow key={f.key}>
               <TableCell>
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">{f.label}</span>
+                <span className="text-xs font-medium text-gray-400 md:uppercase md:tracking-wide">{f.label}</span>
               </TableCell>
               <TableCell>
                 <span className="text-sm text-gray-800">{value}</span>

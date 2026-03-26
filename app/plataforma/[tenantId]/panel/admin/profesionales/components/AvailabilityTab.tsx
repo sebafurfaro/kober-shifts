@@ -143,7 +143,7 @@ export function AvailabilityTab({ availabilityConfig, setFormData, onSave, loadi
                   dayConfig.slots.map((slot: Slot) => (
                     <Card key={slot.id} className="p-4 border border-gray-200">
                       <CardBody className="p-0">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           {/* Columna Izquierda: Horarios y Fecha Inicio */}
                           <div className="space-y-4">
                             {/* Grupo 1: startTime - endTime */}
@@ -151,7 +151,7 @@ export function AvailabilityTab({ availabilityConfig, setFormData, onSave, loadi
                               <p className="text-xs font-semibold text-gray-600 mb-2">
                                 Horario de Atención
                               </p>
-                              <div className="flex gap-3">
+                              <div className="flex flex-col md:flex-row gap-3">
                                 <Input
                                   label="Inicio"
                                   type="time"
@@ -244,7 +244,7 @@ export function AvailabilityTab({ availabilityConfig, setFormData, onSave, loadi
                             />
                           </div>
                         </div>
-                        <div className="mt-6 flex gap-3 justify-end">
+                        <div className="mt-6 flex flex-col md:flex-row gap-3 justify-end">
                           <Button
                             size="sm"
                             variant="light"

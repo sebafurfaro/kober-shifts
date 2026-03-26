@@ -5,6 +5,7 @@ import { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState } from "
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from "@heroui/react";
 import type { Role } from "@/lib/types";
 import Link from "next/link";
+import Logo from "@/app/branding/Logo";
 
 interface AppBarProps {
     isMobile: boolean;
@@ -86,15 +87,7 @@ export default function AppBar({
             style={{ '--dynamic-aside-width': `${asideWidth}px` } as React.CSSProperties}
         >
             <div className="flex items-center gap-4">
-                {isMobile && (
-                    <button
-                        onClick={() => setMobileDrawerOpen((v) => !v)}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
-                        aria-label="Toggle menu"
-                    >
-                        <Menu className="w-5 h-5" />
-                    </button>
-                )}
+                <Logo width={40} height={40} />
             </div>
 
             <div className="flex items-center gap-4">

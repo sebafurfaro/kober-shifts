@@ -451,6 +451,16 @@ export default function AdminPatientsPage() {
                   <div className="flex flex-col gap-1 mt-3">
                     <Button
                       size="sm"
+                      variant="bordered"
+                      color="warning"
+                      onPress={() => handleView(p)}
+                      aria-label="ver"
+                      startContent={<Eye className="w-4 h-4" />}
+                    >
+                      Ver Ficha
+                    </Button>
+                    <Button
+                      size="sm"
                       variant="solid"
                       color="primary"
                       onPress={() => handleEdit(p)}

@@ -24,6 +24,7 @@ import { Dispatch, SetStateAction } from "react";
 import type { Role } from "@/lib/types";
 import { canAccess, type PermissionsMap, type PermKey } from "@/lib/panel-permissions";
 import { savePwaInstallTenantId } from "@/lib/pwa-entry";
+import type { AsideNavKey } from "@/lib/panel-mobile-nav";
 
 const DRAWER_WIDTH = 210;
 const DRAWER_COLLAPSED_WIDTH = 64;
@@ -208,6 +209,8 @@ interface AsideProps {
   features?: TenantFeatures | null;
   /** Si el usuario logueado tiene un professional_profile (puede ser ADMIN con perfil). */
   hasProfessionalProfile?: boolean;
+  /** En móvil, claves de ítems que ya están en la barra inferior (no duplicar en el drawer). */
+  navHiddenOnMobile?: Set<AsideNavKey> | null;
 }
 
 export function Aside({
@@ -227,6 +230,7 @@ export function Aside({
   permissions,
   features,
   hasProfessionalProfile,
+  navHiddenOnMobile,
 }: AsideProps) {
   const [isHovered, setIsHovered] = React.useState(false);
   const [isManuallyToggled, setIsManuallyToggled] = React.useState(false);
@@ -234,6 +238,7 @@ export function Aside({
   const [transitionReady, setTransitionReady] = React.useState(false);
   const can = (permKey: PermKey) => canAccess(permissions ?? null, role, permKey);
   const pathname = usePathname();
+  const hid = (key: AsideNavKey) => isMobile && !!navHiddenOnMobile?.has(key);
 
   const handleNavClick = isMobile ? () => setMobileDrawerOpen(false) : undefined;
 
@@ -342,7 +347,7 @@ export function Aside({
           />
 
           {/* Métricas */}
-          {role !== "PATIENT" && can("analytics") && (
+          {role !== "PATIENT" && can("analytics") && !hid("analytics") && (
             <>
               <SectionTitle label="Métricas" isCollapsed={effectiveIsCollapsed} />
               <NavItem
@@ -357,106 +362,134 @@ export function Aside({
           )}
 
           {/* Recursos: Calendario, Turnos Profesional, Servicios, Clientes */}
-          {role !== "PATIENT" && (calendarEnabled || can("turnosProfessional") || (can("servicios") && isFeatureEnabled("show_servicios")) || can("patients")) ? (
-            <SectionTitle label="Recursos" isCollapsed={effectiveIsCollapsed} />
-          ) : null}
-          {role !== "PATIENT" && calendarEnabled && (
-            <NavItem
-              href={base}
-              label="Calendario"
-              icon={<Calendar className="w-5 h-5" />}
-              isCollapsed={effectiveIsCollapsed}
-              onNavigate={handleNavClick}
-              pathname={pathname}
-              exact
-            />
-          )}
-          {isStaff && can("turnosProfessional") && (role === "PROFESSIONAL" || hasProfessionalProfile) && (
-            <NavItem
-              href={`${base}/professional`}
-              label="Mis turnos"
-              icon={<CalendarCheck2 className="w-5 h-5" />}
-              isCollapsed={effectiveIsCollapsed}
-              onNavigate={handleNavClick}
-              pathname={pathname}
-            />
-          )}
-          {isStaff && can("servicios") && isFeatureEnabled("show_servicios") && (
-            <NavItem
-              href={`${base}/admin/servicios`}
-              label="Servicios"
-              icon={<LayoutGrid className="w-5 h-5" />}
-              isCollapsed={effectiveIsCollapsed}
-              onNavigate={handleNavClick}
-              pathname={pathname}
-            />
-          )}
-          {isStaff && can("patients") && (
-            <NavItem
-              href={pacientesItem.href}
-              label={pacientesItem.label}
-              icon={pacientesItem.icon}
-              isCollapsed={effectiveIsCollapsed}
-              onNavigate={handleNavClick}
-              pathname={pathname}
-            />
-          )}
+          {role !== "PATIENT" &&
+            (() => {
+              const showCal = calendarEnabled && !hid("calendar");
+              const showProf =
+                isStaff &&
+                can("turnosProfessional") &&
+                (role === "PROFESSIONAL" || hasProfessionalProfile) &&
+                !hid("professional");
+              const showServ =
+                isStaff && can("servicios") && isFeatureEnabled("show_servicios") && !hid("servicios");
+              const showPat = isStaff && can("patients") && !hid("patients");
+              const showRecursosHeader = showCal || showProf || showServ || showPat;
+              return (
+                <>
+                  {showRecursosHeader ? (
+                    <SectionTitle label="Recursos" isCollapsed={effectiveIsCollapsed} />
+                  ) : null}
+                  {showCal && (
+                    <NavItem
+                      href={base}
+                      label="Calendario"
+                      icon={<Calendar className="w-5 h-5" />}
+                      isCollapsed={effectiveIsCollapsed}
+                      onNavigate={handleNavClick}
+                      pathname={pathname}
+                      exact
+                    />
+                  )}
+                  {showProf && (
+                    <NavItem
+                      href={`${base}/professional`}
+                      label="Mis turnos"
+                      icon={<CalendarCheck2 className="w-5 h-5" />}
+                      isCollapsed={effectiveIsCollapsed}
+                      onNavigate={handleNavClick}
+                      pathname={pathname}
+                    />
+                  )}
+                  {showServ && (
+                    <NavItem
+                      href={`${base}/admin/servicios`}
+                      label="Servicios"
+                      icon={<LayoutGrid className="w-5 h-5" />}
+                      isCollapsed={effectiveIsCollapsed}
+                      onNavigate={handleNavClick}
+                      pathname={pathname}
+                    />
+                  )}
+                  {showPat && (
+                    <NavItem
+                      href={pacientesItem.href}
+                      label={pacientesItem.label}
+                      icon={pacientesItem.icon}
+                      isCollapsed={effectiveIsCollapsed}
+                      onNavigate={handleNavClick}
+                      pathname={pathname}
+                    />
+                  )}
+                </>
+              );
+            })()}
 
           {/* Gestión: Admin, Pagos, Turnos, Sedes, Coberturas */}
-          {(isStaff && (can("admin") || (can("pagos") && isFeatureEnabled("show_pagos")) || can("turnos") || can("locations") || can("coberturas"))) && (
-            <>
-              <SectionTitle label="Gestión" isCollapsed={effectiveIsCollapsed} />
-              {can("admin") && (
-                <NavItem
-                  href={`${base}/admin`}
-                  label="Admin"
-                  icon={<Settings className="w-5 h-5" />}
-                  isCollapsed={effectiveIsCollapsed}
-                  onNavigate={handleNavClick}
-                  pathname={pathname}
-                  exact
-                />
-              )}
-              {can("pagos") && isFeatureEnabled("show_pagos") && (
-                <NavItem
-                  href={`${base}/admin/payments`}
-                  label="Pagos"
-                  icon={<CircleDollarSign className="w-5 h-5" />}
-                  isCollapsed={effectiveIsCollapsed}
-                  onNavigate={handleNavClick}
-                  pathname={pathname}
-                />
-              )}
-              {can("turnos") && (
-                <NavItem
-                  href={`${base}/admin/turnos`}
-                  label="Turnos"
-                  icon={<CalendarCheck2 className="w-5 h-5" />}
-                  isCollapsed={effectiveIsCollapsed}
-                  onNavigate={handleNavClick}
-                  pathname={pathname}
-                />
-              )}
-              {gestionItems
+          {isStaff &&
+            (() => {
+              const showAdmin = can("admin") && !hid("admin");
+              const showPagos = can("pagos") && isFeatureEnabled("show_pagos") && !hid("pagos");
+              const showTurnos = can("turnos") && !hid("turnos");
+              const gestionFiltered = gestionItems
                 .filter((item) => {
                   if (item.show === false) return false;
-                  if (item.href.includes("/locations")) return can("locations");
-                  if (item.href.includes("/coberturas")) return can("coberturas");
+                  if (item.href.includes("/locations"))
+                    return can("locations") && !hid("locations");
+                  if (item.href.includes("/coberturas"))
+                    return can("coberturas") && !hid("coberturas");
                   return true;
-                })
-                .map((item) => (
-                  <NavItem
-                    key={item.href}
-                    href={item.href}
-                    label={item.label}
-                    icon={item.icon}
-                    isCollapsed={effectiveIsCollapsed}
-                    onNavigate={handleNavClick}
-                    pathname={pathname}
-                  />
-                ))}
-            </>
-          )}
+                });
+              const showGestionHeader =
+                showAdmin || showPagos || showTurnos || gestionFiltered.length > 0;
+              if (!showGestionHeader) return null;
+              return (
+                <>
+                  <SectionTitle label="Gestión" isCollapsed={effectiveIsCollapsed} />
+                  {showAdmin && (
+                    <NavItem
+                      href={`${base}/admin`}
+                      label="Admin"
+                      icon={<Settings className="w-5 h-5" />}
+                      isCollapsed={effectiveIsCollapsed}
+                      onNavigate={handleNavClick}
+                      pathname={pathname}
+                      exact
+                    />
+                  )}
+                  {showPagos && (
+                    <NavItem
+                      href={`${base}/admin/payments`}
+                      label="Pagos"
+                      icon={<CircleDollarSign className="w-5 h-5" />}
+                      isCollapsed={effectiveIsCollapsed}
+                      onNavigate={handleNavClick}
+                      pathname={pathname}
+                    />
+                  )}
+                  {showTurnos && (
+                    <NavItem
+                      href={`${base}/admin/turnos`}
+                      label="Turnos"
+                      icon={<CalendarCheck2 className="w-5 h-5" />}
+                      isCollapsed={effectiveIsCollapsed}
+                      onNavigate={handleNavClick}
+                      pathname={pathname}
+                    />
+                  )}
+                  {gestionFiltered.map((item) => (
+                    <NavItem
+                      key={item.href}
+                      href={item.href}
+                      label={item.label}
+                      icon={item.icon}
+                      isCollapsed={effectiveIsCollapsed}
+                      onNavigate={handleNavClick}
+                      pathname={pathname}
+                    />
+                  ))}
+                </>
+              );
+            })()}
 
           {/* Colaboradores */}
           {isStaff && can("collaborators") && colaboradoresItems.length > 0 && (
@@ -475,7 +508,7 @@ export function Aside({
               ))}
             </>
           )}
-          {role === "ADMIN" && (
+          {role === "ADMIN" && !hid("roles") && (
             <NavItem
               href={`${base}/admin/roles`}
               label="Roles"
@@ -485,7 +518,7 @@ export function Aside({
               pathname={pathname}
             />
           )}
-          {isStaff && can("profesionales") && (
+          {isStaff && can("profesionales") && !hid("profesionales") && (
             <NavItem
               href={`${base}/admin/profesionales`}
               label="Profesionales"
@@ -497,50 +530,63 @@ export function Aside({
           )}
 
           {/* Mis turnos y Mis datos (solo rol PATIENT) */}
-          {role === "PATIENT" && (
-            <>
-              {!effectiveIsCollapsed && <div className="border-t border-slate-200 my-2" />}
-              <NavItem
-                href={`${base}/patient`}
-                label="Mis turnos"
-                icon={<CalendarDays className="w-5 h-5" />}
-                isCollapsed={effectiveIsCollapsed}
-                onNavigate={handleNavClick}
-                pathname={pathname}
-                exact
-              />
-              <NavItem
-                href={`${base}/patient/mis-datos`}
-                label="Mis datos"
-                icon={<User className="w-5 h-5" />}
-                isCollapsed={effectiveIsCollapsed}
-                onNavigate={handleNavClick}
-                pathname={pathname}
-              />
-            </>
-          )}
+          {role === "PATIENT" &&
+            (!hid("patient-mis-turnos") || !hid("patient-mis-datos")) && (
+              <>
+                {!effectiveIsCollapsed && <div className="border-t border-slate-200 my-2" />}
+                {!hid("patient-mis-turnos") && (
+                  <NavItem
+                    href={`${base}/patient`}
+                    label="Mis turnos"
+                    icon={<CalendarDays className="w-5 h-5" />}
+                    isCollapsed={effectiveIsCollapsed}
+                    onNavigate={handleNavClick}
+                    pathname={pathname}
+                    exact
+                  />
+                )}
+                {!hid("patient-mis-datos") && (
+                  <NavItem
+                    href={`${base}/patient/mis-datos`}
+                    label="Mis datos"
+                    icon={<User className="w-5 h-5" />}
+                    isCollapsed={effectiveIsCollapsed}
+                    onNavigate={handleNavClick}
+                    pathname={pathname}
+                  />
+                )}
+              </>
+            )}
 
           {/* Ayuda (no visible para PATIENT) */}
-          {role !== "PATIENT" && (
-            <>
-              <SectionTitle label="Ayuda" isCollapsed={effectiveIsCollapsed} />
-              <NavItem
-                href={"https://nodoapp.gitbook.io/nodoapp-docs"}
-                label="Documentación"
-                icon={<BookOpen className="w-5 h-5" />}
-                isCollapsed={effectiveIsCollapsed}
-                onNavigate={handleNavClick}
-                pathname={pathname}
-              />
-              {!effectiveIsCollapsed && usage !== null && (
-                <div className="px-4 pt-2 pb-2">
-                  <Alert color="primary" variant="faded" icon={<UserIcon className="w-4 h-4" />} className="text-sm">
-                    Usaste {usage.used}/{usage.max} usuario{usage.max !== 1 ? "s" : ""}.
-                  </Alert>
-                </div>
-              )}
-            </>
-          )}
+          {role !== "PATIENT" &&
+            (() => {
+              const showDocs = !hid("documentation");
+              const showUsage = !effectiveIsCollapsed && usage !== null;
+              if (!showDocs && !showUsage) return null;
+              return (
+                <>
+                  <SectionTitle label="Ayuda" isCollapsed={effectiveIsCollapsed} />
+                  {showDocs && (
+                    <NavItem
+                      href={"https://nodoapp.gitbook.io/nodoapp-docs"}
+                      label="Documentación"
+                      icon={<BookOpen className="w-5 h-5" />}
+                      isCollapsed={effectiveIsCollapsed}
+                      onNavigate={handleNavClick}
+                      pathname={pathname}
+                    />
+                  )}
+                  {showUsage && (
+                    <div className="px-4 pt-2 pb-2">
+                      <Alert color="primary" variant="faded" icon={<UserIcon className="w-4 h-4" />} className="text-sm">
+                        Usaste {usage.used}/{usage.max} usuario{usage.max !== 1 ? "s" : ""}.
+                      </Alert>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
         </nav>
       </div>
     </aside>

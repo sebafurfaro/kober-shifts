@@ -1,4 +1,4 @@
-import { Tabs, Tab, Card, CardBody } from "@heroui/react";
+import { Tabs, Tab, Card, CardBody, Accordion, AccordionItem } from "@heroui/react";
 import { HistoryTab } from "./HistoryTab";
 import { ContactTab } from "./ContactTab";
 import { NotepadTab } from "./NotepadTab";
@@ -68,64 +68,94 @@ export const PatientForm = ({ patient, appointments, loadingAppointments, tenant
   };
 
   return (
-    <div className="flex w-full flex-col card">
-      <Tabs
-        aria-label="Tabs del formulario de paciente"
-        className="w-full"
-        classNames={{
-          base: "w-full",
-          tabList: "gap-2 md:gap-6 w-full relative bg-gray-100 rounded-lg p-1",
-          cursor: "bg-white rounded-lg transition-all duration-300 ease-in-out font-medium",
-          tab: "md:max-w-fit px-2 md:px-4 h-12 rounded-md text-slate-800",
-          tabContent: "group-data-[selected=true]:text-primary",
-          panel: "p-0",
-        }}
-      >
-        <Tab key="datos-generales" title="Datos generales">
-          <Card>
-            <CardBody>
-              <ContactTab patient={patient} />
-            </CardBody>
-          </Card>
-        </Tab>
-        <Tab key="historial" title="Historial">
-          <Card>
-            <CardBody>
-              <HistoryTab appointments={appointments} loading={loadingAppointments} />
-            </CardBody>
-          </Card>
-        </Tab>
-        <Tab key="notas" title="Notas">
-          <Card>
-            <CardBody>
-              <NotepadTab
-                notes={patient.notes ?? []}
-                onSave={(notes) => saveField("notes", notes)}
-              />
-            </CardBody>
-          </Card>
-        </Tab>
-        <Tab key="archivos" title="Archivos">
-          <Card>
-            <CardBody>
-              <ArchiveTab
-                archives={patient.archives ?? []}
-                onSave={(archives) => saveField("archives", archives)}
-              />
-            </CardBody>
-          </Card>
-        </Tab>
-        <Tab key="informacion-adicional" title="Información adicional">
-          <Card>
-            <CardBody>
-              <AditionalTab
-                items={patient.additionalInfo ?? []}
-                onSave={(items) => saveField("additionalInfo", items)}
-              />
-            </CardBody>
-          </Card>
-        </Tab>
-      </Tabs>
-    </div>
+    <>
+      <div className="hidden md:flex w-full flex-col card">
+        <Tabs
+          aria-label="Tabs del formulario de paciente"
+          className="w-full"
+          classNames={{
+            base: "w-full",
+            tabList: "gap-2 md:gap-6 w-full relative bg-gray-100 rounded-lg p-1",
+            cursor: "bg-white rounded-lg transition-all duration-300 ease-in-out font-medium",
+            tab: "md:max-w-fit px-2 md:px-4 h-12 rounded-md text-slate-800",
+            tabContent: "group-data-[selected=true]:text-primary",
+            panel: "p-0",
+          }}
+        >
+          <Tab key="datos-generales" title="Datos generales">
+            <Card>
+              <CardBody>
+                <ContactTab patient={patient} />
+              </CardBody>
+            </Card>
+          </Tab>
+          <Tab key="historial" title="Historial">
+            <Card>
+              <CardBody>
+                <HistoryTab appointments={appointments} loading={loadingAppointments} />
+              </CardBody>
+            </Card>
+          </Tab>
+          <Tab key="notas" title="Notas">
+            <Card>
+              <CardBody>
+                <NotepadTab
+                  notes={patient.notes ?? []}
+                  onSave={(notes) => saveField("notes", notes)}
+                />
+              </CardBody>
+            </Card>
+          </Tab>
+          <Tab key="archivos" title="Archivos">
+            <Card>
+              <CardBody>
+                <ArchiveTab
+                  archives={patient.archives ?? []}
+                  onSave={(archives) => saveField("archives", archives)}
+                />
+              </CardBody>
+            </Card>
+          </Tab>
+          <Tab key="informacion-adicional" title="Información adicional">
+            <Card>
+              <CardBody>
+                <AditionalTab
+                  items={patient.additionalInfo ?? []}
+                  onSave={(items) => saveField("additionalInfo", items)}
+                />
+              </CardBody>
+            </Card>
+          </Tab>
+        </Tabs>
+      </div>
+      <div className="block md:hidden">
+        <Accordion variant="splitted" className="space-y-4">
+          <AccordionItem key="Detalles" title="Detalles">
+            <ContactTab patient={patient} />
+          </AccordionItem>
+          <AccordionItem key="Historial de turnos" title="Historial de turnos">
+            <HistoryTab appointments={appointments} loading={loadingAppointments} />
+          </AccordionItem>
+          <AccordionItem key="Notas" title="Notas">
+            <NotepadTab
+              notes={patient.notes ?? []}
+              onSave={(notes) => saveField("notes", notes)}
+            />
+          </AccordionItem>
+          <AccordionItem key="Archivos" title="Archivos">
+            <ArchiveTab
+              archives={patient.archives ?? []}
+              onSave={(archives) => saveField("archives", archives)}
+            />
+          </AccordionItem>
+          <AccordionItem key="Informacion Adicional" title="Informacion Adicional">
+            <AditionalTab
+              items={patient.additionalInfo ?? []}
+              onSave={(items) => saveField("additionalInfo", items)}
+            />
+          </AccordionItem>
+        </Accordion>
+      </div>
+    </>
   );
 };

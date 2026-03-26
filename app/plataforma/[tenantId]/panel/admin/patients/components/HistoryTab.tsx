@@ -1,6 +1,6 @@
 "use client";
 
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Chip, Spinner } from "@heroui/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Chip, Spinner, Divider } from "@heroui/react";
 
 interface Appointment {
   id: string;
@@ -108,7 +108,7 @@ export const HistoryTab = ({ appointments, loading }: HistoryTabProps) => {
 
       {/* Mobile */}
       <div className="flex md:hidden flex-col divide-y divide-gray-100">
-        {appointments.map((apt) => {
+        {appointments.map((apt, index) => {
           const st = STATUS_MAP[apt.status] ?? { label: apt.status, color: "default" as const };
           const dur = durationMinutes(apt.startAt, apt.endAt);
           return (

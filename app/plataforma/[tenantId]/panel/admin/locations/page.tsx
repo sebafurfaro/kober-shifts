@@ -240,7 +240,7 @@ export default function AdminLocationsPage() {
               ) : locations.length === 0 ? (
                 <Typography variant="p" color="gray">No hay sedes registradas</Typography>
               ) : (
-                locations.map((loc) => (
+                locations.map((loc, index) => (
                   <div key={loc.id} className="flex flex-col space-y-3">
                     <Typography variant="h6" color="black">{loc.name}</Typography>
                     <div className="grid grid-cols-2 gap-4">
@@ -279,7 +279,9 @@ export default function AdminLocationsPage() {
                         Eliminar
                       </Button>
                     </div>
-                    <Divider className="my-4" />
+                    {index < locations.length - 1 && (
+                      <Divider className="my-4" />
+                    )}
                   </div>
                 ))
               )}

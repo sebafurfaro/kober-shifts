@@ -15,6 +15,8 @@ import { useTenantLabels } from "@/lib/use-tenant-labels";
 import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
 import type { Role } from "@/lib/types";
 import { DEFAULT_PERMISSIONS, type PermissionsMap } from "@/lib/panel-permissions";
+import { buildPanelMobileNav } from "@/lib/panel-mobile-nav";
+import { MobileBar } from "./layout/MobileBar";
 
 const DRAWER_WIDTH = 260;
 
@@ -150,6 +152,29 @@ export function PanelLayoutShell({
     icon: <BookUser className="w-5 h-5" />,
   };
 
+  const { entries: mobileNavEntries, asideKeysToHide } = React.useMemo(
+    () =>
+      buildPanelMobileNav({
+        role,
+        currentTenantId,
+        calendarEnabled,
+        pacientesItem: { label: pacientesItem.label, href: pacientesItem.href },
+        permissions,
+        features,
+        hasProfessionalProfile,
+      }),
+    [
+      role,
+      currentTenantId,
+      calendarEnabled,
+      pacientesItem.label,
+      pacientesItem.href,
+      permissions,
+      features,
+      hasProfessionalProfile,
+    ],
+  );
+
   async function logout() {
     await fetch(`/api/plataforma/${currentTenantId}/auth/logout`, { method: "POST" });
     window.location.href = `/plataforma/${currentTenantId}/login`;
@@ -193,11 +218,12 @@ export function PanelLayoutShell({
         permissions={permissions}
         features={features}
         hasProfessionalProfile={hasProfessionalProfile}
+        navHiddenOnMobile={asideKeysToHide}
       />
 
       {/* Main Content */}
       <main
-        className="flex-1 py-16 px-6 w-full text-slate-900 transition-all duration-300 responsive-margin"
+        className="flex-1 py-16 max-md:pb-24 px-6 w-full text-slate-900 transition-all duration-300 responsive-margin"
         style={{
           '--dynamic-aside-width': `${asideWidth}px`,
           backgroundImage: "linear-gradient(to bottom, #F3F8FC, #f4f8fa)",
@@ -205,6 +231,7 @@ export function PanelLayoutShell({
       >
         {children}
       </main>
+      <MobileBar entries={mobileNavEntries} setMobileDrawerOpen={setMobileDrawerOpen} />
     </div>
   );
 }

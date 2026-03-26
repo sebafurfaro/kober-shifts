@@ -17,6 +17,8 @@ import {
   Chip,
   Input,
   Divider,
+  Select,
+  SelectItem,
 } from "@heroui/react";
 import { CircleCheck, CircleX, Hand, MapPin, MessageCircle, Plus, Search } from "lucide-react";
 import { PanelHeader } from "../../components/PanelHeader";
@@ -206,7 +208,7 @@ export default function AdminTurnosPage() {
         <Card className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden text-slate-800 p-4">
           <CardBody className="p-0">
             <div className="flex items-center justify-between w-full mb-4">
-              <div className="flex flex-wrap gap-2">
+              <div className="hidden md:flex flex-wrap gap-2">
                 {(
                   [
                     { key: "proximos" as const, label: "Próximos" },
@@ -229,10 +231,34 @@ export default function AdminTurnosPage() {
                   </Button>
                 ))}
               </div>
+              <div className="block md:hidden w-full pr-4">
+                <Select placeholder="Filtra por fecha" fullWidth>
+                  {(
+                  [
+                    { key: "proximos" as const, label: "Próximos" },
+                    { key: "hoy" as const, label: "Hoy" },
+                    { key: "manana" as const, label: "Mañana" },
+                    { key: "todos" as const, label: "Todos" },
+                  ] as const
+                ).map(({ key, label }) => (
+                  <SelectItem
+                    key={key}
+                    variant={filter === key ? "solid" : "bordered"}
+                    color="primary"
+                    onPress={() => {
+                      setFilter(key);
+                      setPage(1);
+                    }}
+                  >
+                    {label}
+                  </SelectItem>
+                ))}
+                </Select>
+              </div>
               
                 <Button
                   color="primary"
-                  className="rounded-full flex items-center justify-center min-w-14! w-14! min-h-14! h-14!"
+                  className="rounded-full flex items-center justify-center p-0 md:p-4 min-w-10! w-10! min-h-10! h-10! md:min-w-14! md:w-14! md:min-h-14! md:h-14!"
                   onPress={() => setCreateDialogOpen(true)}
                   aria-label="Agregar turno"
                 >
@@ -241,7 +267,7 @@ export default function AdminTurnosPage() {
                 
             </div>
 
-            <div className="w-48 py-3">
+            <div className="w-full md:w-48 py-3">
               <Input
                 type="text"
                 placeholder="Buscar turno"
@@ -251,6 +277,8 @@ export default function AdminTurnosPage() {
                 startContent={<Search className="w-4 h-4 text-gray-400" />}
               />
             </div>
+
+            <Divider className="mb-4 block md:hidden" />
 
             <Table aria-label="Turnos" removeWrapper className="hidden md:block">
               <TableHeader>

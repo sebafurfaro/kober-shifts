@@ -285,7 +285,7 @@ export default function AdminProfessionalsPage() {
               ) : professionals.length === 0 ? (
                 <Typography variant="p" color="gray">No hay colaboradores registrados</Typography>
               ) : (
-                professionals.map((pro) => {
+                professionals.map((pro, index) => {
                   const color = pro.color || pro.professional?.color || "#2196f3";
                   const name = pro.name ?? "";
                   const initials = name
@@ -343,7 +343,9 @@ export default function AdminProfessionalsPage() {
                           Eliminar
                         </Button>
                       </div>
-                      <Divider className="my-4" />
+                      {index < professionals.length - 1 && (
+                        <Divider className="my-4" />
+                      )}
                     </div>
                   );
                 })

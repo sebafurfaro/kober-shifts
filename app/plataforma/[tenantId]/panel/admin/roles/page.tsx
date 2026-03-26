@@ -7,6 +7,7 @@ import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { useParams } from "next/navigation";
 import { Section } from "../../components/layout/Section";
 import { DEFAULT_PERMISSIONS, type RoleKey } from "@/lib/panel-permissions";
+import Typography from "@/app/components/Typography";
 
 const PERMISSIONS = [
   { key: "analytics", label: "Analíticas", path: "/analytics", text: "Acceso a la sección de métricas" },
@@ -154,6 +155,7 @@ export default function AdminRolesPage() {
           subtitle="Activa o desactiva permisos por rol. Controla los accesos de tus colaboradores al panel de administracion."
         />
         <Card className="card">
+          <Typography variant="p" className="block md:hidden text-sm mb-4">Te recomendamos hacer scroll hacia los costados para ver el resto de las configuraciones.</Typography>
           <Table aria-label="Permisos por rol">
             <TableHeader>
               <TableColumn key="permission" className="rounded-tl-lg text-slate-800 text-base">

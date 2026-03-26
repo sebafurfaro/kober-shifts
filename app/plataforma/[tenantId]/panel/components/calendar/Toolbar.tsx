@@ -8,9 +8,9 @@ import {
 } from "@heroui/react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { PlusIcon } from "lucide-react";
+import { Calendar, PlusIcon } from "lucide-react";
 
-type ViewType = "dayGridMonth" | "timeGridWeek" | "timeGridDay";
+type ViewType = "dayGridMonth" | "timeGridWeek" | "timeGridDay" | "listWeek";
 
 interface ToolbarProps {
     currentDate: Date;
@@ -36,43 +36,51 @@ export function Toolbar({
     onCreateEvent,
 }: ToolbarProps) {
     return (
-        <div className="p-4 mb-4 bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
-                <div className="flex items-center gap-2">
-                    <Button
-                        onPress={onToday}
-                        className="font-bold tracking-wide"
-                    >
+        <div className="p-2 md:p-4 mb-4 bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="grid grid-cols-2 md:flex md:flex-row items-center justify-between gap-4 w-full">
+                <h2 className="col-span-2 order-1 text-sm md:text-lg font-semibold capitalize text-center px-1 md:order-none md:flex-1">
+                    {currentView === "dayGridMonth"
+                        ? format(currentDate, "MMMM yyyy", { locale: es })
+                        : currentView === "timeGridWeek" || currentView === "listWeek"
+                        ? `Semana · ${format(currentDate, "d MMM yyyy", { locale: es })}`
+                        : format(currentDate, "EEEE d MMMM yyyy", { locale: es })}
+                </h2>
+                <div className="order-3 flex items-center gap-2 md:order-none">
+                    <Button onPress={onToday} className="font-bold tracking-wide text-xs md:text-base px-2 md:px-4 min-w-10 md:min-w-20 hidden md:inline-flex">
                         Hoy
                     </Button>
                     <div className="flex items-center gap-1">
-                        <Button
-                            color="primary"
-                            onPress={onPrev}
-                            className="font-bold tracking-wide rounded-lg min-w-10"
-                        >
+                        <Button color="primary" onPress={onPrev} className="font-bold tracking-wide rounded-lg min-w-10">
                             ‹
                         </Button>
-                        <Button
-                            color="primary"
-                            onPress={onNext}
-                            className="font-bold tracking-wide rounded-lg min-w-10"
-                        >
+                        <Button onPress={onToday} className="font-bold tracking-wide text-xs md:text-base px-2 md:px-4 min-w-10 md:min-w-20 inline-flex md:hidden">
+                            Hoy
+                        </Button>
+                        <Button color="primary" onPress={onNext} className="font-bold tracking-wide rounded-lg min-w-10">
                             ›
                         </Button>
                     </div>
                 </div>
-                <h2 className="text-lg font-semibold flex-1 capitalize text-center">
-                    {format(currentDate, "MMMM yyyy", { locale: es })}
-                </h2>
 
-                <div className="inline-flex bg-gray-200 rounded-lg p-1 gap-1">
+                
+                <div className="order-2 col-span-2 flex justify-end md:order-none">
+                    <Button
+                        color="primary"
+                        onPress={onCreateEvent}
+                        className="font-semibold md:font-bold rounded-lg md:rounded-full w-full md:w-10 h-10 flex items-center justify-center p-2"
+                    >
+                        <Calendar className="w-4 h-4 block md:hidden" />
+                        <span className="text-white md:hidden block font-semibold">Nuevo turno</span>
+                        <PlusIcon className="w-4 h-4 hidden md:block" />
+                    </Button>
+                </div>
+
+
+                <div className="order-3 inline-flex flex-wrap justify-center bg-gray-200 rounded-md md:rounded-lg p-1 md:gap-1 max-w-full md:order-none">
                     <Button
                         onPress={() => onViewChange("dayGridMonth")}
-                        className={`px-4 py-1.5 font-medium min-w-auto rounded-xl ${
-                            currentView === "dayGridMonth"
-                                ? "bg-white text-gray-900"
-                                : "bg-transparent text-gray-500"
+                        className={`px-1 md:px-4 py-1.5 font-medium min-w-auto rounded-lg md:rounded-xl text-xs md:text-base ${
+                            currentView === "dayGridMonth" ? "bg-white text-gray-900" : "bg-transparent text-gray-500"
                         }`}
                         variant="light"
                     >
@@ -80,10 +88,8 @@ export function Toolbar({
                     </Button>
                     <Button
                         onPress={() => onViewChange("timeGridWeek")}
-                        className={`px-4 py-1.5 font-medium min-w-auto rounded-xl ${
-                            currentView === "timeGridWeek"
-                                ? "bg-white text-gray-900"
-                                : "bg-transparent text-gray-500"
+                        className={`px-1 md:px-4 py-1.5 font-medium min-w-auto rounded-lg md:rounded-xl text-xs md:text-base ${
+                            currentView === "timeGridWeek" ? "bg-white text-gray-900" : "bg-transparent text-gray-500"
                         }`}
                         variant="light"
                     >
@@ -91,39 +97,14 @@ export function Toolbar({
                     </Button>
                     <Button
                         onPress={() => onViewChange("timeGridDay")}
-                        className={`px-4 py-1.5 font-medium min-w-auto rounded-xl ${
-                            currentView === "timeGridDay"
-                                ? "bg-white text-gray-900"
-                                : "bg-transparent text-gray-500"
+                        className={`px-1 md:px-4 py-1.5 font-medium min-w-auto rounded-lg md:rounded-xl text-xs md:text-base ${
+                            currentView === "timeGridDay" ? "bg-white text-gray-900" : "bg-transparent text-gray-500"
                         }`}
                         variant="light"
                     >
                         Diaria
                     </Button>
                 </div>
-
-                <Button
-                    color="primary"
-                    onPress={onCreateEvent}
-                    className="font-bold rounded-full w-10 h-10 flex items-center justify-center p-2"
-                >
-                    <PlusIcon className="w-4 h-4" />
-                </Button>
-
-                <Select
-                    size="sm"
-                    aria-label="Zona horaria"
-                    selectedKeys={[timezone]}
-                    onSelectionChange={(keys) => {
-                        const selected = Array.from(keys)[0] as string;
-                        onTimezoneChange(selected);
-                    }}
-                    className="min-w-[200px] hidden"
-                >
-                    <SelectItem key="America/Argentina/Buenos_Aires" textValue="America/Argentina/Buenos_Aires">
-                        Buenos Aires (GMT-3)
-                    </SelectItem>
-                </Select>
             </div>
         </div>
     );

@@ -161,8 +161,8 @@ export default function CoveragesPage() {
                     onClick: handleCreate
                 }}
             />
-            <Card className="card">
-                <CardBody className="p-0">
+            <Card className="">
+                <CardBody className="p-4">
                     <Input
                         placeholder="Buscar cobertura o plan..."
                         value={search}
@@ -199,8 +199,8 @@ export default function CoveragesPage() {
                                         indicator: "mr-4",
                                     }}
                                     title={
-                                        <div className="flex items-center justify-between w-full pl-4">
-                                            <span className="font-semibold flex-1 text-left text-slate-800">{coverage.name}</span>
+                                        <div className="flex flex-col md:flex-row items-center justify-between w-full pl-4">
+                                            <span className="font-semibold text-sm md:text-base md:flex-1 text-left text-slate-800">{coverage.name}</span>
                                             <span className="text-xs text-gray-500 mr-4">
                                                 {coverage.plans.length} planes
                                             </span>

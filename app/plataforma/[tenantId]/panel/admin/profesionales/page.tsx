@@ -292,7 +292,7 @@ export default function AdminProfesionalesPage() {
               ) : professionalsWithProfile.length === 0 ? (
                 <Typography variant="p" color="gray">No hay {professionalLabel.toLowerCase()} registrados</Typography>
               ) : (
-                professionalsWithProfile.map((pro) => {
+                professionalsWithProfile.map((pro, index) => {
                   const color = pro.color || pro.professional?.color || "#2196f3";
                   const name = pro.name ?? "";
                   const initials = name
@@ -350,7 +350,9 @@ export default function AdminProfesionalesPage() {
                           Eliminar
                         </Button>
                       </div>
-                      <Divider className="my-4" />
+                      {index < professionalsWithProfile.length - 1 && (
+                        <Divider className="my-4" />
+                      )}
                     </div>
                   );
                 })

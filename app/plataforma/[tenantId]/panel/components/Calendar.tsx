@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect, useCallback, startTransition, useMe
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
+import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
 import {
   Modal,
@@ -45,7 +46,7 @@ import {
   isEffectiveCalendarDayBlocked,
 } from "@/lib/blocked-calendar-days";
 
-type ViewType = "dayGridMonth" | "timeGridWeek" | "timeGridDay";
+type ViewType = "dayGridMonth" | "timeGridWeek" | "timeGridDay" | "listWeek";
 
 const SPANISH_LOCALE = {
   code: "es",
@@ -54,6 +55,7 @@ const SPANISH_LOCALE = {
     month: "Mes",
     week: "Semana",
     day: "Día",
+    list: "Lista",
   },
   allDayText: "Todo el día",
   moreLinkText: "más",
@@ -152,7 +154,7 @@ function AvailabilitySidebar({ pro, onClose }: { pro: any | null; onClose: () =>
                 }>;
                 return (
                   <div key={dayNum}>
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
                       {AVAILABILITY_DAYS_NAMES[dayNum]}
                     </p>
                     <div className="space-y-2">
@@ -269,6 +271,7 @@ export function Calendar() {
   const [locations, setLocations] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [availabilitySidebarPro, setAvailabilitySidebarPro] = useState<any | null>(null);
   const [blockedCalendarDays, setBlockedCalendarDays] = useState<string[]>([]);
   const [blockAgendaOnNationalHolidays, setBlockAgendaOnNationalHolidays] = useState(false);
@@ -356,6 +359,14 @@ export function Calendar() {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
   // Abrir diálogo "Agregar evento" cuando se navega con ?addEvent=1 (ej. desde Turnos). Opcional: ?date=YYYY-MM-DD&time=HH:mm
   useEffect(() => {
     if (!mounted) return;
@@ -397,6 +408,10 @@ export function Calendar() {
         {
           id: "fc-timegrid",
           href: "https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.15/main.min.css",
+        },
+        {
+          id: "fc-list",
+          href: "https://cdn.jsdelivr.net/npm/@fullcalendar/list@6.1.15/main.min.css",
         },
       ];
 
@@ -756,7 +771,7 @@ export function Calendar() {
     if (currentView === "dayGridMonth") {
       isTodayInView = now.getMonth() === currentDate.getMonth() &&
         now.getFullYear() === currentDate.getFullYear();
-    } else if (currentView === "timeGridWeek") {
+    } else if (currentView === "timeGridWeek" || currentView === "listWeek") {
       // Check if now is within the week starting at currentDate
       // We assume currentDate is the start of the week
       const diffTime = now.getTime() - currentDate.getTime();
@@ -1007,6 +1022,22 @@ export function Calendar() {
     ATTENDED: "Atendido",
   };
 
+  /** Vista semanal/diaria más compacta en móvil; en escritorio altura de slot por defecto. */
+  const timeGridViewsConfig = useMemo(
+    () => ({
+      timeGridWeek: {
+        slotMinHeight: isMobile ? 14 : 24,
+        dayHeaderFormat: isMobile
+          ? { weekday: "short" as const, day: "numeric" as const }
+          : { weekday: "short" as const },
+      },
+      timeGridDay: {
+        slotMinHeight: isMobile ? 14 : 24,
+      },
+    }),
+    [isMobile]
+  );
+
   // Spanish locale configuration for FullCalendar
 
   return (
@@ -1109,11 +1140,39 @@ export function Calendar() {
                 .calendar-blocked-wrap .fc .fc-event.ar-national-holiday {
                   border-left-width: 3px;
                 }
+                @media (max-width: 767px) {
+                  .calendar-blocked-wrap .fc .fc-timegrid-slot-label {
+                    font-size: 10px;
+                    padding: 0 2px;
+                  }
+                  .calendar-blocked-wrap .fc .fc-timegrid-axis-cushion {
+                    font-size: 10px;
+                  }
+                  .calendar-blocked-wrap .fc .fc-col-header-cell {
+                    font-size: 10px;
+                    line-height: 1.15;
+                    padding: 4px 2px;
+                  }
+                  .calendar-blocked-wrap .fc .fc-timegrid-event .fc-event-title {
+                    font-size: 10px;
+                    line-height: 1.2;
+                  }
+                  .calendar-blocked-wrap .fc .fc-timegrid-event {
+                    padding: 1px 2px;
+                  }
+                  .calendar-blocked-wrap .fc .fc-list-day-cushion {
+                    font-size: 12px;
+                  }
+                  .calendar-blocked-wrap .fc .fc-list-event-title {
+                    font-size: 12px;
+                  }
+                }
               `}</style>
               <FullCalendar
                 ref={calendarRef}
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
                 initialView={currentView}
+                views={timeGridViewsConfig}
                 headerToolbar={false}
                 events={events}
                 editable={true}
@@ -1257,6 +1316,7 @@ export function Calendar() {
           onClose={() => setEventDialogOpen(false)}
           size="md"
           scrollBehavior="inside"
+          className="custom-dialog"
           classNames={{
             wrapper: "z-[99999]"
           }}

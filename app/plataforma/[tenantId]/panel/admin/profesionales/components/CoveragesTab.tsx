@@ -132,7 +132,7 @@ export function CoveragesTab({ formData, setFormData }: CoveragesTabProps) {
 				/>
 			</div>
 
-			<Accordion variant="splitted" className="w-full mt-4 space-y-2">
+			<Accordion variant="splitted" className="w-full mt-4 space-y-2 px-0 md:px-2">
 				{filteredCoverages.map((coverage) => {
 					const selected = getSelectedCoverage(coverage.id);
 					const activePlansCount = selected?.plans.filter((p) => p.active).length || 0;
@@ -147,7 +147,7 @@ export function CoveragesTab({ formData, setFormData }: CoveragesTabProps) {
 								indicator: "mr-4 text-slate-800",
 							}}
 							title={
-								<div className="flex items-center justify-between w-full pl-4">
+								<div className="flex flex-col md:flex-row items-center justify-between w-full pl-4">
 									<span className="font-semibold flex-1 text-left text-slate-800">{coverage.name}</span>
 									<span className="text-xs text-gray-500 mr-4">
 										{selected ? `${activePlansCount}/${totalPlansCount}` : totalPlansCount} planes

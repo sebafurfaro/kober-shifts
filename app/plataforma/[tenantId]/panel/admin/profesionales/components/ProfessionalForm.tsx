@@ -8,6 +8,8 @@ import {
     CardBody,
     Tabs,
     Tab,
+    Accordion,
+    AccordionItem,
 } from "@heroui/react";
 import { ProfessionalFormData, INITIAL_AVAILABILITY } from "./types";
 import { ContactTab } from "./ContactTab";
@@ -111,62 +113,96 @@ export function ProfessionalForm({
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex w-full flex-col card">
-            <Tabs
-                selectedKey={selectedTab}
-                onSelectionChange={handleSelectionChange}
-                aria-label="Tabs del formulario de profesional"
-                className="w-full"
-                classNames={{
-                    base: "w-full",
-                    tabList: "gap-2 md:gap-6 w-full relative bg-gray-100 rounded-lg p-1",
-                    cursor: "bg-white rounded-lg transition-all duration-300 ease-in-out font-medium",
-                    tab: "md:max-w-fit px-2 md:px-4 h-12 rounded-md text-slate-800",
-                    tabContent: "group-data-[selected=true]:text-primary",
-                    panel: "p-0",
-                }}
-            >
-                <Tab key="contacto" title="Contacto">
-                    <Card>
-                        <CardBody>
-                            <ContactTab
-                                formData={formData}
-                                handleChange={handleChange}
-                                errors={errors}
-                                mode={mode}
-                            />
-                        </CardBody>
-                    </Card>
-                </Tab>
-                {showCoverage && (
-                    <Tab key="coberturas" title="Coberturas">
+        <form onSubmit={handleSubmit} className="flex w-full flex-col md:p-6 bg-white md:shadow-sm md:rounded-lg bg-transparent! md:bg-white">
+            <div className="hidden md:block">
+
+                <Tabs
+                    selectedKey={selectedTab}
+                    onSelectionChange={handleSelectionChange}
+                    aria-label="Tabs del formulario de profesional"
+                    className="w-full"
+                    classNames={{
+                        base: "w-full",
+                        tabList: "gap-2 md:gap-6 w-full relative bg-gray-100 rounded-lg p-1",
+                        cursor: "bg-white rounded-lg transition-all duration-300 ease-in-out font-medium",
+                        tab: "md:max-w-fit px-2 md:px-4 h-12 rounded-md text-slate-800",
+                        tabContent: "group-data-[selected=true]:text-primary",
+                        panel: "p-0",
+                    }}
+                >
+                    <Tab key="contacto" title="Contacto">
                         <Card>
                             <CardBody>
-                                <CoveragesTab formData={formData} setFormData={setFormData} />
+                                <ContactTab
+                                    formData={formData}
+                                    handleChange={handleChange}
+                                    errors={errors}
+                                    mode={mode}
+                                />
                             </CardBody>
                         </Card>
                     </Tab>
-                )}
-                <Tab key="disponibilidad" title="Disponibilidad">
-                    <Card>
-                        <CardBody>
-                            <AvailabilityTab
-                                availabilityConfig={formData.availabilityConfig}
-                                setFormData={setFormData}
-                                onSave={handleSubmit}
-                                loading={loading}
-                            />
-                        </CardBody>
-                    </Card>
-                </Tab>
-                <Tab key="vacaciones" title="Vacaciones">
-                    <Card>
-                        <CardBody>
-                            <HolidaysTab formData={formData} setFormData={setFormData} onSave={handleSubmit} loading={loading} />
-                        </CardBody>
-                    </Card>
-                </Tab>
-            </Tabs>
+                    {showCoverage && (
+                        <Tab key="coberturas" title="Coberturas">
+                            <Card>
+                                <CardBody>
+                                    <CoveragesTab formData={formData} setFormData={setFormData} />
+                                </CardBody>
+                            </Card>
+                        </Tab>
+                    )}
+                    <Tab key="disponibilidad" title="Disponibilidad">
+                        <Card>
+                            <CardBody>
+                                <AvailabilityTab
+                                    availabilityConfig={formData.availabilityConfig}
+                                    setFormData={setFormData}
+                                    onSave={handleSubmit}
+                                    loading={loading}
+                                />
+                            </CardBody>
+                        </Card>
+                    </Tab>
+                    <Tab key="vacaciones" title="Vacaciones">
+                        <Card>
+                            <CardBody>
+                                <HolidaysTab formData={formData} setFormData={setFormData} onSave={handleSubmit} loading={loading} />
+                            </CardBody>
+                        </Card>
+                    </Tab>
+                </Tabs>
+            </div>
+
+            <div className="block md:hidden">
+                <Accordion variant="splitted" className="w-full mt-4 space-y-2 px-0!">
+                    <AccordionItem key="Detalles" title="Detalles">
+                        <ContactTab
+                            formData={formData}
+                            handleChange={handleChange}
+                            errors={errors}
+                            mode={mode}
+                        />
+                    </AccordionItem>
+                    <AccordionItem key="Cobertura" title="Cobertura">
+                        <CoveragesTab formData={formData} setFormData={setFormData} />
+                    </AccordionItem>
+                    <AccordionItem key="Disponiblilidad" title="Disponiblilidad">
+                        <AvailabilityTab
+                            availabilityConfig={formData.availabilityConfig}
+                            setFormData={setFormData}
+                            onSave={handleSubmit}
+                            loading={loading}
+                        />
+                    </AccordionItem>
+                    <AccordionItem  key="Tiempo Off" title="Tiempo Off">
+                        <HolidaysTab 
+                            formData={formData} 
+                            setFormData={setFormData} 
+                            onSave={handleSubmit} 
+                            loading={loading} />
+                    </AccordionItem>
+                </Accordion>
+            </div>
 
             <div className="mt-6 flex justify-end gap-3">
                 <Button

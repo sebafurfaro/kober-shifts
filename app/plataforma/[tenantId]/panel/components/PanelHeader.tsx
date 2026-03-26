@@ -26,9 +26,9 @@ export function PanelHeader({ title, subtitle, action, showBreadcrumbs = false }
   const tenantId = params.tenantId as string;
 
   return (
-    <div className="relative p-4 my-4">
-      <div className="absolute -inset-1 rounded-xl gradient-nodo opacity-20 blur-md"></div>
-      <Card className="p-6 rounded-xl border border-gray-200 duration-200 bg-white relative z-0">
+    <div className="relative p-0 md:p-4 mt-2 mb-4 md:my-4">
+      <div className="absolute -inset-1 rounded-sm md:rounded-xl gradient-nodo opacity-20 blur-md"></div>
+      <Card className="p-6 rounded-sm md:rounded-xl border border-gray-200 duration-200 bg-white relative z-0">
         <div>
           {showBreadcrumbs && (
             <Breadcrumbs className="mb-2">
