@@ -61,10 +61,18 @@ interface MeUser {
 export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBookingProps) {
   const router = useRouter();
 
-  /** null = comprobando permiso; true = autoreserva habilitada por el tenant */
-  const [bookingAllowed, setBookingAllowed] = useState<boolean | null>(null);
+  /**
+   * Panel: comprobamos /features (paciente puede tener sesión con flag distinto).
+   * Público (/reservar): el servidor ya validó getPatientSelfBookingEnabled; no redirigir acá
+   * a login (evita loop login ↔ reservar si la API devuelve otro resultado que la página RSC).
+   */
+  const [bookingAllowed, setBookingAllowed] = useState<boolean | null>(() =>
+    variant === "public" ? true : null
+  );
 
   useEffect(() => {
+    if (variant === "public") return;
+
     let cancelled = false;
     (async () => {
       const res = await fetch(`/api/plataforma/${tenantId}/features`, { credentials: "include" });
@@ -72,11 +80,7 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
       const data = res.ok ? await res.json().catch(() => ({})) : {};
       const enabled = data.patientSelfBookingEnabled !== false;
       if (!enabled) {
-        if (variant === "panel") {
-          router.replace(`/plataforma/${tenantId}/panel/patient`);
-        } else {
-          router.replace(`/plataforma/${tenantId}/login`);
-        }
+        router.replace(`/plataforma/${tenantId}/panel/patient`);
         return;
       }
       setBookingAllowed(true);
