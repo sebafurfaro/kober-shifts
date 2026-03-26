@@ -52,6 +52,23 @@ export default function PatientPanelPage() {
   const [cancelReason, setCancelReason] = React.useState("");
   const [cancelError, setCancelError] = React.useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = React.useState(false);
+  const [patientSelfBookingEnabled, setPatientSelfBookingEnabled] = React.useState(true);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/plataforma/${tenantId}/features`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        setPatientSelfBookingEnabled(
+          typeof data.patientSelfBookingEnabled === "boolean" ? data.patientSelfBookingEnabled : true
+        );
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   const loadAppointments = React.useCallback(async () => {
     try {
@@ -139,10 +156,15 @@ export default function PatientPanelPage() {
       <PanelHeader
         title="Mis Turnos"
         subtitle="Gestiona tus turnos médicos"
-        action={{
-          label: "Nuevo Turno",
-          onClick: handleCreate,
-        }} />
+        action={
+          patientSelfBookingEnabled
+            ? {
+                label: "Nuevo Turno",
+                onClick: handleCreate,
+              }
+            : undefined
+        }
+      />
       <div className="py-8">
         <Card>
           <CardBody className="p-0">

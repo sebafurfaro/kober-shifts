@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { findTenantById } from "@/lib/db";
+import { getPatientSelfBookingEnabled } from "@/lib/patient-self-booking";
 import { TenantNotFound } from "./components/TenantNotFound";
 
 export default async function TenantEntryPage({
@@ -17,6 +18,10 @@ export default async function TenantEntryPage({
 
   const session = await getSession();
   if (!session || session.tenantId !== tenantId) {
+    const selfBooking = await getPatientSelfBookingEnabled(tenantId);
+    if (selfBooking) {
+      redirect(`/plataforma/${tenantId}/reservar`);
+    }
     redirect(`/plataforma/${tenantId}/login`);
   }
 

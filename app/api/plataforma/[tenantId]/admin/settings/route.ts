@@ -53,6 +53,8 @@ export async function GET(
       blockAgendaOnNationalHolidays: false,
       /** Feriados donde se permite agenda aunque la regla de feriados esté activa. */
       holidayAgendaAllowDays: [] as string[],
+      /** Si es false, los pacientes no pueden usar el flujo de autoreserva (GET/POST asociados devuelven 403). */
+      patientSelfBookingEnabled: true,
     };
 
     const merged = {
@@ -68,6 +70,10 @@ export async function GET(
       holidayAgendaAllowDays: normalizeHolidayAgendaAllowDays(
         settingsObj.holidayAgendaAllowDays ?? defaultSettings.holidayAgendaAllowDays
       ),
+      patientSelfBookingEnabled:
+        typeof settingsObj.patientSelfBookingEnabled === "boolean"
+          ? settingsObj.patientSelfBookingEnabled
+          : defaultSettings.patientSelfBookingEnabled,
     };
     return NextResponse.json(merged);
   } catch (error: unknown) {
@@ -192,6 +198,13 @@ export async function PUT(
       ? normalizeHolidayAgendaAllowDays(body.holidayAgendaAllowDays)
       : normalizeHolidayAgendaAllowDays(existingSettings.holidayAgendaAllowDays);
 
+    const patientSelfBookingEnabled =
+      typeof body.patientSelfBookingEnabled === "boolean"
+        ? body.patientSelfBookingEnabled
+        : typeof existingSettings.patientSelfBookingEnabled === "boolean"
+          ? existingSettings.patientSelfBookingEnabled
+          : true;
+
     const settings = {
       isActive,
       notifications,
@@ -211,6 +224,7 @@ export async function PUT(
       blockedCalendarDays,
       blockAgendaOnNationalHolidays,
       holidayAgendaAllowDays,
+      patientSelfBookingEnabled,
     };
 
     await updateTenantSettingsOnly(tenantId, settings);

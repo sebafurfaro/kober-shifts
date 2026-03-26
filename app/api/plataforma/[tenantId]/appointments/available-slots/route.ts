@@ -13,6 +13,7 @@ import { normalizeBlockedCalendarDays, normalizeHolidayAgendaAllowDays } from "@
 import { fetchArgentinaNationalHolidayYmdsForYear } from "@/lib/argentina-national-holidays";
 import { BUENOS_AIRES_TIMEZONE } from "@/lib/timezone";
 import { formatInTimeZone } from "date-fns-tz";
+import { ensureBookingCatalogAccess } from "@/lib/patient-self-booking";
 
 /**
  * GET /api/plataforma/[tenantId]/appointments/available-slots?professionalId=xxx&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
@@ -29,9 +30,8 @@ export async function GET(
   try {
     const { tenantId } = await params;
     const session = await getSession();
-    if (!session || session.tenantId !== tenantId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const gate = await ensureBookingCatalogAccess(session, tenantId);
+    if (gate) return gate;
 
     const url = new URL(req.url);
     const professionalId = url.searchParams.get("professionalId");

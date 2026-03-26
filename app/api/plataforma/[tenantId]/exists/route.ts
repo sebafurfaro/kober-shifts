@@ -5,6 +5,9 @@ import { findTenantById } from "@/lib/db";
  * GET /api/plataforma/[tenantId]/exists
  * Returns whether the tenant exists (no auth required).
  * Used by login and layout to redirect to 404 when tenant is invalid.
+ *
+ * Nota: es uno de los pocos GET públicos bajo /api/plataforma (sin cookie).
+ * El resto de rutas de agenda y tenant suelen exigir sesión.
  */
 export async function GET(
   _req: Request,

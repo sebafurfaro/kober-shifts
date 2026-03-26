@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { getTenantFeatures, getTenantFeatureFlagsAndLimits } from "@/lib/tenant-features";
-import { countStaffUsers } from "@/lib/db";
+import { countStaffUsers, findTenantById } from "@/lib/db";
+import { getPatientSelfBookingEnabled } from "@/lib/patient-self-booking";
 
 /**
  * GET /api/plataforma/[tenantId]/features
@@ -15,20 +16,27 @@ export async function GET(
   const session = await getSession();
 
   if (!session || session.tenantId !== tenantId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const tenant = await findTenantById(tenantId);
+    if (!tenant || !tenant.isActive) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const patientSelfBookingEnabled = await getPatientSelfBookingEnabled(tenantId);
+    return NextResponse.json({ patientSelfBookingEnabled });
   }
 
   try {
-    const [legacyFeatures, flagsAndLimits, usedUsers] = await Promise.all([
+    const [legacyFeatures, flagsAndLimits, usedUsers, patientSelfBookingEnabled] = await Promise.all([
       getTenantFeatures(tenantId),
       getTenantFeatureFlagsAndLimits(tenantId),
       countStaffUsers(tenantId),
+      getPatientSelfBookingEnabled(tenantId),
     ]);
     return NextResponse.json({
       ...legacyFeatures,
       show_coverage: flagsAndLimits.show_coverage,
       maxUsers: flagsAndLimits.maxUsers,
       usedUsers,
+      patientSelfBookingEnabled,
     });
   } catch (error: unknown) {
     console.error("Error fetching tenant features:", error);

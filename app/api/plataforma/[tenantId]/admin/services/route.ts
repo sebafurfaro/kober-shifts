@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { findAllServices, createService } from "@/lib/db";
 import { randomUUID } from "crypto";
 import { Role } from "@/lib/types";
+import { ensureBookingCatalogAccess } from "@/lib/patient-self-booking";
 
 export async function GET(
   req: Request,
@@ -10,11 +11,13 @@ export async function GET(
 ) {
   const { tenantId } = await params;
   const session = await getSession();
-  if (!session || session.tenantId !== tenantId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  // GET: permitir también PATIENT para flujo de nuevo turno (selección de servicio)
-  if (session.role !== Role.ADMIN && session.role !== Role.PROFESSIONAL && session.role !== Role.PATIENT)
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const gate = await ensureBookingCatalogAccess(session, tenantId);
+  if (gate) return gate;
+  // GET: catálogo público (sin sesión) o staff/paciente autenticado
+  if (session) {
+    if (session.role !== Role.ADMIN && session.role !== Role.PROFESSIONAL && session.role !== Role.PATIENT)
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   try {
     const items = await findAllServices(tenantId);

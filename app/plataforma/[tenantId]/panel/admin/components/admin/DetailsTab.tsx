@@ -13,6 +13,7 @@ export const DetailsTab = () => {
   const [baseUrl, setBaseUrl] = useState("");
   const [alertOpen, setAlertOpen] = useState(false);
   const [isActive, setIsActive] = useState(false);
+  const [patientSelfBookingEnabled, setPatientSelfBookingEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
   const params = useParams();
   const tenantId = params.tenantId as string;
@@ -51,6 +52,9 @@ export const DetailsTab = () => {
         const active = data.isActive === true;
         setIsActive(active);
         setActive(active);
+        setPatientSelfBookingEnabled(
+          typeof data.patientSelfBookingEnabled === "boolean" ? data.patientSelfBookingEnabled : true
+        );
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -64,7 +68,7 @@ export const DetailsTab = () => {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ isActive }),
+        body: JSON.stringify({ isActive, patientSelfBookingEnabled }),
       });
       if (res.ok) {
         setActive(isActive);
@@ -133,7 +137,7 @@ export const DetailsTab = () => {
               onValueChange={setIsActive}
               isDisabled={saving}
             >
-              Permitir reservas
+              {isActive ? "No Permitir reservas" : "Permitir reservas"}
             </Switch>
             <div className="flex items-center gap-1">
               <div className={`w-2 h-2 rounded-full ${isActive ? "bg-green-500" : "bg-red-500"}`}></div>
@@ -144,6 +148,23 @@ export const DetailsTab = () => {
           </div>
           <Typography variant="p" size="sm" color="gray" opacity={70}>
             Activa el negocio para que tus clientes puedan agendar turnos
+          </Typography>
+        </div>
+        <Divider className="my-4" />
+        <div className="flex flex-col space-y-2">
+          <Typography variant="h6" color="black">Reserva pública</Typography>
+          <div className="flex items-center justify-between w-full my-4">
+            <Switch
+              name="patientSelfBookingEnabled"
+              isSelected={patientSelfBookingEnabled}
+              onValueChange={setPatientSelfBookingEnabled}
+              isDisabled={saving}
+            >
+              {patientSelfBookingEnabled ? 'Desactivar' : 'Activar'}
+            </Switch>
+          </div>
+          <Typography variant="p" size="sm" color="gray" opacity={70}>
+            Al activar esta opción, se podrán solicitar turnos de forma pública, pero para confirmarlo el usuario deberá loguearse/registrarse. Si permanece desactivada, el usuario deberá loguearse/registrarse primero, para luego solicitar un turno.
           </Typography>
         </div>
       </div>

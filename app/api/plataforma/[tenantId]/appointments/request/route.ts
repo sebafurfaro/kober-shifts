@@ -10,6 +10,7 @@ import { realUTCToMySQLDate, mysqlDateToUTC, formatInBuenosAires, BUENOS_AIRES_T
 import { toZonedTime } from "date-fns-tz";
 import { getProfessionalAvailableDayNumbers } from "@/lib/professional-availability";
 import { isStartAtBlockedForTenant } from "@/lib/blocked-calendar-days-server";
+import { patientSelfBookingForbiddenResponse } from "@/lib/patient-self-booking";
 
 export async function POST(
   req: Request,
@@ -36,6 +37,9 @@ export async function POST(
       details: `Role ${session.role} is not allowed. Only PATIENT role can request appointments.` 
     }, { status: 403 });
   }
+
+  const patientBookingBlock = await patientSelfBookingForbiddenResponse(session, tenantId);
+  if (patientBookingBlock) return patientBookingBlock;
 
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const professionalId = typeof body.professionalId === "string" ? body.professionalId : "";

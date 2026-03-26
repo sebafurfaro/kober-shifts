@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { findUsersWithProfessionalProfile } from "@/lib/db";
+import { ensureBookingCatalogAccess } from "@/lib/patient-self-booking";
 
 /**
  * GET /api/plataforma/[tenantId]/professionals
@@ -13,9 +14,8 @@ export async function GET(
 ) {
   const { tenantId } = await params;
   const session = await getSession();
-  if (!session || session.tenantId !== tenantId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const gate = await ensureBookingCatalogAccess(session, tenantId);
+  if (gate) return gate;
 
   const professionals = await findUsersWithProfessionalProfile(tenantId);
   const availableProfessionals = professionals

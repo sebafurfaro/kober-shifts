@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { findAllLocations } from "@/lib/db";
+import { ensureBookingCatalogAccess } from "@/lib/patient-self-booking";
 
 /**
  * GET /api/plataforma/[tenantId]/locations
@@ -12,9 +13,8 @@ export async function GET(
 ) {
   const { tenantId } = await params;
   const session = await getSession();
-  if (!session || session.tenantId !== tenantId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const gate = await ensureBookingCatalogAccess(session, tenantId);
+  if (gate) return gate;
 
   const items = await findAllLocations(tenantId);
   return NextResponse.json(items);
