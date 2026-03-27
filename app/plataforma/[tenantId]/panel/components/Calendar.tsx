@@ -45,6 +45,8 @@ import {
   appointmentStartDateYMDInBuenosAires,
   isEffectiveCalendarDayBlocked,
 } from "@/lib/blocked-calendar-days";
+import { useTour } from "@/hooks/useTour";
+import { TourButton } from "@/app/components/panel/TourButton";
 
 type ViewType = "dayGridMonth" | "timeGridWeek" | "timeGridDay" | "listWeek";
 
@@ -1040,6 +1042,45 @@ export function Calendar() {
 
   // Spanish locale configuration for FullCalendar
 
+  const { startTour, hasSeenTour, TourExitDialog } = useTour("calendar", [
+    {
+      element: "#tour-calendar-nav",
+      popover: {
+        title: "Navegación",
+        description: "Desde acá podés moverte entre las diferentes fechas del calendario.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "#tour-calendar-views",
+      popover: {
+        title: "Vistas del Calendario",
+        description: "Cambia la vista activa: mensual, semanal o diaria según te quede más cómodo.",
+        side: "bottom",
+        align: "center",
+      },
+    },
+    {
+      element: "#tour-calendar-create",
+      popover: {
+        title: "Nuevo Turno",
+        description: "Hacé click para agendar un nuevo turno o un bloqueo temporal en la agenda.",
+        side: "bottom",
+        align: "end",
+      },
+    },
+    {
+      element: "#tour-calendar-pros",
+      popover: {
+        title: "Disponibilidad",
+        description: "Hacé click en el profesional para consultar sus franjas horarias y disponibilidad.",
+        side: "top",
+        align: "start",
+      },
+    }
+  ], !loading);
+
   return (
     <div className="h-full flex flex-col mt-8">
       {/* Toolbar */}
@@ -1058,7 +1099,7 @@ export function Calendar() {
       {(() => {
         const professionalsWithProfile = professionals.filter((pro) => pro.hasProfessionalProfile);
         return professionalsWithProfile.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div id="tour-calendar-pros" className="flex flex-wrap items-center gap-3 mb-4">
           {professionalsWithProfile.map((pro) => (
             <button
               key={pro.id}
@@ -1603,6 +1644,11 @@ export function Calendar() {
         pro={availabilitySidebarPro}
         onClose={() => setAvailabilitySidebarPro(null)}
       />
+
+      <TourExitDialog />
+      <div className="fixed bottom-6 right-6 z-50">
+        <TourButton onClick={startTour} />
+      </div>
     </div>
   );
 }

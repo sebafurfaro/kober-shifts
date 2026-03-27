@@ -42,7 +42,7 @@ export function Toolbar({
                         ? `Semana · ${format(currentDate, "d MMM yyyy", { locale: es })}`
                         : format(currentDate, "EEEE d MMMM yyyy", { locale: es })}
                 </h2>
-                <div className="order-3 flex items-center gap-2">
+                <div id="tour-calendar-nav" className="order-3 flex items-center gap-2">
                     <Button onPress={onToday} className="font-bold tracking-wide text-xs md:text-base px-2 md:px-4 min-w-10 md:min-w-20 hidden md:inline-flex">
                         Hoy
                     </Button>
@@ -62,6 +62,7 @@ export function Toolbar({
                 
                 <div className="order-2 col-span-2 flex justify-end">
                     <Button
+                        id="tour-calendar-create"
                         color="primary"
                         onPress={onCreateEvent}
                         className="font-semibold md:font-bold rounded-lg md:rounded-full w-full md:w-10 h-10 flex items-center justify-center p-2"
@@ -73,7 +74,7 @@ export function Toolbar({
                 </div>
 
 
-                <div className="order-3 inline-flex flex-wrap justify-center bg-gray-200 rounded-md md:rounded-lg p-1 md:gap-1 max-w-full">
+                <div id="tour-calendar-views" className="order-3 inline-flex flex-wrap justify-center bg-gray-200 rounded-md md:rounded-lg p-1 md:gap-1 max-w-full">
                     <Button
                         onPress={() => onViewChange("dayGridMonth")}
                         className={`px-1 md:px-4 py-1.5 font-medium min-w-auto rounded-lg md:rounded-xl text-xs md:text-base ${

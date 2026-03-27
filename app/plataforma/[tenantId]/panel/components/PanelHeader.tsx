@@ -12,6 +12,7 @@ interface PanelHeaderProps {
   action?: {
     label: string;
     onClick: () => void;
+    id?: string;
     variant?: ButtonProps["variant"];
     color?: ButtonProps["color"];
     disabled?: boolean;
@@ -57,6 +58,7 @@ export function PanelHeader({ title, subtitle, action, showBreadcrumbs = false }
               <div className="flex items-center justify-center w-[50px] h-[50px]">
                 <Tooltip content={action.label} placement="top">
                   <Button
+                    id={action.id}
                     variant={
                       (action.variant as string) === "outlined" 
                         ? "bordered" 

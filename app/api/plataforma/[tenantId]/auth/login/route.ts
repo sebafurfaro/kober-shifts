@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { findUserByEmail } from "@/lib/db";
+import { verifyRecaptcha } from "@/lib/recaptcha";
 import {
   createSessionCookieValue,
   getSessionCookieOptions,
@@ -18,6 +19,17 @@ export async function POST(
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const password = typeof body.password === "string" ? body.password.trim() : "";
   const pwa = body.pwa === true;
+  const recaptchaToken = typeof body.recaptchaToken === "string" ? body.recaptchaToken : "";
+
+  // Validar reCAPTCHA
+  if (!recaptchaToken) {
+    return NextResponse.json({ error: "No se pudo validar reCAPTCHA" }, { status: 400 });
+  }
+
+  const recaptchaResult = await verifyRecaptcha(recaptchaToken, "LOGIN");
+  if (!recaptchaResult.success) {
+    return NextResponse.json({ error: "Validación de seguridad fallida. Intenta nuevamente." }, { status: 403 });
+  }
 
   try {
     const user = email ? await findUserByEmail(email, tenantId) : null;

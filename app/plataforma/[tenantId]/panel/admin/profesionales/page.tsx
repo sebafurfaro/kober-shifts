@@ -12,6 +12,8 @@ import { LinkCollaboratorAside, type LinkCollaboratorFormData } from "./componen
 import { useTenantLabels } from "@/lib/use-tenant-labels";
 import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
 import { Section } from "../../components/layout/Section";
+import { useTour } from "@/hooks/useTour";
+import { TourButton } from "@/app/components/panel/TourButton";
 
 interface Professional {
   id: string;
@@ -107,6 +109,18 @@ export default function AdminProfesionalesPage() {
   );
   const hasNoProfessionals = professionalsWithProfile.length === 0;
   const atUserLimit = maxUsers !== null && professionals.length >= maxUsers;
+
+  const { startTour, hasSeenTour, TourExitDialog } = useTour("professionals", [
+    {
+      element: "#tour-professionals-edit",
+      popover: {
+        title: "Editar Profesional",
+        description: "Desde acá podés editar el perfil, los horarios y servicios del profesional.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+  ], !loading && !hasNoProfessionals);
 
   const handleCreate = () => {
     if (hasNoProfessionals) {
@@ -211,7 +225,7 @@ export default function AdminProfesionalesPage() {
                   loadingContent={<Spinner label="Cargando..." />}
                   emptyContent={loading ? null : `No hay ${professionalLabel.toLowerCase()} registrados`}
                 >
-                  {professionalsWithProfile.map((professional) => {
+                  {professionalsWithProfile.map((professional, index) => {
                     const color = professional.color || professional.professional?.color || "#2196f3";
                     const name = professional.name ?? "";
                     const initials = name
@@ -226,6 +240,7 @@ export default function AdminProfesionalesPage() {
                       <TableCell key="actions">
                         <div className="flex justify-end gap-2">
                           <Button
+                            id={index === 0 ? "tour-professionals-edit" : undefined}
                             isIconOnly
                             size="sm"
                             variant="light"
@@ -330,6 +345,7 @@ export default function AdminProfesionalesPage() {
                       </div>
                       <div className="flex flex-col gap-1 mt-3">
                         <Button
+                          id={index === 0 ? "tour-professionals-edit-mobile" : undefined}
                           size="sm"
                           variant="solid"
                           color="primary"
@@ -392,6 +408,11 @@ export default function AdminProfesionalesPage() {
         message={alertDialog.message}
         type={alertDialog.type}
       />
+
+      <TourExitDialog />
+      <div className="fixed bottom-6 right-6 z-50">
+        <TourButton onClick={startTour} />
+      </div>
     </Section>
   );
 }

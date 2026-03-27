@@ -12,6 +12,8 @@ import { EditUserAside, type EditUserFormData } from "./components/EditUserAside
 import { useTenantLabels } from "@/lib/use-tenant-labels";
 import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
 import { Section } from "../../components/layout/Section";
+import { useTour } from "@/hooks/useTour";
+import { TourButton } from "@/app/components/panel/TourButton";
 
 interface Professional {
   id: string;
@@ -45,6 +47,18 @@ export default function AdminProfessionalsPage() {
   }>({ open: false, message: "", type: "error" });
   const [editAsideOpen, setEditAsideOpen] = React.useState(false);
   const [editUser, setEditUser] = React.useState<Professional | null>(null);
+
+  const { startTour, hasSeenTour, TourExitDialog } = useTour("collaborators", [
+    {
+      element: "#tour-collaborators-create",
+      popover: {
+        title: "Nuevo Colaborador",
+        description: "Desde acá podés invitar a tu equipo de trabajo y asignarles roles.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+  ]);
 
   const loadData = React.useCallback(async () => {
     try {
@@ -182,6 +196,7 @@ export default function AdminProfessionalsPage() {
                   label: "Agregar colaborador",
                   color: "primary",
                   onClick: handleCreate,
+                  id: "tour-collaborators-create",
                 }
           }
         />
@@ -383,6 +398,11 @@ export default function AdminProfessionalsPage() {
         initialData={editUser ? { name: editUser.name, email: editUser.email, dni: editUser.dni ?? "", role: editUser.role, hasProfessionalProfile: !!editUser.professional } : null}
         onSubmit={handleEditUserSubmit}
       />
+
+      <TourExitDialog />
+      <div className="fixed bottom-6 right-6 z-50">
+        <TourButton onClick={startTour} />
+      </div>
     </Section>
   );
 }

@@ -12,6 +12,8 @@ import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { useTenantLabels } from "@/lib/use-tenant-labels";
 import { useTenantSettingsStore } from "@/lib/tenant-settings-store";
 import { Section } from "../../components/layout/Section";
+import { useTour } from "@/hooks/useTour";
+import { TourButton } from "@/app/components/panel/TourButton";
 
 interface Patient {
   id: string;
@@ -74,6 +76,27 @@ export default function AdminPatientsPage() {
   const [search, setSearch] = React.useState("");
   const [sortKey, setSortKey] = React.useState<string>("");
   const [coverageFilter, setCoverageFilter] = React.useState<string>("");
+
+  const { startTour, hasSeenTour, TourExitDialog } = useTour("patients", [
+    {
+      element: "#tour-patients-create",
+      popover: {
+        title: "Nuevo Paciente",
+        description: "Desde acá podés dar de alta libremente a un nuevo paciente.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "#tour-patients-filters",
+      popover: {
+        title: "Buscador y Filtros",
+        description: "Encontrá fácilmente un paciente por su nombre, u ordená la tabla según facturación, turnos creados o cobertura.",
+        side: "bottom",
+        align: "center",
+      },
+    }
+  ]);
 
   const loadPatients = React.useCallback(async () => {
     try {
@@ -252,11 +275,12 @@ export default function AdminPatientsPage() {
         action={{
           label: `Agregar ${patientLabel.slice(0, -1)}`,
           onClick: handleCreate,
+          id: "tour-patients-create",
         }}
       />
 
       {/* Filters */}
-      <div className="bg-white p-4 mb-4 rounded-lg shadow-sm border border-gray-200 overflow-hidden text-slate-800 flex items-center justify-center w-full">
+      <div id="tour-patients-filters" className="bg-white p-4 mb-4 rounded-lg shadow-sm border border-gray-200 overflow-hidden text-slate-800 flex items-center justify-center w-full">
       <div className="flex flex-col md:flex-1 sm:flex-row w-full gap-3">
         <Input
           placeholder={`Buscar por nombre o apellido...`}
@@ -535,6 +559,11 @@ export default function AdminPatientsPage() {
         message={alertDialog.message}
         type={alertDialog.type}
       />
+
+      <TourExitDialog />
+      <div className="fixed bottom-6 right-6 z-50">
+        <TourButton onClick={startTour} />
+      </div>
     </Section>
   );
 }

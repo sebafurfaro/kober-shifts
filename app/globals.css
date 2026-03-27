@@ -130,3 +130,44 @@ body {
     margin-left: var(--dynamic-aside-width, 210px);
   }
 }
+
+/* Customización de Driver.js para HeroUI & Tailwind */
+.driver-popover {
+  border-radius: 12px !important;
+  font-family: var(--font-inter), sans-serif !important;
+  border: none !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+.driver-popover-next-btn {
+  background-color: #1A237E !important;
+  color: white !important;
+  text-shadow: none !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  padding: 6px 16px !important;
+}
+.driver-popover-next-btn:hover {
+  background-color: #1497B5 !important;
+}
+.driver-popover-prev-btn {
+  border: 1px solid #e5e7eb !important;
+  background-color: transparent !important;
+  color: #374151 !important;
+  text-shadow: none !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  padding: 6px 16px !important;
+}
+.driver-popover-prev-btn:hover {
+  background-color: #f3f4f6 !important;
+}
+.driver-popover-close-btn {
+  color: #6b7280 !important;
+}
+.driver-popover-close-btn:hover {
+  color: #111827 !important;
+}
+#driver-page-overlay {
+  background-color: rgba(0, 0, 0, 0.45) !important;
+}

@@ -22,6 +22,8 @@ import { ConfirmationDialog } from "../../components/alerts/ConfirmationDialog";
 import { AlertDialog } from "../../components/alerts/AlertDialog";
 import { useParams } from "next/navigation";
 import { Section } from "../../components/layout/Section";
+import { useTour } from "@/hooks/useTour";
+import { TourButton } from "@/app/components/panel/TourButton";
 
 interface Location {
   id: string;
@@ -47,6 +49,18 @@ export default function AdminLocationsPage() {
     message: "",
     type: "error",
   });
+
+  const { startTour, hasSeenTour, TourExitDialog } = useTour("locations", [
+    {
+      element: "#tour-locations-create",
+      popover: {
+        title: "Crear Sede",
+        description: "Desde acá podés agregar nuevas sedes a la plataforma.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+  ]);
 
   const loadLocations = React.useCallback(async () => {
     try {
@@ -174,6 +188,7 @@ export default function AdminLocationsPage() {
           action={{
             label: "Crear Sede",
             onClick: handleCreate,
+            id: "tour-locations-create",
           }}
         />
 
@@ -321,6 +336,11 @@ export default function AdminLocationsPage() {
           message={alertDialog.message}
           type={alertDialog.type}
         />
+
+        <TourExitDialog />
+        <div className="fixed bottom-6 right-6 z-50">
+          <TourButton onClick={startTour} />
+        </div>
       </Section>
   );
 }

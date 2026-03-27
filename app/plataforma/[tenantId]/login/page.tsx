@@ -7,6 +7,7 @@ import Logo from "@/app/branding/Logo";
 import { GoogleIcon } from "@/app/branding/GoogleIcon";
 import { Typography } from "@/app/components/Typography";
 import Link from "next/link";
+import Script from "next/script";
 import { Role } from "@/lib/types";
 
 export default function LoginPage() {
@@ -21,15 +22,39 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
+      let token = "";
+      try {
+        if (typeof window !== 'undefined' && siteKey) {
+          // Wrap en Promesa para esperar el ready
+          token = await new Promise((resolve, reject) => {
+            (window as any).grecaptcha.enterprise.ready(async () => {
+              try {
+                const resToken = await (window as any).grecaptcha.enterprise.execute(siteKey, { action: 'LOGIN' });
+                resolve(resToken);
+              } catch (err) {
+                reject(err);
+              }
+            });
+          });
+        }
+      } catch (err) {
+         console.error("Error al obtener token de reCAPTCHA:", err);
+         setError("No se pudo conectar con reCAPTCHA. Desactiva tu bloqueador de anuncios y reintenta.");
+         setLoading(false);
+         return;
+      }
+
       const res = await fetch(`/api/plataforma/${tenantId}/auth/login`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password, pwa: fromInstalledPwa }),
+        body: JSON.stringify({ email, password, pwa: fromInstalledPwa, recaptchaToken: token }),
       });
       if (!res.ok) {
         const json = (await res.json().catch(() => ({}))) as { error?: string };
@@ -51,11 +76,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-white bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/p-1.png')" }}>
-      <div className="max-w-md w-full px-4">
-        <Card shadow="md" isBlurred className="bg-white/80">
-          <CardHeader className="flex justify-center flex-col">
-            <Logo width={50} height={50} />
+    <>
+      {siteKey && (
+        <Script 
+          src={`https://www.google.com/recaptcha/enterprise.js?render=${siteKey}`}
+        />
+      )}
+      <div className="flex justify-center items-center min-h-screen bg-white bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/p-1.png')" }}>
+        <div className="max-w-md w-full px-4">
+          <Card shadow="md" isBlurred className="bg-white/80">
+            <CardHeader className="flex justify-center flex-col">
+              <Logo width={50} height={50} />
             <h2 className="text-2xl font-semibold text-slate-800 font-primary">Ingresar</h2>
             {fromInstalledPwa ? (
               <p className="text-sm text-slate-500 font-normal text-center px-2">
@@ -117,9 +148,10 @@ export default function LoginPage() {
               </div>
             </form>
           </CardBody>
-        </Card>
+          </Card>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
