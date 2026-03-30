@@ -22,6 +22,7 @@ export function PaymentsForm() {
     const [refreshingManual, setRefreshingManual] = useState(false);
 
     const mpErrorParam = searchParams.get("mp_error");
+    const mpErrorDetailParam = searchParams.get("mp_error_detail");
     const mpSuccessParam = searchParams.get("mp_linked");
 
     useEffect(() => {
@@ -53,7 +54,22 @@ export function PaymentsForm() {
         <div className="flex w-full flex-col">
             {mpErrorParam && (
                 <Alert color="danger" variant="flat" className="mb-4">
-                    {MP_OAUTH_ERROR_MESSAGES[mpErrorParam] || "Error al vincular con Mercado Pago."}
+                    <div className="space-y-2">
+                        <p>
+                            {MP_OAUTH_ERROR_MESSAGES[mpErrorParam] ||
+                                "Error al vincular con Mercado Pago."}
+                        </p>
+                        {mpErrorDetailParam ? (
+                            <p className="text-xs font-normal text-default-700 whitespace-pre-wrap border-t border-default-200 pt-2 mt-1">
+                                Detalle (Mercado Pago): {mpErrorDetailParam}
+                            </p>
+                        ) : null}
+                        <p className="text-xs text-default-600 border-t border-default-200 pt-2 mt-1">
+                            Si ya te habías vinculado y ahora falla: la app tiene flujo OAuth; el mensaje de MP
+                            suele indicar credenciales, Redirect URI o PKCE distintos entre Developers y el
+                            servidor (p. ej. activaste PKCE en MP y falta MERCADOPAGO_OAUTH_USE_PKCE=true).
+                        </p>
+                    </div>
                 </Alert>
             )}
             {mpSuccessParam === "1" && (

@@ -49,9 +49,16 @@ export async function GET(req: Request) {
 
   if (!code || !state) {
     const error = url.searchParams.get("error") || "missing_code_or_state";
-    const res = NextResponse.redirect(
-      `${baseUrl}${defaultReturnPath}?mp_error=${encodeURIComponent(error)}`
-    );
+    const errorDescription = url.searchParams.get("error_description");
+    const back = new URL(`${baseUrl}${defaultReturnPath}`);
+    back.searchParams.set("mp_error", error);
+    if (errorDescription) {
+      back.searchParams.set(
+        "mp_error_detail",
+        errorDescription.slice(0, 800)
+      );
+    }
+    const res = NextResponse.redirect(back.toString());
     clearOAuthCookies(res);
     return res;
   }
