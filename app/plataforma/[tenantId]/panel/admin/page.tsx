@@ -15,7 +15,7 @@ export default function AdminPage() {
     <Section>
       <PanelHeader title="Administra tu negocio" subtitle="Gestiona los detalles de tu negocio, ajustes y configuraciones." />
       <Card className="p-4 hidden md:block">
-        <Tabs disabledKeys={[ "tabwhatsapp", "tabintegrations" ]} classNames={{
+        <Tabs disabledKeys={["tabwhatsapp"]} classNames={{
           base: "w-full",
           tabList: "gap-2 md:gap-6 w-full relative bg-gray-100 rounded-lg p-1",
           cursor: "bg-white rounded-lg transition-all duration-300 ease-in-out font-medium",
@@ -57,7 +57,7 @@ export default function AdminPage() {
           </Tab>
         </Tabs>
       </Card>
-      <Accordion disabledKeys={["whatsapp", "integrations"]} variant="splitted" className="flex flex-col md:hidden space-y-2">
+      <Accordion disabledKeys={["whatsapp"]} variant="splitted" className="flex flex-col md:hidden space-y-2">
         <AccordionItem key="details" startContent={<CircleUser className="w-5 h-5" />} title="Detalles">
           <DetailsTab />
         </AccordionItem>

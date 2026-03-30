@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { Role } from "@/lib/types";
+import { getPublicBaseUrl, isSafeMercadoPagoReturnPath } from "@/lib/public-base-url";
+
+const MP_OAUTH_RETURN_COOKIE = "mp_oauth_return";
+
+function canManageMercadoPago(role: Role): boolean {
+  return role === Role.ADMIN || role === Role.PROFESSIONAL || role === Role.SUPERVISOR;
+}
 
 /**
  * GET /api/plataforma/[tenantId]/integrations/mercadopago/authorize
  * Redirects the user to MercadoPago OAuth consent. state = tenantId.
+ * Query: optional return_to=/plataforma/... (misma app, mismo tenant) para volver tras el callback.
  */
 export async function GET(
   req: Request,
@@ -15,22 +23,21 @@ export async function GET(
   if (!session || session.tenantId !== tenantId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (session.role !== Role.ADMIN && session.role !== Role.PROFESSIONAL) {
+  if (!canManageMercadoPago(session.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const baseUrl = getPublicBaseUrl(req);
+  const returnTo = new URL(req.url).searchParams.get("return_to");
+  const safeReturn =
+    returnTo && isSafeMercadoPagoReturnPath(returnTo, tenantId) ? returnTo : undefined;
+
   const clientId = process.env.MERCADOPAGO_CLIENT_ID;
   if (!clientId) {
-    const host = req.headers.get("x-forwarded-host");
-    const proto = req.headers.get("x-forwarded-proto") || "https";
-    const baseUrl = process.env.APP_URL || (host ? `${proto}://${host}` : "http://localhost:3000");
     const paymentsUrl = `${baseUrl}/plataforma/${tenantId}/panel/admin/payments?mp_error=oauth_not_configured`;
     return NextResponse.redirect(paymentsUrl);
   }
 
-  const host = req.headers.get("x-forwarded-host");
-  const proto = req.headers.get("x-forwarded-proto") || "https";
-  const baseUrl = process.env.APP_URL || (host ? `${proto}://${host}` : "http://localhost:3000");
   const redirectUri = `${baseUrl}/api/integrations/mercadopago/callback`;
   const authUrl = new URL("https://auth.mercadopago.com/authorization");
   authUrl.searchParams.set("client_id", clientId);
@@ -38,5 +45,15 @@ export async function GET(
   authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("state", tenantId);
 
-  return NextResponse.redirect(authUrl.toString());
+  const res = NextResponse.redirect(authUrl.toString());
+  if (safeReturn) {
+    res.cookies.set(MP_OAUTH_RETURN_COOKIE, safeReturn, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 600,
+    });
+  }
+  return res;
 }

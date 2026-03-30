@@ -34,6 +34,8 @@ export async function GET(
     return NextResponse.json({
       ...legacyFeatures,
       show_coverage: flagsAndLimits.show_coverage,
+      show_servicios: flagsAndLimits.show_servicios,
+      show_pagos: flagsAndLimits.show_pagos,
       maxUsers: flagsAndLimits.maxUsers,
       usedUsers,
       patientSelfBookingEnabled,

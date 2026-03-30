@@ -21,7 +21,11 @@ export async function POST(
   if (!session || session.tenantId !== tenantId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (session.role !== Role.ADMIN && session.role !== Role.PROFESSIONAL) {
+  if (
+    session.role !== Role.ADMIN &&
+    session.role !== Role.PROFESSIONAL &&
+    session.role !== Role.SUPERVISOR
+  ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -22,6 +22,8 @@ export type WhatsappReminderOption = "24" | "48" | "48_and_24";
 /** Store feature flags and limits (from Store Manager) */
 export interface TenantFeatureFlagsAndLimits {
   show_coverage: boolean;
+  show_servicios: boolean;
+  show_pagos: boolean;
   maxUsers: number;
 }
 
@@ -37,6 +39,8 @@ const defaultFeatures: TenantFeatures = {
 
 const defaultFlagsAndLimits: TenantFeatureFlagsAndLimits = {
   show_coverage: true,
+  show_servicios: true,
+  show_pagos: true,
   maxUsers: 1,
 };
 
@@ -146,12 +150,14 @@ export async function getTenantFeatureFlagsAndLimits(tenantId: string): Promise<
     const row = await getTenantFeaturesRow(tenantId);
     const features = row?.features && typeof row.features === "object" ? row.features : {};
     const limits = row?.limits && typeof row.limits === "object" ? row.limits : {};
-    const raw = features as { show_coverage?: boolean; disabled_payment?: boolean; payment_enabled?: boolean };
+    const raw = features as { show_coverage?: boolean; show_servicios?: boolean; show_pagos?: boolean; disabled_payment?: boolean; payment_enabled?: boolean };
     const show_coverage = raw.show_coverage ?? true;
+    const show_servicios = raw.show_servicios ?? true;
+    const show_pagos = raw.show_pagos ?? true;
     const maxUsers = typeof (limits as { maxUsers?: number }).maxUsers === "number" && (limits as { maxUsers: number }).maxUsers >= 0
       ? (limits as { maxUsers: number }).maxUsers
       : defaultFlagsAndLimits.maxUsers;
-    return { show_coverage, maxUsers };
+    return { show_coverage, show_servicios, show_pagos, maxUsers };
   } catch (error) {
     console.error("Error fetching tenant feature flags and limits:", error);
     return defaultFlagsAndLimits;
