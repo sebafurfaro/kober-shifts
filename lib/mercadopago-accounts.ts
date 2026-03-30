@@ -196,6 +196,27 @@ export async function hasMercadoPagoAccount(tenantId: string): Promise<boolean> 
   return (rows as any[]).length > 0;
 }
 
+/** Para depuración: fila ausente, activa o inactiva (p. ej. desvinculación previa). */
+export async function getMercadoPagoLinkageDiagnostics(tenantId: string): Promise<{
+  linked: boolean;
+  rowStatus: "missing" | "active" | "inactive";
+}> {
+  await ensureTable();
+  const [rows] = await mysql.execute(
+    "SELECT status FROM mercadopago_accounts WHERE tenantId = ? LIMIT 1",
+    [tenantId]
+  );
+  const arr = rows as { status?: string }[];
+  if (arr.length === 0) {
+    return { linked: false, rowStatus: "missing" };
+  }
+  const st = String(arr[0].status ?? "").toLowerCase();
+  if (st === "active") {
+    return { linked: true, rowStatus: "active" };
+  }
+  return { linked: false, rowStatus: "inactive" };
+}
+
 export async function deactivateMercadoPagoAccount(tenantId: string): Promise<void> {
   await ensureTable();
   await mysql.execute(

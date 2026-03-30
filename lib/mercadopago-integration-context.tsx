@@ -34,19 +34,43 @@ export function MercadoPagoIntegrationProvider({
   const [isDisconnecting, setIsDisconnecting] = React.useState(false);
 
   const loadStatus = React.useCallback(async () => {
+    const clientLog =
+      typeof process !== "undefined" &&
+      process.env.NEXT_PUBLIC_MERCADOPAGO_LINKAGE_LOG === "1";
     try {
       setIsLoading(true);
       const res = await fetch(`/api/plataforma/${tenantId}/integrations/mercadopago/status`, {
         credentials: "include",
       });
+      const raw = await res.text();
+      let data: { linked?: boolean; _debug?: { rowStatus?: string }; error?: string } = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        data = {};
+      }
+      if (clientLog) {
+        console.info("[mp-oauth-status client]", {
+          tenantId,
+          httpStatus: res.status,
+          linked: data.linked,
+          _debug: data._debug,
+          ok: res.ok,
+        });
+      }
       if (res.ok) {
-        const data = await res.json();
         setIsLinked(!!data.linked);
       } else {
+        if (clientLog) {
+          console.warn("[mp-oauth-status client] no ok", res.status, data);
+        }
         setIsLinked(false);
       }
     } catch (e) {
       console.error("Error loading Mercado Pago status:", e);
+      if (clientLog) {
+        console.warn("[mp-oauth-status client] fetch error", e);
+      }
       setIsLinked(false);
     } finally {
       setIsLoading(false);

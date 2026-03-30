@@ -99,6 +99,20 @@ export async function GET(req: Request) {
       expiresAt,
     });
 
+    const linkageLog =
+      process.env.MERCADOPAGO_LINKAGE_LOG?.trim() === "1" ||
+      process.env.MERCADOPAGO_LINKAGE_LOG?.trim()?.toLowerCase() === "true";
+    if (linkageLog) {
+      console.info(
+        "[mp-oauth-callback]",
+        JSON.stringify({
+          tenantId: state,
+          stored: true,
+          mpUserId: data.user_id ?? null,
+        })
+      );
+    }
+
     const returnPath = jar.get(MP_OAUTH_RETURN_COOKIE)?.value;
     const successPath =
       returnPath && isSafeMercadoPagoReturnPath(returnPath, state)
