@@ -32,18 +32,21 @@ export async function GET(
   const safeReturn =
     returnTo && isSafeMercadoPagoReturnPath(returnTo, tenantId) ? returnTo : undefined;
 
-  const clientId = process.env.MERCADOPAGO_CLIENT_ID;
-  if (!clientId) {
+  const clientId = process.env.MERCADOPAGO_CLIENT_ID?.trim();
+  const clientSecret = process.env.MERCADOPAGO_CLIENT_SECRET?.trim();
+  if (!clientId || !clientSecret) {
     const paymentsUrl = `${baseUrl}/plataforma/${tenantId}/panel/admin/payments?mp_error=oauth_not_configured`;
     return NextResponse.redirect(paymentsUrl);
   }
 
   const redirectUri = `${baseUrl}/api/integrations/mercadopago/callback`;
+  // Alineado con mercadopago SDK getAuthorizationURL (platform_id=mp)
   const authUrl = new URL("https://auth.mercadopago.com/authorization");
   authUrl.searchParams.set("client_id", clientId);
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("state", tenantId);
+  authUrl.searchParams.set("platform_id", "mp");
 
   const res = NextResponse.redirect(authUrl.toString());
   if (safeReturn) {

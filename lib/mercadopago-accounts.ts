@@ -87,20 +87,36 @@ export async function getMercadoPagoAccountWithRefresh(
   const now = Date.now();
   if (account.expiresAt.getTime() - now > 60 * 1000) return account;
   try {
-    const refreshBody = new URLSearchParams({
+    const refreshPayload = {
       client_id: clientId,
       client_secret: clientSecret,
-      grant_type: "refresh_token",
+      grant_type: "refresh_token" as const,
       refresh_token: account.refreshToken,
-    });
-    const tokenRes = await fetch(MP_OAUTH_TOKEN_URL, {
+    };
+    let tokenRes = await fetch(MP_OAUTH_TOKEN_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
         Accept: "application/json",
+        "Content-Type": "application/json",
       },
-      body: refreshBody.toString(),
+      body: JSON.stringify(refreshPayload),
     });
+    if (!tokenRes.ok) {
+      const formBody = new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: "refresh_token",
+        refresh_token: account.refreshToken,
+      });
+      tokenRes = await fetch(MP_OAUTH_TOKEN_URL, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formBody.toString(),
+      });
+    }
     if (!tokenRes.ok) {
       const errBody = await tokenRes.text();
       console.error("MercadoPago refresh token error:", tokenRes.status, errBody);

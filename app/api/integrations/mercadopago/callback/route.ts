@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { upsertMercadoPagoAccount } from "@/lib/mercadopago-accounts";
+import { exchangeAuthorizationCodeForTokens } from "@/lib/mercadopago-oauth-token";
 import { getPublicBaseUrl, isSafeMercadoPagoReturnPath } from "@/lib/public-base-url";
 
-const MP_OAUTH_TOKEN_URL = "https://api.mercadopago.com/oauth/token";
 const MP_OAUTH_RETURN_COOKIE = "mp_oauth_return";
 
 function appendMpLinked(base: string, pathWithQuery: string): string {
@@ -31,8 +31,8 @@ export async function GET(req: Request) {
     );
   }
 
-  const clientId = process.env.MERCADOPAGO_CLIENT_ID;
-  const clientSecret = process.env.MERCADOPAGO_CLIENT_SECRET;
+  const clientId = process.env.MERCADOPAGO_CLIENT_ID?.trim();
+  const clientSecret = process.env.MERCADOPAGO_CLIENT_SECRET?.trim();
   if (!clientId || !clientSecret) {
     return NextResponse.redirect(
       `${baseUrl}${defaultPaymentsPath}?mp_error=server_config`
@@ -42,37 +42,33 @@ export async function GET(req: Request) {
   const redirectUri = `${baseUrl}/api/integrations/mercadopago/callback`;
 
   try {
-    const body = new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: redirectUri,
-    });
-
-    const tokenRes = await fetch(MP_OAUTH_TOKEN_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
-      },
-      body: body.toString(),
-    });
-
-    if (!tokenRes.ok) {
-      const errBody = await tokenRes.text();
-      console.error("MercadoPago OAuth token error:", tokenRes.status, errBody);
-      return NextResponse.redirect(
-        `${baseUrl}${defaultPaymentsPath}?mp_error=token_exchange_failed`
-      );
-    }
-
-    const data = (await tokenRes.json()) as {
+    let data: {
       access_token: string;
       refresh_token?: string;
       expires_in?: number;
       user_id?: number;
     };
+
+    try {
+      data = await exchangeAuthorizationCodeForTokens({
+        clientId,
+        clientSecret,
+        code,
+        redirectUri,
+      });
+    } catch (e) {
+      console.error("MercadoPago OAuth exchangeAuthorizationCodeForTokens:", e);
+      return NextResponse.redirect(
+        `${baseUrl}${defaultPaymentsPath}?mp_error=token_exchange_failed`
+      );
+    }
+
+    if (!data.access_token) {
+      console.error("MercadoPago OAuth: respuesta sin access_token", data);
+      return NextResponse.redirect(
+        `${baseUrl}${defaultPaymentsPath}?mp_error=token_exchange_failed`
+      );
+    }
 
     const expiresAt = data.expires_in
       ? new Date(Date.now() + data.expires_in * 1000)
