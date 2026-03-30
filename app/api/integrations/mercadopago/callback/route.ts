@@ -18,7 +18,7 @@ function appendMpLinked(base: string, pathWithQuery: string): string {
 /**
  * GET /api/integrations/mercadopago/callback
  * MercadoPago redirects here with ?code=...&state=tenantId
- * Exchange code for tokens and store per tenant, then redirect (pagos o return_to guardado en cookie).
+ * Exchange code for tokens and store per tenant, then redirect (admin o return_to guardado en cookie).
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -26,7 +26,8 @@ export async function GET(req: Request) {
   const state = url.searchParams.get("state"); // tenantId
 
   const baseUrl = getPublicBaseUrl(req);
-  const defaultPaymentsPath = `/plataforma/${state || ""}/panel/admin/payments`;
+  /** Sin cookie de return_to: volver a Admin (Integraciones), no a Pagos. */
+  const defaultReturnPath = `/plataforma/${state || ""}/panel/admin`;
 
   const jar = await cookies();
   const pkceVerifier = jar.get(MP_OAUTH_PKCE_COOKIE)?.value;
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
   if (!code || !state) {
     const error = url.searchParams.get("error") || "missing_code_or_state";
     const res = NextResponse.redirect(
-      `${baseUrl}${defaultPaymentsPath}?mp_error=${encodeURIComponent(error)}`
+      `${baseUrl}${defaultReturnPath}?mp_error=${encodeURIComponent(error)}`
     );
     clearOAuthCookies(res);
     return res;
@@ -44,7 +45,7 @@ export async function GET(req: Request) {
   const clientSecret = process.env.MERCADOPAGO_CLIENT_SECRET?.trim();
   if (!clientId || !clientSecret) {
     const res = NextResponse.redirect(
-      `${baseUrl}${defaultPaymentsPath}?mp_error=server_config`
+      `${baseUrl}${defaultReturnPath}?mp_error=server_config`
     );
     clearOAuthCookies(res);
     return res;
@@ -71,7 +72,7 @@ export async function GET(req: Request) {
     } catch (e) {
       console.error("MercadoPago OAuth exchangeAuthorizationCodeForTokens:", e);
       const res = NextResponse.redirect(
-        `${baseUrl}${defaultPaymentsPath}?mp_error=token_exchange_failed`
+        `${baseUrl}${defaultReturnPath}?mp_error=token_exchange_failed`
       );
       clearOAuthCookies(res);
       return res;
@@ -80,7 +81,7 @@ export async function GET(req: Request) {
     if (!data.access_token) {
       console.error("MercadoPago OAuth: respuesta sin access_token", data);
       const res = NextResponse.redirect(
-        `${baseUrl}${defaultPaymentsPath}?mp_error=token_exchange_failed`
+        `${baseUrl}${defaultReturnPath}?mp_error=token_exchange_failed`
       );
       clearOAuthCookies(res);
       return res;
@@ -102,7 +103,7 @@ export async function GET(req: Request) {
     const successPath =
       returnPath && isSafeMercadoPagoReturnPath(returnPath, state)
         ? returnPath
-        : `${defaultPaymentsPath}`;
+        : `${defaultReturnPath}`;
     const target = appendMpLinked(baseUrl, successPath);
 
     const res = NextResponse.redirect(target);
@@ -111,7 +112,7 @@ export async function GET(req: Request) {
   } catch (error) {
     console.error("MercadoPago callback error:", error);
     const res = NextResponse.redirect(
-      `${baseUrl}${defaultPaymentsPath}?mp_error=callback_failed`
+      `${baseUrl}${defaultReturnPath}?mp_error=callback_failed`
     );
     clearOAuthCookies(res);
     return res;

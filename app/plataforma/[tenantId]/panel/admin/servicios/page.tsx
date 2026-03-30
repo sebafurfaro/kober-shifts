@@ -13,7 +13,6 @@ import {
   CardBody,
   Spinner,
   Divider,
-  Alert,
 } from "@heroui/react";
 import { Pencil, Trash2, Eye } from "lucide-react";
 import Typography from "@/app/components/Typography";
@@ -24,9 +23,6 @@ import { PanelHeader } from "../../components/PanelHeader";
 import { useParams } from "next/navigation";
 import { Section } from "../../components/layout/Section";
 import { useFeatureGate } from "@/lib/use-feature-gate";
-import { useMercadoPagoAccount } from "@/hooks/useMercadoPagoAccount";
-import { MP_OAUTH_ERROR_MESSAGES } from "@/lib/mercadopago-oauth-messages";
-import { Suspense } from "react";
 
 interface Service {
   id: string;
@@ -36,76 +32,6 @@ interface Service {
   marginMinutes: number;
   price: number;
   seniaPercent: number;
-}
-
-function MercadoPagoBanner({ tenantId }: { tenantId: string }) {
-  const {
-    isLinked,
-    isLoading,
-    isDisconnecting,
-    connect,
-    disconnect,
-    mpErrorParam,
-    mpSuccessParam,
-  } = useMercadoPagoAccount(tenantId);
-
-  return (
-    <Card className="mb-6 shadow-sm border border-divider">
-      <CardBody className="flex flex-col gap-4 py-4 px-6 bg-slate-50">
-        {mpErrorParam ? (
-          <Alert color="danger" variant="flat">
-            {MP_OAUTH_ERROR_MESSAGES[mpErrorParam] || "Error al vincular con Mercado Pago."}
-          </Alert>
-        ) : null}
-        {mpSuccessParam === "1" ? (
-          <Alert color="success" variant="flat">
-            Cuenta vinculada correctamente con Mercado Pago.
-          </Alert>
-        ) : null}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-[#009ee3] p-2.5 rounded-full flex-shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-          </div>
-          <div>
-            <Typography variant="h6" color="black" className="!mb-0">Cobros con Mercado Pago</Typography>
-            <Typography variant="p" color="gray" opacity={50} className="text-sm mt-0.5 max-w-[500px]">
-              Recibí pagos o señas (%) para asegurar turnos. Vinculá tu cuenta para habilitarlo en tus servicios con costo.
-            </Typography>
-          </div>
-        </div>
-        <div className="shrink-0 flex items-center gap-3 w-full md:w-auto mt-2 md:mt-0">
-          {isLoading ? (
-            <Spinner size="sm" />
-          ) : isLinked ? (
-            <div className="flex flex-col md:flex-row items-center gap-3">
-              <div className="flex items-center gap-1.5 text-success text-sm font-medium">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                Cuenta activa
-              </div>
-              <Button 
-                 size="sm" 
-                 variant="bordered" 
-                 color="danger"
-                 onPress={disconnect}
-                 isLoading={isDisconnecting}
-              >
-                Desvincular
-              </Button>
-            </div>
-          ) : (
-            <Button 
-              onPress={connect}
-              className="bg-[#009ee3] text-white font-medium w-full md:w-auto"
-            >
-              Vincular Mercado Pago
-            </Button>
-          )}
-        </div>
-        </div>
-      </CardBody>
-    </Card>
-  );
 }
 
 export default function ServiciosPage() {
@@ -254,10 +180,6 @@ export default function ServiciosPage() {
           onClick: handleCreate,
         }}
       />
-
-      <Suspense fallback={null}>
-        <MercadoPagoBanner tenantId={tenantId} />
-      </Suspense>
 
       <Card>
         <CardBody className="p-0">

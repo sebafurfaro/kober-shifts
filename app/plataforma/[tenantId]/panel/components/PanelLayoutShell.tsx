@@ -17,6 +17,7 @@ import type { Role } from "@/lib/types";
 import { DEFAULT_PERMISSIONS, type PermissionsMap } from "@/lib/panel-permissions";
 import { buildPanelMobileNav } from "@/lib/panel-mobile-nav";
 import { MobileBar } from "./layout/MobileBar";
+import { MercadoPagoIntegrationProvider } from "@/lib/mercadopago-integration-context";
 
 const DRAWER_WIDTH = 260;
 
@@ -181,6 +182,10 @@ export function PanelLayoutShell({
   }
 
   return (
+    <MercadoPagoIntegrationProvider
+      tenantId={currentTenantId}
+      isPagosFeatureEnabled={features?.show_pagos ?? false}
+    >
     <div className="flex min-h-screen">
       {isMobile && mobileDrawerOpen && (
         <div
@@ -233,6 +238,7 @@ export function PanelLayoutShell({
       </main>
       <MobileBar entries={mobileNavEntries} setMobileDrawerOpen={setMobileDrawerOpen} />
     </div>
+    </MercadoPagoIntegrationProvider>
   );
 }
 

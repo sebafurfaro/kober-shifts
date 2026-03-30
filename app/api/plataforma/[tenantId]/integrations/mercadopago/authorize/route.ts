@@ -18,7 +18,8 @@ function canManageMercadoPago(role: Role): boolean {
 /**
  * GET /api/plataforma/[tenantId]/integrations/mercadopago/authorize
  * Redirects the user to MercadoPago OAuth consent. state = tenantId.
- * Query: optional return_to=/plataforma/... (misma app, mismo tenant) para volver tras el callback.
+ * Query: integration_source=integrations (obligatorio; solo desde Admin → Integraciones).
+ * Opcional: return_to=/plataforma/... (misma app, mismo tenant) para volver tras el callback.
  */
 export async function GET(
   req: Request,
@@ -34,15 +35,24 @@ export async function GET(
   }
 
   const baseUrl = getPublicBaseUrl(req);
-  const returnTo = new URL(req.url).searchParams.get("return_to");
+  const search = new URL(req.url).searchParams;
+  const integrationSource = search.get("integration_source");
+  if (integrationSource !== "integrations") {
+    return NextResponse.json(
+      { error: "La vinculación con Mercado Pago solo puede iniciarse desde Admin → Integraciones." },
+      { status: 403 }
+    );
+  }
+
+  const returnTo = search.get("return_to");
   const safeReturn =
     returnTo && isSafeMercadoPagoReturnPath(returnTo, tenantId) ? returnTo : undefined;
 
   const clientId = process.env.MERCADOPAGO_CLIENT_ID?.trim();
   const clientSecret = process.env.MERCADOPAGO_CLIENT_SECRET?.trim();
   if (!clientId || !clientSecret) {
-    const paymentsUrl = `${baseUrl}/plataforma/${tenantId}/panel/admin/payments?mp_error=oauth_not_configured`;
-    return NextResponse.redirect(paymentsUrl);
+    const adminUrl = `${baseUrl}/plataforma/${tenantId}/panel/admin?mp_error=oauth_not_configured`;
+    return NextResponse.redirect(adminUrl);
   }
 
   const redirectUri = `${baseUrl}/api/integrations/mercadopago/callback`;

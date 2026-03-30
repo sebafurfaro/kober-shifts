@@ -25,6 +25,7 @@ import type { Role } from "@/lib/types";
 import { canAccess, type PermissionsMap, type PermKey } from "@/lib/panel-permissions";
 import { savePwaInstallTenantId } from "@/lib/pwa-entry";
 import type { AsideNavKey } from "@/lib/panel-mobile-nav";
+import { useShowPagosAsideLink } from "@/lib/mercadopago-integration-context";
 
 const DRAWER_WIDTH = 210;
 const DRAWER_COLLAPSED_WIDTH = 64;
@@ -239,6 +240,7 @@ export function Aside({
   const can = (permKey: PermKey) => canAccess(permissions ?? null, role, permKey);
   const pathname = usePathname();
   const hid = (key: AsideNavKey) => isMobile && !!navHiddenOnMobile?.has(key);
+  const showPagosAsideLink = useShowPagosAsideLink();
 
   const handleNavClick = isMobile ? () => setMobileDrawerOpen(false) : undefined;
 
@@ -428,7 +430,7 @@ export function Aside({
           {isStaff &&
             (() => {
               const showAdmin = can("admin") && !hid("admin");
-              const showPagos = can("pagos") && isFeatureEnabled("show_pagos") && !hid("pagos");
+              const showPagos = can("pagos") && showPagosAsideLink && !hid("pagos");
               const showTurnos = can("turnos") && !hid("turnos");
               const gestionFiltered = gestionItems
                 .filter((item) => {
