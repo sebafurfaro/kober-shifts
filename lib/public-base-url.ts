@@ -32,6 +32,43 @@ export function getPublicBaseUrl(req: Request): string {
   }
 }
 
+const MP_CALLBACK_PATH = "/api/integrations/mercadopago/callback";
+
+/**
+ * Base pública para OAuth Mercado Pago y redirects posteriores al callback.
+ * Debe coincidir **exactamente** con el dominio registrado en MP Developers.
+ *
+ * Prioridad: `MERCADOPAGO_OAUTH_BASE_URL` (recomendado en producción si hay dudas
+ * entre www / apex o proxy) → `APP_URL` → inferido del request.
+ */
+export function getMercadoPagoOAuthBaseUrl(req: Request): string {
+  const explicit =
+    process.env.MERCADOPAGO_OAUTH_BASE_URL?.trim() || process.env.APP_URL?.trim();
+  if (explicit) {
+    return explicit.replace(/\/$/, "");
+  }
+  return getPublicBaseUrl(req);
+}
+
+/** Ruta absoluta del redirect_uri que MP valida en el intercambio de token. */
+export function getMercadoPagoOAuthRedirectUri(req: Request): string {
+  return `${getMercadoPagoOAuthBaseUrl(req)}${MP_CALLBACK_PATH}`;
+}
+
+/**
+ * Valida que un redirect_uri guardado en cookie sea seguro y apunte al callback OAuth.
+ */
+export function isSafeMercadoPagoRedirectUriCookie(value: string | undefined): value is string {
+  if (!value || value.length > 512 || value.includes("..")) return false;
+  try {
+    const u = new URL(value);
+    if (u.pathname.replace(/\/$/, "") !== MP_CALLBACK_PATH) return false;
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 /** Evita open redirects al volver del OAuth. */
 export function isSafeMercadoPagoReturnPath(path: string, tenantId: string): boolean {
   if (!path.startsWith("/") || path.includes("..")) return false;

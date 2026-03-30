@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { Role } from "@/lib/types";
-import { getPublicBaseUrl, isSafeMercadoPagoReturnPath } from "@/lib/public-base-url";
+import {
+  getMercadoPagoOAuthRedirectUri,
+  getMercadoPagoOAuthBaseUrl,
+  isSafeMercadoPagoReturnPath,
+} from "@/lib/public-base-url";
 import { getMercadoPagoOAuthAuthorizationPageUrl } from "@/lib/mercadopago-oauth-auth-url";
 import { generateMercadoPagoPkcePair } from "@/lib/mercadopago-oauth-pkce";
-import { MP_OAUTH_RETURN_COOKIE, MP_OAUTH_PKCE_COOKIE } from "@/lib/mercadopago-oauth-cookies";
+import {
+  MP_OAUTH_RETURN_COOKIE,
+  MP_OAUTH_PKCE_COOKIE,
+  MP_OAUTH_REDIRECT_URI_COOKIE,
+} from "@/lib/mercadopago-oauth-cookies";
 
 function oauthPkceEnabled(): boolean {
   const v = process.env.MERCADOPAGO_OAUTH_USE_PKCE?.trim().toLowerCase();
@@ -34,7 +42,7 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const baseUrl = getPublicBaseUrl(req);
+  const baseUrl = getMercadoPagoOAuthBaseUrl(req);
   const search = new URL(req.url).searchParams;
   const integrationSource = search.get("integration_source");
   if (integrationSource !== "integrations") {
@@ -55,7 +63,7 @@ export async function GET(
     return NextResponse.redirect(adminUrl);
   }
 
-  const redirectUri = `${baseUrl}/api/integrations/mercadopago/callback`;
+  const redirectUri = getMercadoPagoOAuthRedirectUri(req);
   // Host regional (p. ej. .com.ar); auth.mercadopago.com sin país suele dar 403 para apps MLA.
   const authUrl = new URL(getMercadoPagoOAuthAuthorizationPageUrl());
   authUrl.searchParams.set("client_id", clientId);
@@ -81,6 +89,7 @@ export async function GET(
   };
 
   const res = NextResponse.redirect(authUrl.toString());
+  res.cookies.set(MP_OAUTH_REDIRECT_URI_COOKIE, redirectUri, cookieOpts);
   if (safeReturn) {
     res.cookies.set(MP_OAUTH_RETURN_COOKIE, safeReturn, cookieOpts);
   }
