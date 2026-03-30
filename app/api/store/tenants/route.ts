@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { getStoreSession } from "@/lib/store-session";
-import { findAllTenants, createTenant, createUser, findUserByEmail } from "@/lib/db";
+import {
+  findAllTenants,
+  createTenant,
+  createUser,
+  findUserByEmail,
+  findStaffUsersWithEmail,
+  STAFF_EMAIL_ALREADY_EXISTS_MESSAGE,
+} from "@/lib/db";
 import { upsertTenantFeatures } from "@/lib/settings-db";
 import { randomUUID } from "crypto";
 import { hashPassword } from "@/lib/auth";
@@ -56,6 +63,13 @@ export async function POST(req: Request) {
   const adminPassword = typeof body.adminPassword === "string" ? body.adminPassword : "";
 
   if (!name) return NextResponse.json({ error: "Invalid input: name is required" }, { status: 400 });
+
+  if (adminEmail && adminPassword) {
+    const staffWithEmail = await findStaffUsersWithEmail(adminEmail);
+    if (staffWithEmail.length > 0) {
+      return NextResponse.json({ error: STAFF_EMAIL_ALREADY_EXISTS_MESSAGE }, { status: 409 });
+    }
+  }
 
   // Generate tenant ID from name (slug-like) or use provided id
   const id = typeof body.id === "string" && body.id.trim()

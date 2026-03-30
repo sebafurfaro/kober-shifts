@@ -5,6 +5,6 @@ export const metadata: Metadata = {
   description: "Abriendo la aplicación",
 };
 
-export default function PwaLayout({ children }: { children: React.ReactNode }) {
+export default function PlataformaPwaLayout({ children }: { children: React.ReactNode }) {
   return children;
 }

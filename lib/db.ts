@@ -1,5 +1,6 @@
 import mysql from './mysql';
-import type { User, Service, Location, ProfessionalProfile, GoogleOAuthToken, Appointment, Role, AppointmentStatus, MedicalCoverage, MedicalPlan, MedicalCoverageWithPlans, Tenant } from './types';
+import type { User, Service, Location, ProfessionalProfile, GoogleOAuthToken, Appointment, AppointmentStatus, MedicalCoverage, MedicalPlan, MedicalCoverageWithPlans, Tenant } from './types';
+import { Role } from './types';
 import { isSupportAdminEmail } from './constants';
 
 // Helper para convertir filas de MySQL a objetos tipados
@@ -202,6 +203,46 @@ export async function findUserByEmail(email: string, tenantId: string): Promise<
   return result.length > 0 ? rowToUser(result[0]) : null;
 }
 
+/** Un mismo correo no puede ser usuario del equipo (staff) en más de un comercio; los pacientes sí pueden repetir email entre tenants. */
+export const STAFF_EMAIL_ALREADY_EXISTS = "STAFF_EMAIL_ALREADY_EXISTS";
+export const STAFF_EMAIL_ALREADY_EXISTS_MESSAGE =
+  "Este correo ya está registrado como usuario del equipo en otro comercio.";
+
+export function isStaffEmailConflictError(err: unknown): boolean {
+  return err instanceof Error && (err as Error & { code?: string }).code === STAFF_EMAIL_ALREADY_EXISTS;
+}
+
+function throwStaffEmailConflict(): never {
+  const err = new Error(STAFF_EMAIL_ALREADY_EXISTS_MESSAGE);
+  (err as Error & { code?: string }).code = STAFF_EMAIL_ALREADY_EXISTS;
+  throw err;
+}
+
+export async function findStaffUsersWithEmail(email: string): Promise<User[]> {
+  const [rows] = await mysql.execute(
+    `SELECT * FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM(?)) AND role IN ('ADMIN','PROFESSIONAL','SUPERVISOR')`,
+    [email]
+  );
+  return (rows as any[]).map(rowToUser);
+}
+
+export async function assertStaffEmailUniqueForCreate(email: string): Promise<void> {
+  const users = await findStaffUsersWithEmail(email);
+  if (users.length > 0) throwStaffEmailConflict();
+}
+
+export async function assertStaffEmailUniqueForUpdate(
+  email: string,
+  tenantId: string,
+  excludeUserId: string
+): Promise<void> {
+  const users = await findStaffUsersWithEmail(email);
+  for (const u of users) {
+    if (u.id === excludeUserId && u.tenantId === tenantId) continue;
+    throwStaffEmailConflict();
+  }
+}
+
 // Find user by email across all tenants (for store authentication)
 export async function findUserByEmailAnyTenant(email: string): Promise<User | null> {
   const [rows] = await mysql.execute(
@@ -238,6 +279,10 @@ export async function createUser(data: {
   role: Role;
   tenantId: string;
 }): Promise<User> {
+  const normalizedEmail = data.email.trim().toLowerCase();
+  if (data.role !== Role.PATIENT) {
+    await assertStaffEmailUniqueForCreate(normalizedEmail);
+  }
   // Try with all fields first (if migration has been run)
   try {
     await mysql.execute(
@@ -245,7 +290,7 @@ export async function createUser(data: {
       [
         data.id,
         data.tenantId,
-        data.email,
+        normalizedEmail,
         data.name,
         data.firstName || null,
         data.lastName || null,
@@ -271,7 +316,7 @@ export async function createUser(data: {
         [
           data.id,
           data.tenantId,
-          data.email,
+          normalizedEmail,
           data.name,
           data.firstName || null,
           data.lastName || null,
@@ -300,6 +345,16 @@ export async function updateUser(
   tenantId: string,
   data: Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'email' | 'phone' | 'address' | 'dni' | 'coverage' | 'plan' | 'dateOfBirth' | 'admissionDate' | 'gender' | 'nationality' | 'googleId' | 'passwordHash' | 'role' | 'additionalInfo' | 'archives' | 'notes'>>
 ): Promise<User> {
+  if (data.email !== undefined || data.role !== undefined) {
+    const current = await findUserById(id, tenantId);
+    if (!current) throw new Error('User not found');
+    const nextEmail = data.email !== undefined ? String(data.email).trim().toLowerCase() : current.email;
+    const nextRole = data.role !== undefined ? data.role : current.role;
+    if (nextRole !== Role.PATIENT) {
+      await assertStaffEmailUniqueForUpdate(nextEmail, tenantId, id);
+    }
+  }
+
   const updates: string[] = [];
   const values: any[] = [];
   const newFieldUpdates: string[] = [];
@@ -320,7 +375,7 @@ export async function updateUser(
   }
   if (data.email !== undefined) {
     updates.push('email = ?');
-    values.push(data.email);
+    values.push(String(data.email).trim().toLowerCase());
   }
   if (data.phone !== undefined) {
     updates.push('phone = ?');

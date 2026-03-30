@@ -10,6 +10,7 @@ import {
   deleteUser,
   deleteAppointmentsByProfessional,
   deleteProfessionalProfile,
+  isStaffEmailConflictError,
 } from "@/lib/db";
 import { hashPassword, validatePassword } from "@/lib/auth";
 import { Role } from "@/lib/types";
@@ -236,9 +237,16 @@ export async function PUT(
       availableHours: updatedProfile?.availableHours,
     };
     return NextResponse.json(responsePayload);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    if (isStaffEmailConflictError(error)) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Conflicto de correo" },
+        { status: 409 }
+      );
+    }
     console.error("Error updating professional:", error);
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

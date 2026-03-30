@@ -3,14 +3,14 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import Logo from "@/app/branding/Logo";
-import { PWA_STORAGE_TENANT_KEY, isValidPwaTenantIdSegment } from "@/lib/pwa-entry";
+import { PWA_STORAGE_TENANT_KEY, isValidPwaTenantIdSegment, savePwaInstallTenantId } from "@/lib/pwa-entry";
 import { Role } from "@/lib/types";
 
 /**
- * Punto de entrada de la PWA (manifest start_url). Sin marketing: solo logo y redirección.
- * Sesión válida → panel según rol; sin sesión → login del tenant con ?pwa=1
+ * Entrada PWA bajo /plataforma (alineada al manifest scope).
+ * Sesión válida → panel según rol; sin sesión → login del tenant (paciente) o login de equipo.
  */
-export default function PwaEntryPage() {
+export default function PlataformaPwaEntryPage() {
   const router = useRouter();
 
   React.useLayoutEffect(() => {
@@ -18,17 +18,17 @@ export default function PwaEntryPage() {
 
     async function run() {
       try {
-        const raw = localStorage.getItem(PWA_STORAGE_TENANT_KEY);
-        if (!raw || !isValidPwaTenantIdSegment(raw)) {
-          router.replace("/");
-          return;
-        }
-        const tenantId = raw;
-        const res = await fetch(`/api/plataforma/${tenantId}/auth/me`, { credentials: "include" });
+        const sessionRes = await fetch("/api/plataforma/auth/me", { credentials: "include" });
         if (cancelled) return;
 
-        if (res.ok) {
-          const data = (await res.json().catch(() => ({}))) as { role?: Role };
+        if (sessionRes.ok) {
+          const data = (await sessionRes.json().catch(() => ({}))) as { role?: Role; tenantId?: string };
+          const tenantId = data.tenantId;
+          if (!tenantId) {
+            router.replace("/plataforma/login?pwa=1");
+            return;
+          }
+          savePwaInstallTenantId(tenantId);
           const role = data.role;
           if (role === Role.ADMIN || role === Role.SUPERVISOR) {
             router.replace(`/plataforma/${tenantId}/panel/admin`);
@@ -42,9 +42,15 @@ export default function PwaEntryPage() {
           return;
         }
 
-        router.replace(`/plataforma/${tenantId}/login?pwa=1`);
+        const raw = localStorage.getItem(PWA_STORAGE_TENANT_KEY);
+        if (raw && isValidPwaTenantIdSegment(raw)) {
+          router.replace(`/plataforma/${raw}/login?pwa=1`);
+          return;
+        }
+
+        router.replace("/plataforma/login?pwa=1");
       } catch {
-        if (!cancelled) router.replace("/");
+        if (!cancelled) router.replace("/plataforma/login?pwa=1");
       }
     }
 

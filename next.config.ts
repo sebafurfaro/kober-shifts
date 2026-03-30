@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [{ source: "/pwa", destination: "/plataforma/pwa", permanent: false }];
+  },
   output: "standalone",
   outputFileTracingIncludes: {
     "/**": ["./docs/**/*"],

@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { findUsersWithProfessionalProfile, findUsersWithRoleIn, findUserByEmail, createUser, createProfessionalProfile } from "@/lib/db";
+import {
+  findUsersWithProfessionalProfile,
+  findUsersWithRoleIn,
+  findUserByEmail,
+  createUser,
+  createProfessionalProfile,
+  isStaffEmailConflictError,
+  STAFF_EMAIL_ALREADY_EXISTS_MESSAGE,
+} from "@/lib/db";
 import { getTenantFeatureFlagsAndLimits } from "@/lib/tenant-features";
 import { hashPassword, validatePassword } from "@/lib/auth";
 import { Role } from "@/lib/types";
@@ -78,15 +86,23 @@ export async function POST(
   if (exists) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
 
   const userId = randomUUID();
-  const user = await createUser({
-    id: userId,
-    tenantId,
-    name,
-    email,
-    dni: dni ?? undefined,
-    role,
-    passwordHash: hashPassword(tempPassword),
-  });
+  let user;
+  try {
+    user = await createUser({
+      id: userId,
+      tenantId,
+      name,
+      email,
+      dni: dni ?? undefined,
+      role,
+      passwordHash: hashPassword(tempPassword),
+    });
+  } catch (e) {
+    if (isStaffEmailConflictError(e)) {
+      return NextResponse.json({ error: STAFF_EMAIL_ALREADY_EXISTS_MESSAGE }, { status: 409 });
+    }
+    throw e;
+  }
 
   if (role === Role.PROFESSIONAL || (role === Role.ADMIN && alsoProfessional)) {
     await createProfessionalProfile({

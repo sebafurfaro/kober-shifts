@@ -93,6 +93,13 @@ export default function LoginPage() {
                 Accedé con tu cuenta de la app instalada.
               </p>
             ) : null}
+            <p className="text-xs text-slate-500 text-center px-2 mt-1">
+              ¿Sos del equipo? Podés usar{" "}
+              <Link href="/plataforma/login" className="text-primary underline">
+                el ingreso general
+              </Link>
+              .
+            </p>
           </CardHeader>
           <Divider />
           <CardBody className="py-4 px-10">

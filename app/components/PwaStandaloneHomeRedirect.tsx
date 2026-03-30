@@ -2,10 +2,8 @@
 
 import * as React from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { PWA_STORAGE_TENANT_KEY, isValidPwaTenantIdSegment } from "@/lib/pwa-entry";
-
 /**
- * Si la app abierta desde el icono (standalone) cae en `/`, redirige al panel del último tenant guardado.
+ * Si la app abierta desde el icono (standalone) cae en `/`, redirige a la entrada PWA bajo /plataforma.
  */
 export function PwaStandaloneHomeRedirect() {
   const router = useRouter();
@@ -18,9 +16,7 @@ export function PwaStandaloneHomeRedirect() {
         window.matchMedia("(display-mode: standalone)").matches ||
         (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
       if (!standalone) return;
-      const raw = localStorage.getItem(PWA_STORAGE_TENANT_KEY);
-      if (!raw || !isValidPwaTenantIdSegment(raw)) return;
-      router.replace(`/plataforma/${raw}/panel`);
+      router.replace("/plataforma/pwa");
     } catch {
       // ignore
     }
