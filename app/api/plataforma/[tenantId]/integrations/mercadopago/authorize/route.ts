@@ -2,8 +2,14 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { Role } from "@/lib/types";
 import { getPublicBaseUrl, isSafeMercadoPagoReturnPath } from "@/lib/public-base-url";
+import { getMercadoPagoOAuthAuthorizationPageUrl } from "@/lib/mercadopago-oauth-auth-url";
+import { generateMercadoPagoPkcePair } from "@/lib/mercadopago-oauth-pkce";
+import { MP_OAUTH_RETURN_COOKIE, MP_OAUTH_PKCE_COOKIE } from "@/lib/mercadopago-oauth-cookies";
 
-const MP_OAUTH_RETURN_COOKIE = "mp_oauth_return";
+function oauthPkceEnabled(): boolean {
+  const v = process.env.MERCADOPAGO_OAUTH_USE_PKCE?.trim().toLowerCase();
+  return v === "true" || v === "1" || v === "yes";
+}
 
 function canManageMercadoPago(role: Role): boolean {
   return role === Role.ADMIN || role === Role.PROFESSIONAL || role === Role.SUPERVISOR;
@@ -40,23 +46,36 @@ export async function GET(
   }
 
   const redirectUri = `${baseUrl}/api/integrations/mercadopago/callback`;
-  // Alineado con mercadopago SDK getAuthorizationURL (platform_id=mp)
-  const authUrl = new URL("https://auth.mercadopago.com/authorization");
+  // Host regional (p. ej. .com.ar); auth.mercadopago.com sin país suele dar 403 para apps MLA.
+  const authUrl = new URL(getMercadoPagoOAuthAuthorizationPageUrl());
   authUrl.searchParams.set("client_id", clientId);
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("state", tenantId);
   authUrl.searchParams.set("platform_id", "mp");
 
+  let pkceVerifier: string | undefined;
+  if (oauthPkceEnabled()) {
+    const pair = generateMercadoPagoPkcePair();
+    pkceVerifier = pair.codeVerifier;
+    authUrl.searchParams.set("code_challenge", pair.codeChallenge);
+    authUrl.searchParams.set("code_method", "S256");
+  }
+
+  const cookieOpts = {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    path: "/",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 600,
+  };
+
   const res = NextResponse.redirect(authUrl.toString());
   if (safeReturn) {
-    res.cookies.set(MP_OAUTH_RETURN_COOKIE, safeReturn, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 600,
-    });
+    res.cookies.set(MP_OAUTH_RETURN_COOKIE, safeReturn, cookieOpts);
+  }
+  if (pkceVerifier) {
+    res.cookies.set(MP_OAUTH_PKCE_COOKIE, pkceVerifier, cookieOpts);
   }
   return res;
 }

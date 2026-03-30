@@ -18,14 +18,19 @@ export async function exchangeAuthorizationCodeForTokens(params: {
   clientSecret: string;
   code: string;
   redirectUri: string;
+  /** Obligatorio si en MP Developers activaste OAuth con PKCE. */
+  codeVerifier?: string;
 }): Promise<MercadoPagoOAuthTokenResponse> {
-  const bodyJson = {
+  const bodyJson: Record<string, string> = {
     client_id: params.clientId,
     client_secret: params.clientSecret,
-    grant_type: "authorization_code" as const,
+    grant_type: "authorization_code",
     code: params.code,
     redirect_uri: params.redirectUri,
   };
+  if (params.codeVerifier) {
+    bodyJson.code_verifier = params.codeVerifier;
+  }
 
   const jsonRes = await fetch(MP_OAUTH_TOKEN_URL, {
     method: "POST",
@@ -50,6 +55,9 @@ export async function exchangeAuthorizationCodeForTokens(params: {
     code: params.code,
     redirect_uri: params.redirectUri,
   });
+  if (params.codeVerifier) {
+    form.set("code_verifier", params.codeVerifier);
+  }
 
   const formRes = await fetch(MP_OAUTH_TOKEN_URL, {
     method: "POST",

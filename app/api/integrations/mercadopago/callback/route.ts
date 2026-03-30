@@ -3,8 +3,12 @@ import { cookies } from "next/headers";
 import { upsertMercadoPagoAccount } from "@/lib/mercadopago-accounts";
 import { exchangeAuthorizationCodeForTokens } from "@/lib/mercadopago-oauth-token";
 import { getPublicBaseUrl, isSafeMercadoPagoReturnPath } from "@/lib/public-base-url";
+import { MP_OAUTH_RETURN_COOKIE, MP_OAUTH_PKCE_COOKIE } from "@/lib/mercadopago-oauth-cookies";
 
-const MP_OAUTH_RETURN_COOKIE = "mp_oauth_return";
+function clearOAuthCookies(res: NextResponse): void {
+  res.cookies.set(MP_OAUTH_RETURN_COOKIE, "", { maxAge: 0, path: "/" });
+  res.cookies.set(MP_OAUTH_PKCE_COOKIE, "", { maxAge: 0, path: "/" });
+}
 
 function appendMpLinked(base: string, pathWithQuery: string): string {
   const join = pathWithQuery.includes("?") ? "&" : "?";
@@ -24,19 +28,26 @@ export async function GET(req: Request) {
   const baseUrl = getPublicBaseUrl(req);
   const defaultPaymentsPath = `/plataforma/${state || ""}/panel/admin/payments`;
 
+  const jar = await cookies();
+  const pkceVerifier = jar.get(MP_OAUTH_PKCE_COOKIE)?.value;
+
   if (!code || !state) {
     const error = url.searchParams.get("error") || "missing_code_or_state";
-    return NextResponse.redirect(
+    const res = NextResponse.redirect(
       `${baseUrl}${defaultPaymentsPath}?mp_error=${encodeURIComponent(error)}`
     );
+    clearOAuthCookies(res);
+    return res;
   }
 
   const clientId = process.env.MERCADOPAGO_CLIENT_ID?.trim();
   const clientSecret = process.env.MERCADOPAGO_CLIENT_SECRET?.trim();
   if (!clientId || !clientSecret) {
-    return NextResponse.redirect(
+    const res = NextResponse.redirect(
       `${baseUrl}${defaultPaymentsPath}?mp_error=server_config`
     );
+    clearOAuthCookies(res);
+    return res;
   }
 
   const redirectUri = `${baseUrl}/api/integrations/mercadopago/callback`;
@@ -55,19 +66,24 @@ export async function GET(req: Request) {
         clientSecret,
         code,
         redirectUri,
+        codeVerifier: pkceVerifier || undefined,
       });
     } catch (e) {
       console.error("MercadoPago OAuth exchangeAuthorizationCodeForTokens:", e);
-      return NextResponse.redirect(
+      const res = NextResponse.redirect(
         `${baseUrl}${defaultPaymentsPath}?mp_error=token_exchange_failed`
       );
+      clearOAuthCookies(res);
+      return res;
     }
 
     if (!data.access_token) {
       console.error("MercadoPago OAuth: respuesta sin access_token", data);
-      return NextResponse.redirect(
+      const res = NextResponse.redirect(
         `${baseUrl}${defaultPaymentsPath}?mp_error=token_exchange_failed`
       );
+      clearOAuthCookies(res);
+      return res;
     }
 
     const expiresAt = data.expires_in
@@ -82,7 +98,6 @@ export async function GET(req: Request) {
       expiresAt,
     });
 
-    const jar = await cookies();
     const returnPath = jar.get(MP_OAUTH_RETURN_COOKIE)?.value;
     const successPath =
       returnPath && isSafeMercadoPagoReturnPath(returnPath, state)
@@ -91,12 +106,14 @@ export async function GET(req: Request) {
     const target = appendMpLinked(baseUrl, successPath);
 
     const res = NextResponse.redirect(target);
-    res.cookies.set(MP_OAUTH_RETURN_COOKIE, "", { maxAge: 0, path: "/" });
+    clearOAuthCookies(res);
     return res;
   } catch (error) {
     console.error("MercadoPago callback error:", error);
-    return NextResponse.redirect(
+    const res = NextResponse.redirect(
       `${baseUrl}${defaultPaymentsPath}?mp_error=callback_failed`
     );
+    clearOAuthCookies(res);
+    return res;
   }
 }
