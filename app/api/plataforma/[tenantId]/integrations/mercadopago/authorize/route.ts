@@ -87,6 +87,7 @@ export async function GET(
     maxAge: 600,
   };
 
+
   const res = NextResponse.redirect(authUrl.toString());
   res.cookies.set(MP_OAUTH_REDIRECT_URI_COOKIE, redirectUri, cookieOpts);
   if (safeReturn) {
