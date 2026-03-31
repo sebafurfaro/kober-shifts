@@ -393,13 +393,19 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
         throw new Error(errorData.error || errorData.details || `Error al crear el turno (${response.status})`);
       }
 
-      await response.json();
+      const data = await response.json();
 
       setConfirmDialogOpen(false);
       setSelectedSlot(null);
       setSelectedLocation("");
       if (professional) await loadAvailableSlots(professional, selectedServiceId || undefined);
       setError(null);
+
+      if (data.mercadopagoUrl) {
+        setSuccessDialog({ open: true, message: "Redirigiendo a Mercado Pago para abonar..." });
+        window.location.href = data.mercadopagoUrl;
+        return;
+      }
 
       setSuccessDialog({ open: true, message: "Turno creado exitosamente" });
     } catch (err) {

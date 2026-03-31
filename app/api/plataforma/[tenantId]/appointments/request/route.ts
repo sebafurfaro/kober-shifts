@@ -11,6 +11,9 @@ import { toZonedTime } from "date-fns-tz";
 import { getProfessionalAvailableDayNumbers } from "@/lib/professional-availability";
 import { isStartAtBlockedForTenant } from "@/lib/blocked-calendar-days-server";
 import { patientSelfBookingForbiddenResponse } from "@/lib/patient-self-booking";
+import { getMercadoPagoOAuthBaseUrl } from "@/lib/public-base-url";
+import { createAppointmentPreference } from "@/lib/mercadopago-checkout";
+import { createLocalPaymentRecord } from "@/lib/mercadopago-payments";
 
 export async function POST(
   req: Request,
@@ -90,7 +93,12 @@ export async function POST(
   if (!location) return NextResponse.json({ error: "Invalid location" }, { status: 400 });
 
   const service = serviceId ? await findServiceById(serviceId, tenantId) : null;
-  const hasSenia = !!(service && service.price > 0);
+  
+  let amountToPay = 0;
+  if (service && service.price > 0) {
+    amountToPay = service.seniaPercent > 0 ? (service.price * service.seniaPercent) / 100 : service.price;
+  }
+  const hasSenia = amountToPay > 0;
 
   const settingsRow = await getTenantSettingsRow(tenantId).catch(() => null);
   const settings =
@@ -204,7 +212,39 @@ export async function POST(
     });
   }
 
-  return NextResponse.json({ appointmentId: appointment.id, googleEventId: appointment.googleEventId });
+  let mercadopagoUrl: string | undefined = undefined;
+
+  if (hasSenia && service && amountToPay > 0) {
+    try {
+      const baseUrl = getMercadoPagoOAuthBaseUrl(req);
+      const pref = await createAppointmentPreference({
+        appointmentId: appointment.id,
+        tenantId,
+        amount: amountToPay,
+        serviceName: service.name,
+        patientEmail: patient.email,
+        patientName: patient.name,
+        baseUrl,
+      });
+      await createLocalPaymentRecord({
+        tenantId,
+        appointmentId: appointment.id,
+        amount: amountToPay,
+        mpPreferenceId: pref.id,
+      });
+      mercadopagoUrl = pref.init_point;
+    } catch (error) {
+      console.error("Error setting up Mercado Pago preference:", error);
+      // Se creó el turno pero falló MP, se mantendrá como PENDING_DEPOSIT
+    }
+  }
+
+  return NextResponse.json({ 
+    appointmentId: appointment.id, 
+    googleEventId: appointment.googleEventId,
+    mercadopagoUrl
+  });
 }
+
 
 
