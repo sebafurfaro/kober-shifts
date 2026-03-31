@@ -20,8 +20,14 @@ export async function GET(
     if (!tenant || !tenant.isActive) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    const patientSelfBookingEnabled = await getPatientSelfBookingEnabled(tenantId);
-    return NextResponse.json({ patientSelfBookingEnabled });
+    const [patientSelfBookingEnabled, flagsAndLimits] = await Promise.all([
+      getPatientSelfBookingEnabled(tenantId),
+      getTenantFeatureFlagsAndLimits(tenantId),
+    ]);
+    return NextResponse.json({
+      patientSelfBookingEnabled,
+      show_servicios: flagsAndLimits.show_servicios,
+    });
   }
 
   try {

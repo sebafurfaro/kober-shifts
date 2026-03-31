@@ -13,7 +13,7 @@ export const DetailsTab = () => {
   const [baseUrl, setBaseUrl] = useState("");
   const [alertOpen, setAlertOpen] = useState(false);
   const [isActive, setIsActive] = useState(false);
-  const [patientSelfBookingEnabled, setPatientSelfBookingEnabled] = useState(true);
+  const [patientSelfBookingEnabled, setPatientSelfBookingEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
   const params = useParams();
   const tenantId = params.tenantId as string;
@@ -53,7 +53,7 @@ export const DetailsTab = () => {
         setIsActive(active);
         setActive(active);
         setPatientSelfBookingEnabled(
-          typeof data.patientSelfBookingEnabled === "boolean" ? data.patientSelfBookingEnabled : true
+          typeof data.patientSelfBookingEnabled === "boolean" ? data.patientSelfBookingEnabled : false
         );
       })
       .catch(() => {});

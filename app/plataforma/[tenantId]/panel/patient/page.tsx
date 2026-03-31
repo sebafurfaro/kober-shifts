@@ -52,7 +52,7 @@ export default function PatientPanelPage() {
   const [cancelReason, setCancelReason] = React.useState("");
   const [cancelError, setCancelError] = React.useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = React.useState(false);
-  const [patientSelfBookingEnabled, setPatientSelfBookingEnabled] = React.useState(true);
+  const [patientSelfBookingEnabled, setPatientSelfBookingEnabled] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -61,7 +61,7 @@ export default function PatientPanelPage() {
       .then((data) => {
         if (cancelled || !data) return;
         setPatientSelfBookingEnabled(
-          typeof data.patientSelfBookingEnabled === "boolean" ? data.patientSelfBookingEnabled : true
+          typeof data.patientSelfBookingEnabled === "boolean" ? data.patientSelfBookingEnabled : false
         );
       })
       .catch(() => {});

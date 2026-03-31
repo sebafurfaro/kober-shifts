@@ -3,7 +3,7 @@ import { getTenantSettingsRow } from "@/lib/settings-db";
 import { Role } from "@/lib/types";
 
 /**
- * Lee si el tenant permite autoreserva para pacientes (default true).
+ * Lee si el tenant permite autoreserva para pacientes (default false hasta que lo activen en Admin).
  */
 export async function getPatientSelfBookingEnabled(tenantId: string): Promise<boolean> {
   const row = await getTenantSettingsRow(tenantId).catch(() => null);
@@ -14,7 +14,7 @@ export async function getPatientSelfBookingEnabled(tenantId: string): Promise<bo
   if (typeof settings.patientSelfBookingEnabled === "boolean") {
     return settings.patientSelfBookingEnabled;
   }
-  return true;
+  return false;
 }
 
 type SessionLike = { role: Role; tenantId: string } | null;

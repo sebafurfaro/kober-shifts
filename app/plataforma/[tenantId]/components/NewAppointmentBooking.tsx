@@ -19,16 +19,18 @@ import {
   Divider,
 } from "@heroui/react";
 import { AlertDialog } from "../panel/components/alerts/AlertDialog";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Role } from "@/lib/types";
 
-const STEPS = [
-  { id: 1, title: "Profesional" },
-  { id: 2, title: "Fecha y hora" },
-] as const;
-type StepId = (typeof STEPS)[number]["id"];
+type StepId = 1 | 2 | 3;
+
+interface ServiceOption {
+  id: string;
+  name: string;
+  durationMinutes: number;
+}
 
 interface Professional {
   id: string;
@@ -69,21 +71,30 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
   const [bookingAllowed, setBookingAllowed] = useState<boolean | null>(() =>
     variant === "public" ? true : null
   );
+  const [featuresLoaded, setFeaturesLoaded] = useState(false);
+  const [showServiciosFlag, setShowServiciosFlag] = useState(false);
+  const [services, setServices] = useState<ServiceOption[]>([]);
+  const [loadingServices, setLoadingServices] = useState(false);
+  /** Catálogo de servicios resuelto (o no aplica) para no mostrar pasos intermedios incorrectos. */
+  const [servicesCatalogReady, setServicesCatalogReady] = useState(false);
 
   useEffect(() => {
-    if (variant === "public") return;
-
     let cancelled = false;
     (async () => {
       const res = await fetch(`/api/plataforma/${tenantId}/features`, { credentials: "include" });
       if (cancelled) return;
       const data = res.ok ? await res.json().catch(() => ({})) : {};
-      const enabled = data.patientSelfBookingEnabled !== false;
-      if (!enabled) {
-        router.replace(`/plataforma/${tenantId}/panel/patient`);
-        return;
+      if (cancelled) return;
+      setShowServiciosFlag(data.show_servicios === true);
+      if (variant === "panel") {
+        const enabled = data.patientSelfBookingEnabled === true;
+        if (!enabled) {
+          router.replace(`/plataforma/${tenantId}/panel/patient`);
+          return;
+        }
+        setBookingAllowed(true);
       }
-      setBookingAllowed(true);
+      setFeaturesLoaded(true);
     })();
     return () => {
       cancelled = true;
@@ -97,6 +108,7 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
   const [professional, setProfessional] = useState("");
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loadingProfessionals, setLoadingProfessionals] = useState(false);
+  const [selectedServiceId, setSelectedServiceId] = useState("");
 
   // Step 2: Slots
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
@@ -158,8 +170,81 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
     };
   }, [tenantId, bookingAllowed]);
 
-  // Load slots when step 2 is active and professional is selected
-  const loadAvailableSlots = useCallback(async (professionalId: string) => {
+  useEffect(() => {
+    if (bookingAllowed !== true || !featuresLoaded) return;
+    if (!showServiciosFlag) {
+      setServices([]);
+      setLoadingServices(false);
+      setServicesCatalogReady(true);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoadingServices(true);
+        setServicesCatalogReady(false);
+        const res = await fetch(`/api/plataforma/${tenantId}/admin/services`, {
+          credentials: "include",
+        });
+        if (!res.ok) {
+          if (!cancelled) setServices([]);
+          return;
+        }
+        const data = await res.json();
+        if (!cancelled) {
+          const list = Array.isArray(data) ? data : [];
+          setServices(
+            list.map((s: { id: string; name: string; durationMinutes?: number }) => ({
+              id: s.id,
+              name: s.name,
+              durationMinutes: typeof s.durationMinutes === "number" ? s.durationMinutes : 30,
+            }))
+          );
+        }
+      } catch {
+        if (!cancelled) setServices([]);
+      } finally {
+        if (!cancelled) {
+          setLoadingServices(false);
+          setServicesCatalogReady(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId, bookingAllowed, featuresLoaded, showServiciosFlag]);
+
+  const includeServicesStep = Boolean(
+    featuresLoaded && showServiciosFlag && services.length > 0
+  );
+  const slotsStepId: StepId = includeServicesStep ? 3 : 2;
+
+  const catalogReady = featuresLoaded && servicesCatalogReady;
+
+  const stepperSteps = useMemo(() => {
+    if (includeServicesStep) {
+      return [
+        { id: 1 as const, title: "Profesional" },
+        { id: 2 as const, title: "Servicio" },
+        { id: 3 as const, title: "Fecha y hora" },
+      ];
+    }
+    return [
+      { id: 1 as const, title: "Profesional" },
+      { id: 2 as const, title: "Fecha y hora" },
+    ];
+  }, [includeServicesStep]);
+
+  useEffect(() => {
+    if (!includeServicesStep && currentStep === 3) {
+      setCurrentStep(2);
+    }
+  }, [includeServicesStep, currentStep]);
+
+  // Load slots when fecha step is active and professional is selected (and service if aplica)
+  const loadAvailableSlots = useCallback(
+    async (professionalId: string, serviceId?: string) => {
     try {
       setLoadingSlots(true);
       setError(null);
@@ -167,8 +252,14 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
       const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 30);
       const startDateStr = now.toISOString().split("T")[0];
       const endDateStr = endDate.toISOString().split("T")[0];
+      const qs = new URLSearchParams({
+        professionalId,
+        startDate: startDateStr,
+        endDate: endDateStr,
+      });
+      if (serviceId) qs.set("serviceId", serviceId);
       const res = await fetch(
-        `/api/plataforma/${tenantId}/appointments/available-slots?professionalId=${professionalId}&startDate=${startDateStr}&endDate=${endDateStr}`,
+        `/api/plataforma/${tenantId}/appointments/available-slots?${qs.toString()}`,
         { credentials: "include" }
       );
       if (!res.ok) {
@@ -187,9 +278,19 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
 
   useEffect(() => {
     if (bookingAllowed !== true) return;
-    if (currentStep === 2 && professional) loadAvailableSlots(professional);
-    else if (currentStep !== 2) setAvailableSlots([]);
-  }, [bookingAllowed, currentStep, professional, loadAvailableSlots]);
+    const needService = includeServicesStep && !selectedServiceId;
+    if (currentStep === slotsStepId && professional && !needService) {
+      void loadAvailableSlots(professional, selectedServiceId || undefined);
+    } else if (currentStep !== slotsStepId) setAvailableSlots([]);
+  }, [
+    bookingAllowed,
+    currentStep,
+    professional,
+    selectedServiceId,
+    includeServicesStep,
+    slotsStepId,
+    loadAvailableSlots,
+  ]);
 
   // Load locations for confirm dialog
   useEffect(() => {
@@ -213,6 +314,7 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
 
   const handleProfessionalChange = (professionalId: string) => {
     setProfessional(professionalId);
+    setSelectedServiceId("");
     setCurrentPage(1);
     if (!professionalId) setAvailableSlots([]);
   };
@@ -227,6 +329,10 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
   const handleConfirmAppointment = async () => {
     if (!selectedSlot || !professional || !selectedLocation) {
       setError("Por favor completa todos los campos");
+      return;
+    }
+    if (includeServicesStep && !selectedServiceId) {
+      setError("Seleccioná un servicio para continuar.");
       return;
     }
     const selectedProfessionalObj = professionals.find((p) => p.id === professional);
@@ -261,7 +367,12 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
       const [year, month, day] = datePart.split("-").map(Number);
       const [hours, minutes] = (timePart || "00:00").split(":").map(Number);
       const startAt = new Date(year, month - 1, day, hours, minutes, 0);
-      const durationMinutes = 30;
+      const selectedServiceObj = selectedServiceId
+        ? services.find((s) => s.id === selectedServiceId)
+        : undefined;
+      const durationMinutes = selectedServiceObj
+        ? Math.max(5, selectedServiceObj.durationMinutes || 30)
+        : 30;
       const endAt = new Date(startAt.getTime() + durationMinutes * 60 * 1000);
 
       const response = await fetch(`/api/plataforma/${tenantId}/appointments/request`, {
@@ -273,6 +384,7 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
           locationId: selectedLocation,
           startAt: startAt.toISOString(),
           endAt: endAt.toISOString(),
+          ...(selectedServiceId ? { serviceId: selectedServiceId } : {}),
         }),
       });
 
@@ -286,7 +398,7 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
       setConfirmDialogOpen(false);
       setSelectedSlot(null);
       setSelectedLocation("");
-      if (professional) await loadAvailableSlots(professional);
+      if (professional) await loadAvailableSlots(professional, selectedServiceId || undefined);
       setError(null);
 
       setSuccessDialog({ open: true, message: "Turno creado exitosamente" });
@@ -354,18 +466,30 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
   };
 
   const canGoToSlots = Boolean(professional);
+  const canLeaveServiceStep = Boolean(professional && selectedServiceId);
 
   const goNext = () => {
     if (currentStep === 1 && canGoToSlots) {
       setCurrentPage(1);
       setCurrentStep(2);
+    } else if (currentStep === 2 && includeServicesStep && canLeaveServiceStep) {
+      setCurrentPage(1);
+      setCurrentStep(3);
     }
   };
 
   const goBack = () => {
-    if (currentStep === 2) {
-      setCurrentStep(1);
+    if (currentStep === 3) setCurrentStep(2);
+    else if (currentStep === 2) setCurrentStep(1);
+  };
+
+  const isStepCircleDisabled = (stepId: number) => {
+    if (stepId === 1) return false;
+    if (includeServicesStep) {
+      if (stepId === 2) return !professional;
+      if (stepId === 3) return !professional || !selectedServiceId;
     }
+    return stepId === 2 && !canGoToSlots;
   };
 
   const totalPages = Math.ceil(availableSlots.length / slotsPerPage);
@@ -382,8 +506,9 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
   };
 
   const selectedProfessional = professionals.find((p) => p.id === professional);
+  const selectedService = services.find((s) => s.id === selectedServiceId);
 
-  if (bookingAllowed === null) {
+  if (bookingAllowed === null || !catalogReady) {
     return (
       <div className="flex min-h-[40vh] w-full items-center justify-center">
         <Spinner size="lg" label="Cargando…" />
@@ -421,10 +546,10 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
 
       {/* Stepper */}
       <div className="flex items-center gap-2 mb-8 flex-wrap">
-        {STEPS.map((step, index) => {
+        {stepperSteps.map((step, index) => {
           const isActive = currentStep === step.id;
           const isCompleted = currentStep > step.id;
-          const isDisabled = step.id === 2 && !canGoToSlots;
+          const isDisabled = isStepCircleDisabled(step.id);
           return (
             <div key={step.id} className="flex items-center gap-2">
               <div
@@ -438,7 +563,7 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
               <span className={`font-medium ${isActive ? "text-foreground" : isDisabled ? "text-default-400" : "text-default-600"}`}>
                 {step.title}
               </span>
-              {index < STEPS.length - 1 && (
+              {index < stepperSteps.length - 1 && (
                 <div className={`w-8 h-0.5 mx-1 ${isCompleted ? "bg-primary" : "bg-default-200"}`} />
               )}
             </div>
@@ -481,13 +606,55 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
         </Card>
       )}
 
-      {/* Step 2: Fecha y hora */}
-      {currentStep === 2 && (
+      {/* Step 2: Servicio (solo con feature + catálogo con al menos un servicio) */}
+      {currentStep === 2 && includeServicesStep && (
+        <Card className="mb-6">
+          <CardBody>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Seleccioná el servicio</h3>
+            {loadingServices ? (
+              <div className="flex justify-center py-12">
+                <Spinner />
+              </div>
+            ) : (
+              <>
+                <Select
+                  label="Servicio"
+                  placeholder="Elegí un servicio"
+                  selectedKeys={selectedServiceId ? [selectedServiceId] : []}
+                  onSelectionChange={(keys) =>
+                    setSelectedServiceId((Array.from(keys)[0] as string) || "")
+                  }
+                  classNames={{ value: "text-slate-800", trigger: "min-h-12" }}
+                >
+                  {services.map((svc) => (
+                    <SelectItem key={svc.id} textValue={svc.name}>
+                      {svc.name}
+                    </SelectItem>
+                  ))}
+                </Select>
+                <div className="flex justify-between mt-6 gap-2">
+                  <Button variant="light" onPress={goBack}>
+                    Anterior
+                  </Button>
+                  <Button color="primary" onPress={goNext} isDisabled={!canLeaveServiceStep}>
+                    Siguiente
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardBody>
+        </Card>
+      )}
+
+      {/* Fecha y hora (paso 2 sin servicios, o paso 3 con servicios) */}
+      {currentStep === slotsStepId && (
         <Card className="mb-6">
           <CardBody>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Seleccioná fecha y hora</h3>
             {!professional ? (
               <p className="text-default-500">Seleccioná un profesional en el paso anterior.</p>
+            ) : includeServicesStep && !selectedServiceId ? (
+              <p className="text-default-500">Seleccioná un servicio en el paso anterior.</p>
             ) : loadingSlots ? (
               <div className="flex justify-center py-12">
                 <Spinner />
@@ -551,6 +718,12 @@ export function NewAppointmentBooking({ tenantId, variant }: NewAppointmentBooki
                   <p className="text-sm text-gray-600 mb-1">Profesional</p>
                   <p className="font-medium text-gray-800">{selectedProfessional.name}</p>
                 </div>
+                {selectedService && (
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600 mb-1">Servicio</p>
+                    <p className="font-medium text-gray-800">{selectedService.name}</p>
+                  </div>
+                )}
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 mb-1">Fecha y Hora</p>
                   <p className="font-medium text-gray-800">

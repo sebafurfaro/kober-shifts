@@ -53,8 +53,8 @@ export async function GET(
       blockAgendaOnNationalHolidays: false,
       /** Feriados donde se permite agenda aunque la regla de feriados esté activa. */
       holidayAgendaAllowDays: [] as string[],
-      /** Si es false, los pacientes no pueden usar el flujo de autoreserva (GET/POST asociados devuelven 403). */
-      patientSelfBookingEnabled: true,
+      /** Si es true, los pacientes pueden usar el flujo de autoreserva pública. Por defecto desactivado. */
+      patientSelfBookingEnabled: false,
     };
 
     const merged = {
@@ -203,7 +203,7 @@ export async function PUT(
         ? body.patientSelfBookingEnabled
         : typeof existingSettings.patientSelfBookingEnabled === "boolean"
           ? existingSettings.patientSelfBookingEnabled
-          : true;
+          : false;
 
     const settings = {
       isActive,
