@@ -70,7 +70,6 @@ export async function GET(
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("state", tenantId);
-  authUrl.searchParams.set("platform_id", "mp");
 
   let pkceVerifier: string | undefined;
   if (oauthPkceEnabled()) {
