@@ -76,7 +76,7 @@ export async function GET(
     const pair = generateMercadoPagoPkcePair();
     pkceVerifier = pair.codeVerifier;
     authUrl.searchParams.set("code_challenge", pair.codeChallenge);
-    authUrl.searchParams.set("code_method", "S256");
+    authUrl.searchParams.set("code_challenge_method", "S256");
   }
 
   const cookieOpts = {
