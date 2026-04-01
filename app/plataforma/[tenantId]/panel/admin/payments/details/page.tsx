@@ -7,10 +7,7 @@ import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { Section } from "../../../components/layout/Section";
 import { useFeatureGate } from "@/lib/use-feature-gate";
-import {
-    useMercadoPagoIntegration,
-    useRedirectIfPagosWithoutMercadoPago,
-} from "@/lib/mercadopago-integration-context";
+import { useMercadoPagoIntegration } from "@/lib/mercadopago-integration-context";
 
 type PaymentRecord = {
     _id: string;
@@ -38,9 +35,7 @@ export default function AdminPaymentsDetailsPage() {
     const params = useParams();
     const tenantId = params.tenantId as string;
     const { isLoading: featureGateLoading } = useFeatureGate("show_pagos");
-    const { isMercadoPagoStatusLoading, isMercadoPagoLinked, isPagosFeatureEnabled } =
-        useMercadoPagoIntegration();
-    useRedirectIfPagosWithoutMercadoPago();
+    const { isMercadoPagoStatusLoading, isPagosFeatureEnabled } = useMercadoPagoIntegration();
     const [records, setRecords] = React.useState<PaymentRecord[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [page, setPage] = React.useState(1);
@@ -100,10 +95,7 @@ export default function AdminPaymentsDetailsPage() {
             </Section>
         );
     }
-    if (
-        isPagosFeatureEnabled &&
-        (isMercadoPagoStatusLoading || isMercadoPagoLinked === null)
-    ) {
+    if (isPagosFeatureEnabled && isMercadoPagoStatusLoading) {
         return (
             <Section>
                 <div className="flex justify-center py-24">
@@ -112,10 +104,6 @@ export default function AdminPaymentsDetailsPage() {
             </Section>
         );
     }
-    if (isPagosFeatureEnabled && isMercadoPagoLinked === false) {
-        return null;
-    }
-
     return (
         <Section>
                 <PanelHeader

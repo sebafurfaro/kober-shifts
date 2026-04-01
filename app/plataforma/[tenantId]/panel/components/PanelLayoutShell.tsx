@@ -184,7 +184,7 @@ export function PanelLayoutShell({
   return (
     <MercadoPagoIntegrationProvider
       tenantId={currentTenantId}
-      isPagosFeatureEnabled={features?.show_pagos ?? false}
+      isPagosFeatureEnabled={features == null ? true : (features.show_pagos ?? false)}
     >
     <div className="flex min-h-screen">
       {isMobile && mobileDrawerOpen && (

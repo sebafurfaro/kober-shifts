@@ -27,7 +27,7 @@ export async function ensurePaymentsTable() {
       updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       INDEX idx_mp_payments_tenant (tenantId),
       INDEX idx_mp_payments_appointment (appointmentId)
-    )
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 }
 
@@ -89,4 +89,30 @@ export async function updateLocalPaymentStatusByPreferenceOrAppointment(
      WHERE appointmentId = ?`,
     [status, mpPaymentId, appointmentId]
   );
+}
+// Para overrides manuales (en efectivo/qr no conectado)
+export async function upsertLocalPaymentStatus(
+  tenantId: string,
+  appointmentId: string,
+  status: string,
+  amount: number
+): Promise<void> {
+  await ensurePaymentsTable();
+  const [rows] = await mysql.execute("SELECT id FROM mercadopago_payments WHERE appointmentId = ? AND tenantId = ?", [appointmentId, tenantId]);
+  const exists = (rows as any[]).length > 0;
+  
+  if (exists) {
+    await mysql.execute(
+      `UPDATE mercadopago_payments SET status = ? WHERE appointmentId = ? AND tenantId = ?`,
+      [status, appointmentId, tenantId]
+    );
+  } else {
+    const id = randomUUID();
+    await mysql.execute(
+      `INSERT INTO mercadopago_payments 
+       (id, tenantId, appointmentId, amount, status) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [id, tenantId, appointmentId, amount, status]
+    );
+  }
 }

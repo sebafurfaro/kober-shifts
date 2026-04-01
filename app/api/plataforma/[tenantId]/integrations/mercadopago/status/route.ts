@@ -80,8 +80,9 @@ export async function GET(
 
     const body: {
       linked: boolean;
+      paymentsLocal: boolean;
       _debug?: { rowStatus: string };
-    } = { linked: oauthLinked };
+    } = { linked: oauthLinked, paymentsLocal: process.env.PAYMENTS_LOCAL === "true" };
 
     if (withLog && diagnostics) {
       body._debug = { rowStatus: diagnostics.rowStatus };
