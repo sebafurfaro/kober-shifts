@@ -39,7 +39,7 @@ export const DetailsTab = () => {
 
   useEffect(() => {
     if (!baseUrl || !tenantId) return;
-    setReservationLink(`https://${baseUrl.replace(/^https?:\/\//, "")}/plataforma/${tenantId}/reservas`);
+    setReservationLink(`https://${baseUrl.replace(/^https?:\/\//, "")}/plataforma/${tenantId}/reservar`);
   }, [baseUrl, tenantId, setReservationLink]);
 
   useEffect(() => {
