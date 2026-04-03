@@ -276,7 +276,7 @@ export default function AdminPaymentsPage() {
 
             <Card className="mb-6">
                 <CardBody className="p-4 sm:p-6 gap-4 border border-default-200 shadow-none">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="flex flex-col md:grid md:grid-cols-2 align-center gap-10 mb-4">
                         <div>
                             <Input
                                 type="text"
@@ -288,6 +288,49 @@ export default function AdminPaymentsPage() {
                                 onClear={() => setSearchQuery("")}
                             />
                         </div>
+                        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                            <CheckboxGroup
+                                orientation="horizontal"
+                                value={statusFilters}
+                                onValueChange={setStatusFilters}
+                            >
+                                <Checkbox
+                                    value="Pendiente"
+                                    classNames={{
+                                        base: "m-0 w-auto opacity-80 data-[selected=true]:opacity-100 bg-warning-100 data-[selected=true]:bg-warning data-[selected=true]:text-warning-foreground hover:shadow-md transition-all cursor-pointer rounded-md px-4 py-2",
+                                        wrapper: "hidden",
+                                        label: "text-warning-800 w-full text-center"
+                                    }}
+                                >
+                                    Pendiente
+                                </Checkbox>
+                                <Checkbox
+                                    value="Seña paga"
+                                    classNames={{
+                                        base: "m-0 w-auto opacity-80 data-[selected=true]:opacity-100 bg-blue-100 data-[selected=true]:bg-blue-300 data-[selected=true]:text-blue-foreground hover:shadow-md transition-all cursor-pointer rounded-md px-4 py-2",
+                                        wrapper: "hidden",
+                                        label: "text-blue-800 w-full text-center"
+                                    }}
+                                >
+                                    Seña paga
+                                </Checkbox>
+                                <Checkbox
+                                    value="Pagado"
+                                    classNames={{
+                                        base: "m-0 w-auto opacity-80 data-[selected=true]:opacity-100 bg-success-100 data-[selected=true]:bg-success data-[selected=true]:text-success-foreground hover:shadow-md transition-all cursor-pointer rounded-md px-4 py-2",
+                                        wrapper: "hidden",
+                                        label: "text-success-800 w-full text-center"
+                                    }}
+                                >
+                                    Pagado
+                                </Checkbox>
+                            </CheckboxGroup>
+                            <Button size="sm" variant="flat" onPress={clearFilters}>
+                                Limpiar filtros
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <Input
                                 type="date"
@@ -328,21 +371,6 @@ export default function AdminPaymentsPage() {
                             </Select>
                         </div>
                     </div>
-                    <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                        <CheckboxGroup
-                            label="Filtrar por Estados"
-                            orientation="horizontal"
-                            value={statusFilters}
-                            onValueChange={setStatusFilters}
-                        >
-                            <Checkbox value="Pendiente">Pendiente</Checkbox>
-                            <Checkbox value="Seña paga">Seña paga</Checkbox>
-                            <Checkbox value="Pagado">Pagado</Checkbox>
-                        </CheckboxGroup>
-                        <Button size="sm" variant="flat" onPress={clearFilters}>
-                            Limpiar filtros
-                        </Button>
-                    </div>
                 </CardBody>
             </Card>
 
@@ -376,7 +404,7 @@ export default function AdminPaymentsPage() {
                                         <TableCell>
                                             <p className="font-medium">{payment.serviceName}</p>
                                             <p className="text-xs text-default-500 mt-1">
-                                                Costo Total: ${payment.servicePrice.toFixed(2)}
+                                                Costo Total: ${Number(payment.servicePrice ?? 0).toFixed(2)}
                                                 {payment.seniaPercent > 0 && ` (Seña: ${payment.seniaPercent}%)`}
                                             </p>
                                         </TableCell>
@@ -421,7 +449,7 @@ export default function AdminPaymentsPage() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="flex flex-col space-y-1 col-span-2">
                                             <Typography variant="p" color="gray" opacity={50}>Servicio</Typography>
-                                            <Typography variant="p">{payment.serviceName} (${payment.servicePrice})</Typography>
+                                            <Typography variant="p">{payment.serviceName} (${Number(payment.servicePrice ?? 0).toFixed(2)})</Typography>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">

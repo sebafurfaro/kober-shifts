@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import mysql from "@/lib/mysql";
-import { Role } from "@/lib/types";
+import { AppointmentStatus, Role } from "@/lib/types";
 import { ensurePaymentsTable } from "@/lib/mercadopago-payments";
+import { mysqlDateToUTC } from "@/lib/timezone";
 
 export async function GET(
   req: Request,
@@ -30,6 +31,9 @@ export async function GET(
     const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 20;
     const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
     const offset = (safePage - 1) * safeLimit;
+    // LIMIT/OFFSET as prepared params can trigger ER_WRONG_ARGUMENTS / mysqld_stmt_execute on some MySQL stacks; use validated ints in SQL.
+    const limitInt = Math.min(200, Math.max(1, safeLimit));
+    const offsetInt = Math.max(0, offset);
 
     // Filters
     const search = url.searchParams.get("search") || "";
@@ -39,8 +43,9 @@ export async function GET(
     const dateFilter = url.searchParams.get("date");
     
     // Cobros: servicio con precio > 0; o PENDING_DEPOSIT; o pago MP local aún pendiente (aunque falle join con services).
+    // Turnos cancelados no se listan aunque tengan seña o pago pendiente.
     // BINARY en joins con mercadopago_payments: evita ER_CANT_AGGREGATE_2COLLATIONS (utf8mb4_0900_ai_ci vs utf8mb4_unicode_ci).
-    let baseWhere = `a.tenantId = ? AND (
+    let baseWhere = `a.tenantId = ? AND a.status <> '${AppointmentStatus.CANCELLED}' AND (
       (s.id IS NOT NULL AND COALESCE(s.price, 0) > 0)
       OR a.status = 'PENDING_DEPOSIT'
       OR EXISTS (
@@ -127,35 +132,40 @@ export async function GET(
       LEFT JOIN mercadopago_payments mp ON BINARY mp.appointmentId = BINARY a.id AND BINARY mp.tenantId = BINARY a.tenantId
       WHERE ${baseWhere}
       ${orderClause}
-      LIMIT ? OFFSET ?
+      LIMIT ${limitInt} OFFSET ${offsetInt}
     `;
 
-    const [rows] = await mysql.execute(listQuery, [...queryParams, safeLimit, offset]);
+    const [rows] = await mysql.execute(listQuery, queryParams);
 
-    const payments = (rows as Record<string, unknown>[]).map((row) => ({
-      appointmentId: row.appointmentId,
-      appointmentDate: row.appointmentDate,
-      appointmentStatus: row.appointmentStatus,
-      serviceName: row.serviceName,
-      servicePrice: Number(row.servicePrice),
-      seniaPercent: Number(row.seniaPercent || 0),
-      patientName: row.patientName,
-      patientPhone: row.patientPhone,
-      patientEmail: row.patientEmail,
-      paymentRecordId: row.paymentRecordId,
-      mpAmount: row.mpAmount ? Number(row.mpAmount) : null,
-      mpStatus: row.mpStatus,
-      computedPaymentStatus: row.computedPaymentStatus,
-      mpUpdatedAt: row.mpUpdatedAt,
-    }));
+    const payments = (rows as Record<string, unknown>[]).map((row) => {
+      const rawStart = row.appointmentDate;
+      const startDate =
+        rawStart instanceof Date ? rawStart : new Date(rawStart as string | number);
+      return {
+        appointmentId: row.appointmentId,
+        appointmentDate: mysqlDateToUTC(startDate).toISOString(),
+        appointmentStatus: row.appointmentStatus,
+        serviceName: row.serviceName,
+        servicePrice: Number(row.servicePrice),
+        seniaPercent: Number(row.seniaPercent || 0),
+        patientName: row.patientName,
+        patientPhone: row.patientPhone,
+        patientEmail: row.patientEmail,
+        paymentRecordId: row.paymentRecordId,
+        mpAmount: row.mpAmount ? Number(row.mpAmount) : null,
+        mpStatus: row.mpStatus,
+        computedPaymentStatus: row.computedPaymentStatus,
+        mpUpdatedAt: row.mpUpdatedAt,
+      };
+    });
 
     return NextResponse.json({
       payments,
       pagination: {
         page: safePage,
-        limit: safeLimit,
+        limit: limitInt,
         total,
-        totalPages: Math.ceil(total / safeLimit),
+        totalPages: Math.ceil(total / limitInt) || 1,
       },
     });
   } catch (error: unknown) {

@@ -42,6 +42,7 @@ export async function GET(
       show_coverage: flagsAndLimits.show_coverage,
       show_servicios: flagsAndLimits.show_servicios,
       show_pagos: flagsAndLimits.show_pagos,
+      show_mercado_pago: flagsAndLimits.show_mercado_pago,
       maxUsers: flagsAndLimits.maxUsers,
       usedUsers,
       patientSelfBookingEnabled,

@@ -5,6 +5,7 @@ import * as React from "react";
 export type MercadoPagoIntegrationContextValue = {
   tenantId: string;
   isPagosFeatureEnabled: boolean;
+  isMercadoPagoFeatureEnabled: boolean;
   isMercadoPagoLinked: boolean | null;
   isPaymentsLocal: boolean;
   isMercadoPagoStatusLoading: boolean;
@@ -20,10 +21,12 @@ const MercadoPagoIntegrationContext =
 export function MercadoPagoIntegrationProvider({
   tenantId,
   isPagosFeatureEnabled,
+  isMercadoPagoFeatureEnabled,
   children,
 }: {
   tenantId: string;
   isPagosFeatureEnabled: boolean;
+  isMercadoPagoFeatureEnabled: boolean;
   children: React.ReactNode;
 }) {
   const [isLinked, setIsLinked] = React.useState<boolean | null>(null);
@@ -105,6 +108,7 @@ export function MercadoPagoIntegrationProvider({
     () => ({
       tenantId,
       isPagosFeatureEnabled,
+      isMercadoPagoFeatureEnabled,
       isMercadoPagoLinked: isLinked,
       isPaymentsLocal,
       isMercadoPagoStatusLoading: isLoading,
@@ -116,6 +120,7 @@ export function MercadoPagoIntegrationProvider({
     [
       tenantId,
       isPagosFeatureEnabled,
+      isMercadoPagoFeatureEnabled,
       isLinked,
       isPaymentsLocal,
       isLoading,
@@ -141,11 +146,8 @@ export function useMercadoPagoIntegration(): MercadoPagoIntegrationContextValue 
   return ctx;
 }
 
-/** Muestra el ítem Cobros/Pagos en el menú si el plan tiene la feature; no exige MP vinculado. */
+/** Muestra el ítem Cobros/Pagos en el menú si el tenant tiene `show_pagos` (no exige MP vinculado). */
 export function useShowPagosAsideLink(): boolean {
-  const { isPagosFeatureEnabled, isMercadoPagoLinked, isMercadoPagoStatusLoading } =
-    useMercadoPagoIntegration();
-  if (!isPagosFeatureEnabled) return false;
-  if (isMercadoPagoStatusLoading || isMercadoPagoLinked === null) return false;
-  return true;
+  const { isPagosFeatureEnabled } = useMercadoPagoIntegration();
+  return isPagosFeatureEnabled;
 }

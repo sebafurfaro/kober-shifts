@@ -105,6 +105,8 @@ export async function PUT(
     const features = body.features as {
       show_coverage?: boolean;
       show_mercado_pago?: boolean;
+      show_pagos?: boolean;
+      show_servicios?: boolean;
       calendar?: boolean;
       payment_enabled?: boolean;
       whatsappNotifications?: boolean;
@@ -125,6 +127,8 @@ export async function PUT(
     const featureFlags = {
       show_coverage: features?.show_coverage ?? (docRaw as { show_coverage?: boolean }).show_coverage ?? true,
       show_mercado_pago: features?.show_mercado_pago ?? (docRaw as { show_mercado_pago?: boolean }).show_mercado_pago ?? true,
+      show_pagos: features?.show_pagos ?? (docRaw as { show_pagos?: boolean }).show_pagos ?? false,
+      show_servicios: features?.show_servicios ?? (docRaw as { show_servicios?: boolean }).show_servicios ?? false,
       calendar: features?.calendar ?? (docRaw as { calendar?: boolean }).calendar ?? true,
       payment_enabled: features?.payment_enabled ?? docPaymentEnabled ?? true,
       whatsappNotifications: features?.whatsappNotifications ?? (docRaw as { whatsappNotifications?: boolean }).whatsappNotifications ?? false,

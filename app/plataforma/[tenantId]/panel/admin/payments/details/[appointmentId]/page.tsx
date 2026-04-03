@@ -27,7 +27,7 @@ export default function PaymentDetailsPage() {
     const router = useRouter();
     const tenantId = params.tenantId as string;
     const appointmentId = params.appointmentId as string;
-    
+
     const { isMercadoPagoStatusLoading, isPagosFeatureEnabled } = useMercadoPagoIntegration();
 
     const [data, setData] = React.useState<PaymentDetail | null>(null);
@@ -56,7 +56,7 @@ export default function PaymentDetailsPage() {
         if (!data) return;
         try {
             setUpdating(true);
-            const amountToSet = overrideAmount ?? data.servicePrice;
+            const amountToSet = overrideAmount ?? Number(data.servicePrice ?? 0);
             const res = await fetch(`/api/plataforma/${tenantId}/admin/payments/records/${appointmentId}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -105,7 +105,9 @@ export default function PaymentDetailsPage() {
     }
 
     const cleanPhone = data.patientPhone ? data.patientPhone.replace(/\D/g, "") : "";
-    const seniaAmount = data.servicePrice * (data.seniaPercent / 100);
+    const servicePriceNum = Number(data.servicePrice ?? 0);
+    const seniaPercentNum = Number(data.seniaPercent ?? 0);
+    const seniaAmount = servicePriceNum * (seniaPercentNum / 100);
 
     const renderStatusBadge = (status: "Pendiente" | "Seña paga" | "Pagado") => {
         let colorClass = "bg-warning text-warning-foreground";
@@ -121,7 +123,7 @@ export default function PaymentDetailsPage() {
     return (
         <Section>
             <PanelHeader
-                title={`Detalles de Cobro - Turno ${data.appointmentId.slice(0, 8)}`}
+                title={`Detalles de Cobro - Turno de ${data.patientName}`}
                 subtitle="Gestión manual de pagos, historial y contacto del cliente."
                 action={{ label: "Volver a Pagos", onClick: () => router.push(`/plataforma/${tenantId}/panel/admin/payments`) }}
             />
@@ -144,25 +146,25 @@ export default function PaymentDetailsPage() {
                                 <span className="font-semibold">{data.patientEmail || "No especificado"}</span>
                             </li>
                         </ul>
-                        
+
                         <Divider className="my-6" />
-                        
+
                         <Typography variant="h6" className="mb-4">Contactar Cliente</Typography>
                         <div className="flex gap-4">
-                            <Button 
-                                as="a" 
-                                href={`https://wa.me/${cleanPhone}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
+                            <Button
+                                as="a"
+                                href={`https://wa.me/${cleanPhone}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 color="success"
                                 variant="flat"
                                 isDisabled={!cleanPhone}
                             >
                                 WhatsApp
                             </Button>
-                            <Button 
-                                as="a" 
-                                href={`mailto:${data.patientEmail}`} 
+                            <Button
+                                as="a"
+                                href={`mailto:${data.patientEmail}`}
                                 color="primary"
                                 variant="flat"
                                 isDisabled={!data.patientEmail}
@@ -187,11 +189,11 @@ export default function PaymentDetailsPage() {
                             <li className="flex justify-between">
                                 <div>
                                     <span className="text-default-500 block text-sm">Costo Total</span>
-                                    <span className="font-semibold">${data.servicePrice.toFixed(2)}</span>
+                                    <span className="font-semibold">${servicePriceNum.toFixed(2)}</span>
                                 </div>
-                                {data.seniaPercent > 0 && (
+                                {seniaPercentNum > 0 && (
                                     <div className="text-right">
-                                        <span className="text-default-500 block text-sm">Seña ({data.seniaPercent}%)</span>
+                                        <span className="text-default-500 block text-sm">Seña ({seniaPercentNum}%)</span>
                                         <span className="font-semibold">${seniaAmount.toFixed(2)}</span>
                                     </div>
                                 )}
@@ -215,19 +217,21 @@ export default function PaymentDetailsPage() {
                             </p>
                         )}
                         <div className="flex flex-wrap gap-3">
-                            <Button 
-                                color="success" 
-                                onClick={() => updateStatus("fully_paid", data.servicePrice)}
+                            <Button
+                                color="success"
+                                onClick={() => updateStatus("fully_paid", servicePriceNum)}
+                                variant="solid"
                                 isLoading={updating}
                                 isDisabled={data.computedPaymentStatus === "Pagado"}
+                                className={data.computedPaymentStatus === "Pagado" ? "cursor-not-allowed" : "cursor-pointer"}
                             >
                                 Marcar como 100% Pagado
                             </Button>
-                            
-                            {data.seniaPercent > 0 && data.seniaPercent < 100 && (
-                                <Button 
-                                    color="primary" 
-                                    variant="flat"
+
+                            {seniaPercentNum > 0 && seniaPercentNum < 100 && (
+                                <Button
+                                    color="primary"
+                                    variant="solid"
                                     onClick={() => updateStatus("approved", seniaAmount)}
                                     isLoading={updating}
                                     isDisabled={data.computedPaymentStatus === "Seña paga" || data.computedPaymentStatus === "Pagado"}
@@ -235,10 +239,10 @@ export default function PaymentDetailsPage() {
                                     Marcar Seña como Pagada
                                 </Button>
                             )}
-                            
-                            <Button 
-                                color="warning" 
-                                variant="flat"
+
+                            <Button
+                                color="warning"
+                                variant="solid"
                                 onClick={() => updateStatus("pending", 0)}
                                 isLoading={updating}
                                 isDisabled={data.computedPaymentStatus === "Pendiente"}

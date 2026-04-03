@@ -45,7 +45,7 @@ export function PanelLayoutShell({
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [asideWidth, setAsideWidth] = React.useState(DRAWER_WIDTH);
   const [permissions, setPermissions] = React.useState<PermissionsMap | null>(null);
-  const [features, setFeatures] = React.useState<{ show_pagos?: boolean; show_servicios?: boolean } | null>(null);
+  const [features, setFeatures] = React.useState<{ show_pagos?: boolean; show_servicios?: boolean; show_mercado_pago?: boolean } | null>(null);
   const { patientLabel, professionalLabel } = useTenantLabels();
   const loadTranslations = useTenantSettingsStore((state) => state.loadTranslations);
 
@@ -72,6 +72,7 @@ export function PanelLayoutShell({
           setFeatures({
             show_pagos: featureData.show_pagos ?? false,
             show_servicios: featureData.show_servicios ?? false,
+            show_mercado_pago: featureData.show_mercado_pago ?? false,
           });
           const used = typeof featureData.usedUsers === "number" ? featureData.usedUsers : 0;
           const max = typeof featureData.maxUsers === "number" ? featureData.maxUsers : 0;
@@ -79,14 +80,14 @@ export function PanelLayoutShell({
         } else {
           setCalendarEnabled(true);
           setShowCoverage(true);
-          setFeatures({ show_pagos: false, show_servicios: false });
+          setFeatures({ show_pagos: false, show_servicios: false, show_mercado_pago: false });
           setUsage(null);
         }
       } catch (error) {
         if (!cancelled) {
           setCalendarEnabled(true);
           setShowCoverage(true);
-          setFeatures({ show_pagos: false, show_servicios: false });
+          setFeatures({ show_pagos: false, show_servicios: false, show_mercado_pago: false });
           setUsage(null);
         }
       }
@@ -184,7 +185,8 @@ export function PanelLayoutShell({
   return (
     <MercadoPagoIntegrationProvider
       tenantId={currentTenantId}
-      isPagosFeatureEnabled={features == null ? true : (features.show_pagos ?? false)}
+      isPagosFeatureEnabled={features?.show_pagos === true}
+      isMercadoPagoFeatureEnabled={features?.show_mercado_pago === true}
     >
     <div className="flex min-h-screen">
       {isMobile && mobileDrawerOpen && (

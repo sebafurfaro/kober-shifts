@@ -10,12 +10,22 @@ import { PanelHeader } from "../components/PanelHeader";
 import { WhatsappTab } from "./components/admin/WhatsappTab";
 import { Section } from "../components/layout/Section";
 
+import { useMercadoPagoIntegration } from "@/lib/mercadopago-integration-context";
+
 export default function AdminPage() {
+  const { isMercadoPagoFeatureEnabled } = useMercadoPagoIntegration();
+  const disabledKeys = ["tabwhatsapp"];
+  const disabledAccordionKeys = ["whatsapp"];
+  if (!isMercadoPagoFeatureEnabled) {
+    disabledKeys.push("tabintegrations");
+    disabledAccordionKeys.push("integrations");
+  }
+
   return (
     <Section>
       <PanelHeader title="Administra tu negocio" subtitle="Gestiona los detalles de tu negocio, ajustes y configuraciones." />
       <Card className="p-4 hidden md:block">
-        <Tabs disabledKeys={["tabwhatsapp"]} classNames={{
+        <Tabs disabledKeys={disabledKeys} classNames={{
           base: "w-full",
           tabList: "gap-2 md:gap-6 w-full relative bg-gray-100 rounded-lg p-1",
           cursor: "bg-white rounded-lg transition-all duration-300 ease-in-out font-medium",
@@ -57,7 +67,7 @@ export default function AdminPage() {
           </Tab>
         </Tabs>
       </Card>
-      <Accordion disabledKeys={["whatsapp"]} variant="splitted" className="flex flex-col md:hidden space-y-2">
+      <Accordion disabledKeys={disabledAccordionKeys} variant="splitted" className="flex flex-col md:hidden space-y-2">
         <AccordionItem key="details" startContent={<CircleUser className="w-5 h-5" />} title="Detalles">
           <DetailsTab />
         </AccordionItem>

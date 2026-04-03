@@ -9,7 +9,7 @@ export function useFeatureGate(featureName: "show_pagos" | "show_servicios") {
   const router = useRouter();
   const params = useParams();
   const tenantId = params?.tenantId as string;
-  const [isFeatureEnabled, setIsFeatureEnabled] = useState(true);
+  const [isFeatureEnabled, setIsFeatureEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export function useFeatureGate(featureName: "show_pagos" | "show_servicios") {
         });
         if (res.ok) {
           const features = await res.json();
-          const isEnabled = features[featureName] ?? false;
+          const isEnabled = features[featureName] === true;
           setIsFeatureEnabled(isEnabled);
           if (!isEnabled) {
             // Redirigir al panel principal si la feature está deshabilitada

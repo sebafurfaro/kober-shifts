@@ -5,6 +5,7 @@ import { upsertLocalPaymentStatus, ensurePaymentsTable } from "@/lib/mercadopago
 import { updateAppointment, findAppointmentById } from "@/lib/db";
 import { AppointmentStatus } from "@/lib/types";
 import mysql from "@/lib/mysql";
+import { mysqlDateToUTC } from "@/lib/timezone";
 
 export async function GET(
   req: Request,
@@ -54,6 +55,7 @@ export async function GET(
       LEFT JOIN users p ON a.patientId = p.id AND a.tenantId = p.tenantId
       LEFT JOIN mercadopago_payments mp ON BINARY mp.appointmentId = BINARY a.id AND BINARY mp.tenantId = BINARY a.tenantId
       WHERE a.id = ? AND a.tenantId = ?
+        AND a.status <> '${AppointmentStatus.CANCELLED}'
         AND (
           (s.id IS NOT NULL AND COALESCE(s.price, 0) > 0)
           OR a.status = 'PENDING_DEPOSIT'
@@ -65,10 +67,26 @@ export async function GET(
       [appointmentId, tenantId]
     );
 
-    const data = (rows as any[])[0];
-    if (!data) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    const row = (rows as Record<string, unknown>[])[0];
+    if (!row) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
 
-    return NextResponse.json(data);
+    const rawStart = row.appointmentDate;
+    const startDate =
+      rawStart instanceof Date ? rawStart : new Date(rawStart as string | number);
+
+    return NextResponse.json({
+      appointmentId: row.appointmentId,
+      appointmentDate: mysqlDateToUTC(startDate).toISOString(),
+      serviceName: row.serviceName,
+      servicePrice: Number(row.servicePrice ?? 0),
+      seniaPercent: Number(row.seniaPercent ?? 0),
+      patientName: row.patientName,
+      patientPhone: row.patientPhone,
+      patientEmail: row.patientEmail,
+      mpAmount: row.mpAmount != null ? Number(row.mpAmount) : null,
+      rawMpStatus: row.rawMpStatus,
+      computedPaymentStatus: row.computedPaymentStatus,
+    });
   } catch (error: any) {
     console.error("Error fetching payment details:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -94,6 +112,11 @@ export async function PATCH(
   }
 
   try {
+    const aptCheck = await findAppointmentById(appointmentId, tenantId);
+    if (!aptCheck || aptCheck.status === AppointmentStatus.CANCELLED) {
+      return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    }
+
     const { status, amount } = await req.json();
 
     if (!status || typeof amount !== "number") {

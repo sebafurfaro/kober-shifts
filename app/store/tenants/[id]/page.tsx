@@ -23,9 +23,9 @@ interface Tenant {
 
 const defaultFeatures: TenantFeatureFlags = {
   show_coverage: true,
-  show_mercado_pago: true,
+  show_mercado_pago: false,
   calendar: true,
-  payment_enabled: true,
+  payment_enabled: false,
   whatsappNotifications: false,
   whatsappCustomMessage: "",
   show_pagos: false,

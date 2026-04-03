@@ -17,6 +17,8 @@ import {
   UserIcon,
   CalendarCheck2,
   Download,
+  HandCoins,
+  ChartPie,
 } from "lucide-react";
 import { Alert, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Button } from "@heroui/react";
 import Logo from "@/app/branding/Logo";
@@ -202,15 +204,10 @@ interface AsideProps {
   isCollapsed: boolean;
   setIsCollapsed: Dispatch<SetStateAction<boolean>>;
   onWidthChange: (width: number) => void;
-  /** Si se pasa, evita una segunda llamada a /features (viene del shell). */
   usage?: { used: number; max: number } | null;
-  /** Matriz de permisos por sección y rol. Si no está cargada, se usan los defaults (staff ve según su rol). */
   permissions?: PermissionsMap | null;
-  /** Feature flags del tenant */
   features?: TenantFeatures | null;
-  /** Si el usuario logueado tiene un professional_profile (puede ser ADMIN con perfil). */
   hasProfessionalProfile?: boolean;
-  /** En móvil, claves de ítems que ya están en la barra inferior (no duplicar en el drawer). */
   navHiddenOnMobile?: Set<AsideNavKey> | null;
 }
 
@@ -293,9 +290,9 @@ export function Aside({
   const isStaff = role === "ADMIN" || role === "PROFESSIONAL" || role === "SUPERVISOR";
   const base = `/plataforma/${currentTenantId}/panel`;
 
-  // Helper function to check if a service is enabled
+  /** Flags de store: solo visibles si la API devolvió `true` (mientras `features` es null, todo desactivado). */
   const isFeatureEnabled = (featureName: keyof TenantFeatures): boolean => {
-    return features ? (features[featureName] ?? true) : true;
+    return features != null && features[featureName] === true;
   };
 
   return (
@@ -458,16 +455,6 @@ export function Aside({
                       exact
                     />
                   )}
-                  {showPagos && (
-                    <NavItem
-                      href={`${base}/admin/payments`}
-                      label="Pagos"
-                      icon={<CircleDollarSign className="w-5 h-5" />}
-                      isCollapsed={effectiveIsCollapsed}
-                      onNavigate={handleNavClick}
-                      pathname={pathname}
-                    />
-                  )}
                   {showTurnos && (
                     <NavItem
                       href={`${base}/admin/turnos`}
@@ -489,6 +476,41 @@ export function Aside({
                       pathname={pathname}
                     />
                   ))}
+                  {isFeatureEnabled("show_pagos") && (showPagos || role === "ADMIN") && (
+                    <>
+                      <SectionTitle label="Finanzas" isCollapsed={effectiveIsCollapsed} />
+                      {role === "ADMIN" && (
+                        <NavItem
+                          href={`${base}/admin/egresos`}
+                          label="Egresos"
+                          icon={<HandCoins className="w-5 h-5" />}
+                          isCollapsed={effectiveIsCollapsed}
+                          onNavigate={handleNavClick}
+                          pathname={pathname}
+                        />
+                      )}
+                      {showPagos && (
+                        <>
+                          <NavItem
+                            href={`${base}/admin/payments`}
+                            label="Pagos"
+                            icon={<CircleDollarSign className="w-5 h-5" />}
+                            isCollapsed={effectiveIsCollapsed}
+                            onNavigate={handleNavClick}
+                            pathname={pathname}
+                          />
+                          <NavItem
+                            href={`${base}/admin/finanzas`}
+                            label="Finanzas"
+                            icon={<ChartPie className="w-5 h-5" />}
+                            isCollapsed={effectiveIsCollapsed}
+                            onNavigate={handleNavClick}
+                            pathname={pathname}
+                          />
+                        </>
+                      )}
+                    </>
+                  )}
                 </>
               );
             })()}
