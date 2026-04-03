@@ -39,7 +39,7 @@ export const DetailsTab = () => {
 
   useEffect(() => {
     if (!baseUrl || !tenantId) return;
-    setReservationLink(`https://${baseUrl.replace(/^https?:\/\//, "")}/plataforma/${tenantId}`);
+    setReservationLink(`https://${baseUrl.replace(/^https?:\/\//, "")}/plataforma/${tenantId}/reservas`);
   }, [baseUrl, tenantId, setReservationLink]);
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export const DetailsTab = () => {
           typeof data.patientSelfBookingEnabled === "boolean" ? data.patientSelfBookingEnabled : false
         );
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => { cancelled = true; };
   }, [tenantId, setActive]);
 
